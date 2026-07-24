@@ -5,6 +5,7 @@ import json
 import os
 import base64
 from streamlit_drawable_canvas import st_canvas
+from streamlit_google_auth import Authenticate
 
 # --- 1. CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="FTN AI | Workspace", page_icon="⚡", layout="wide")
@@ -19,7 +20,7 @@ st.markdown(hide_st_style, unsafe_allow_html=True)
 
 ARCHIVO_BD = "ftn_database.json"
 
-# --- 2. MOTOR DE MEMORIA PERMANENTE Y PARCHE AUTOMÁTICO ---
+# --- 2. MOTOR DE MEMORIA PERMANENTE ---
 def guardar_y_recargar():
     with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
         json.dump(st.session_state["proyectos"], f, ensure_ascii=False, indent=4)
@@ -31,7 +32,6 @@ def inicializar_bd():
             with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
                 data_cargada = json.load(f)
                 
-                # CREAR MOTOR DE USUARIOS SI NO EXISTE
                 if "_CONFIG_" not in data_cargada:
                     data_cargada["_CONFIG_"] = {
                         "usuarios": {
@@ -39,7 +39,6 @@ def inicializar_bd():
                         }
                     }
                 
-                # PARCHE DE MÓDULOS DE PROYECTO
                 claves_necesarias = [
                     "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
                     "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
@@ -118,19 +117,10 @@ def ventana_crew(proyecto):
     rol = c1.text_input("Rol en el set")
     telefono = c2.text_input("Teléfono de contacto")
     obra_social = st.text_input("Obra Social / ART")
-    col1, col2, col3 = st.columns(3)
-    em1_nom = col1.text_input("Nom. Em 1", key="e1n")
-    em1_vin = col2.text_input("Vínculo", key="e1v")
-    em1_tel = col3.text_input("Teléfono", key="e1t")
-    col4, col5, col6 = st.columns(3)
-    em2_nom = col4.text_input("Nom. Em 2", key="e2n")
-    em2_vin = col5.text_input("Vínculo", key="e2v")
-    em2_tel = col6.text_input("Teléfono", key="e2t")
     if st.button("Fichar en Proyecto", use_container_width=True):
         if nombre:
             st.session_state["proyectos"][proyecto]["crew"].append({
-                "nombre": nombre, "rol": rol, "telefono": telefono, "obra_social": obra_social,
-                "em1_nom": em1_nom, "em1_vin": em1_vin, "em1_tel": em1_tel, "em2_nom": em2_nom, "em2_vin": em2_vin, "em2_tel": em2_tel
+                "nombre": nombre, "rol": rol, "telefono": telefono, "obra_social": obra_social
             })
             guardar_y_recargar()
 
@@ -176,7 +166,7 @@ def ventana_continuidad(proyecto):
             st.session_state["proyectos"][proyecto]["continuidad"].append({"escena": escena, "toma": toma, "detalle": detalle})
             guardar_y_recargar()
 
-@st.dialog("🎨 Cargar Arte (Con Foto)")
+@st.dialog("🎨 Cargar Arte")
 def ventana_arte(proyecto):
     categoria = st.radio("Baúl:", ["🪑 Utilería", "👗 Vestuario"], horizontal=True)
     objeto = st.text_input("Objeto o Prenda")
@@ -305,55 +295,84 @@ def ventana_desglose(proyecto):
             st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc})
             guardar_y_recargar()
 
-# --- 4. BASE DE USUARIOS Y SESIÓN ---
+# --- 4. MOTOR DE GOOGLE LOGIN (OAUTH 2.0) ---
 
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-# --- 5. LOGIN DINÁMICO ---
-if st.session_state["usuario_logueado"] is None:
+if not os.path.exists("google_credentials.json"):
+    try:
+        creds = {
+            "web": {
+                "client_id": st.secrets["GOOGLE_CLIENT_ID"],
+                "project_id": "ftn-ai-workspace",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_secret": st.secrets["GOOGLE_CLIENT_SECRET"],
+                "redirect_uris": [st.secrets["REDIRECT_URI"]]
+            }
+        }
+        with open("google_credentials.json", "w") as f:
+            json.dump(creds, f)
+    except Exception as e:
+        st.error("⚠️ Falta configurar los Secrets de Google en Streamlit Cloud.")
+
+try:
+    authenticator = Authenticate(
+        secret_credentials_path='google_credentials.json',
+        cookie_name='ftn_cookie',
+        cookie_key='firma_super_secreta_ftn_123',
+        redirect_uri=st.secrets["REDIRECT_URI"]
+    )
+    authenticator.check_authentification()
+except:
+    pass
+
+# --- 5. PANTALLA DE ACCESO ---
+if not st.session_state.get('connected'):
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         st.markdown("<h1 style='text-align: center; letter-spacing: 2px;'>⚡ FTN AI</h1>", unsafe_allow_html=True)
-        st.info("👋 Ingresá con tu correo electrónico. Los usuarios nuevos ingresan como 'Invitados'.")
-        
-        with st.form("login", border=True):
-            email = st.text_input("Correo Electrónico (Gmail)").lower().strip()
-            nombre = st.text_input("Tu Nombre (Solo si es tu primera vez en la app)")
-            
-            if st.form_submit_button("INGRESAR AL WORKSPACE", use_container_width=True):
-                if email:
-                    # HACK PARA VOS LAU: Si ponés "lau", te mapeo a tu correo de Super Admin
-                    if email == "lau":
-                        email = "lau@admin.com"
-                        
-                    db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
-                    
-                    if email in db_users:
-                        st.session_state["usuario_logueado"] = email
-                        st.rerun()
-                    else:
-                        if nombre:
-                            # REGISTRO DE USUARIO NUEVO
-                            db_users[email] = {"nombre": nombre, "rol": "Invitado", "nivel": "lectura"}
-                            guardar_y_recargar()
-                            st.session_state["usuario_logueado"] = email
-                            st.rerun()
-                        else:
-                            st.error("Como sos un usuario nuevo, por favor escribí tu nombre para registrarte.")
-                else:
-                    st.error("Por favor ingresá un correo.")
+        st.info("🔐 Acceso Exclusivo para Equipo de Producción.")
+        try:
+            authenticator.login()
+        except:
+            st.warning("El botón de Google está cargando o falta configuración de red.")
 
 # --- 6. PLATAFORMA CENTRAL ---
 else:
-    usuario_email = st.session_state["usuario_logueado"]
-    mis_datos = st.session_state["proyectos"]["_CONFIG_"]["usuarios"][usuario_email]
+    user_info = st.session_state['user_info']
+    email_google = user_info.get('email').lower()
+    nombre_google = user_info.get('name', 'Usuario')
+    foto_google = user_info.get('picture')
+
+    # HACK DEL SUPER ADMIN: Leemos tu mail secreto de la caja fuerte de Streamlit
+    try:
+        mail_admin = st.secrets["SUPER_ADMIN_EMAIL"].lower()
+    except:
+        mail_admin = "ninguno"
+
+    if email_google == mail_admin:
+        email_google = "lau@admin.com"
+
+    db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
+    
+    if email_google not in db_users:
+        db_users[email_google] = {"nombre": nombre_google, "rol": "Invitado", "nivel": "lectura"}
+        guardar_y_recargar()
+
+    st.session_state["usuario_logueado"] = email_google
+    mis_datos = db_users[email_google]
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
     with st.sidebar:
         st.markdown("### ⚡ FTN AI")
+        if foto_google:
+            st.image(foto_google, width=50) 
+        
         if nivel_actual == "jefe_supremo": st.error(f"👑 **{mis_datos['nombre']}** | {rol_actual}")
         elif nivel_actual == "jefe": st.success(f"🎬 **{mis_datos['nombre']}** | {rol_actual}")
         elif nivel_actual == "asistente": st.warning(f"🛠️ **{mis_datos['nombre']}** | {rol_actual}")
@@ -380,12 +399,11 @@ else:
             proyecto_elegido = None
         st.divider()
         
-        # MENÚ INTELIGENTE POR ROLES
         opciones_nav = ["⟡ Panel de Control", "⟡ Chat Central IA", "⟡ Baúl y Archivos", "⟡ Tablón de Avisos", "⟡ Portfolio y Links"]
         
         if rol_actual == "Super Admin":
             opciones_nav.extend([
-                "⟡ Gestión de Accesos", # <--- NUEVA PESTAÑA SOLO PARA VOS
+                "⟡ Gestión de Accesos",
                 "⟡ Control de Presupuesto", "⟡ Bandeja de Pedidos (Prod)", "⟡ Locaciones y Scouting", "⟡ Registro de Crew", "⟡ Casting y Actores", "⟡ Planilla de Catering",
                 "⟡ Desglose de Guion", "⟡ Laboratorio de Guion", 
                 "⟡ Inventario General", "⟡ Plan de Rodaje (AD)", "⟡ Planos y Dirección", 
@@ -411,30 +429,21 @@ else:
         seccion_elegida = st.radio("Navegación:", opciones_nav, label_visibility="collapsed")
         st.divider()
         if st.button("Cerrar Sesión", use_container_width=True):
+            authenticator.logout()
             st.session_state["usuario_logueado"] = None
             st.rerun()
 
     if proyecto_elegido:
         p_data = st.session_state["proyectos"][proyecto_elegido]
         
-        # --- NUEVO: GESTIÓN DE ACCESOS (SOLO SUPER ADMIN) ---
         if seccion_elegida == "⟡ Gestión de Accesos":
             st.markdown("## 👑 Panel de Permisos (Super Admin)")
-            st.write("Acá podés cambiarle el rol a cualquier persona que haya ingresado a la plataforma.")
-            
+            st.write("Cambiá el rol del equipo. Los cambios se guardan automáticamente al tocar 'Guardar Cambios'.")
             mapa_niveles = {
-                "Super Admin": "jefe_supremo",
-                "Producción": "jefe",
-                "Dirección": "jefe",
-                "Dirección de Fotografía": "jefe",
-                "Dirección de Arte": "jefe",
-                "Director de Sonido": "jefe",
-                "Asistente de Sonido": "asistente",
-                "Guion": "jefe",
-                "Continuidad": "jefe",
-                "Invitado": "lectura"
+                "Super Admin": "jefe_supremo", "Producción": "jefe", "Dirección": "jefe", 
+                "Dirección de Fotografía": "jefe", "Dirección de Arte": "jefe", "Director de Sonido": "jefe",
+                "Asistente de Sonido": "asistente", "Guion": "jefe", "Continuidad": "jefe", "Invitado": "lectura"
             }
-            
             for em_usr, dt_usr in st.session_state["proyectos"]["_CONFIG_"]["usuarios"].items():
                 with st.container(border=True):
                     col1, col2, col3 = st.columns([2, 2, 1])
@@ -449,7 +458,7 @@ else:
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["rol"] = nuevo_rol
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["nivel"] = mapa_niveles[nuevo_rol]
                             guardar_y_recargar()
-                            
+
         # --- PORTFOLIO Y LINKS ---
         elif seccion_elegida == "⟡ Portfolio y Links":
             colA, colB = st.columns([3, 1])
@@ -523,7 +532,6 @@ else:
             
             st.markdown("### ⚡ Inteligencia Artificial Central")
             if st.button("Generar Call Sheet Automático con IA", use_container_width=True):
-                # Aca va la clave segura leyendo de los Secrets
                 try:
                     CLAVE_API = st.secrets["GEMINI_API_KEY"]
                     genai.configure(api_key=CLAVE_API)
