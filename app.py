@@ -52,7 +52,6 @@ def inicializar_bd():
                 ]
                 for nombre_proy, datos_proy in data_cargada.items():
                     if nombre_proy == "_CONFIG_": 
-                        # Asegurar campos nuevos en la configuración de usuarios si faltaban
                         for email_u, info_u in datos_proy.get("usuarios", {}).items():
                             if "estado" not in info_u:
                                 info_u["estado"] = "Aprobado"
@@ -336,11 +335,11 @@ if st.session_state["usuario_logueado"] is None:
                 if st.form_submit_button("ENTRAR", use_container_width=True):
                     if email_ingreso in db_users:
                         if db_users[email_ingreso]["pass"] == pass_ingreso:
-                            if db_users[email_ingreso]["estado"] == "Aprobado":
+                            if db_users[email_ingreso].get("estado") == "Aprobado":
                                 st.session_state["usuario_logueado"] = email_ingreso
                                 st.rerun()
                             else:
-                                st.warning("⏳ Tu cuenta está pendiente de aprobación por el Administrador.")
+                                st.warning("⏳ Tu cuenta fue creada pero el Administrador aún no la ha aprobado.")
                         else:
                             st.error("Contraseña incorrecta.")
                     else:
@@ -349,15 +348,16 @@ if st.session_state["usuario_logueado"] is None:
         with tab_registro:
             with st.form("form_registro", border=True):
                 nombre_reg = st.text_input("Nombre y Apellido")
-                email_reg = st.text_input("Correo electrónico (Mail)").lower().strip()
+                email_reg = st.text_input("Correo electrónico (Mail real)").lower().strip()
                 pass_reg = st.text_input("Contraseña", type="password")
                 
                 if st.form_submit_button("CREAR CUENTA", use_container_width=True):
                     if nombre_reg and email_reg and pass_reg:
-                        if email_reg in db_users:
+                        if "@" not in email_reg or "." not in email_reg or len(email_reg) < 5:
+                            st.error("⚠️ Por favor ingresa un correo electrónico real y válido.")
+                        elif email_reg in db_users:
                             st.error("Ese correo ya está registrado. Iniciá sesión.")
                         else:
-                            # Se crea con estado Pendiente y rol Invitado
                             db_users[email_reg] = {
                                 "nombre": nombre_reg, 
                                 "pass": pass_reg, 
@@ -366,7 +366,7 @@ if st.session_state["usuario_logueado"] is None:
                                 "estado": "Pendiente"
                             }
                             guardar_y_recargar()
-                            st.success("¡Cuenta creada con éxito! Esperá a que el Administrador te apruebe para ingresar.")
+                            st.success("¡Cuenta creada! Quedó pendiente de aprobación por el Administrador.")
                     else:
                         st.error("Completá todos los campos.")
 
@@ -375,9 +375,9 @@ else:
     usuario_actual = st.session_state["usuario_logueado"]
     db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
     
-    if usuario_actual not in db_users or db_users[usuario_actual]["estado"] != "Aprobado":
-        st.error("Tu cuenta ya no está autorizada o fue bloqueada.")
-        if st.button("Volver"):
+    if usuario_actual not in db_users or db_users[usuario_actual].get("estado") != "Aprobado":
+        st.error("⚠️ Tu cuenta todavía no ha sido aprobada por el Administrador o fue bloqueada.")
+        if st.button("Cerrar Sesión / Volver"):
             st.session_state["usuario_logueado"] = None
             st.rerun()
         st.stop()
@@ -453,7 +453,7 @@ else:
         # --- PANEL DE APROBACIÓN DE USUARIOS (SUPER ADMIN) ---
         if seccion_elegida == "⟡ Gestión de Accesos":
             st.markdown("## 👑 Panel de Aprobación y Permisos")
-            st.write("Aprobá a los nuevos usuarios que se registren y asignales su rol dentro del equipo.")
+            st.write("Aprobá o rechazá el acceso de los usuarios y asignales su rol.")
             
             mapa_niveles = {
                 "Super Admin": "jefe_supremo", "Producción": "jefe", "Dirección": "jefe", 
@@ -468,16 +468,20 @@ else:
                         st.markdown(f"**{dt_usr['nombre']}**")
                         st.caption(em_usr)
                     with c2:
-                        nuevo_estado = st.selectbox("Estado", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"est_{em_usr}")
+                        estado_actual = dt_usr.get("estado", "Pendiente")
+                        idx_est = 0 if estado_actual == "Aprobado" else 1
+                        nuevo_estado = st.selectbox("Estado", ["Aprobado", "Pendiente"], index=idx_est, key=f"est_{em_usr}")
                     with c3:
                         idx_rol = list(mapa_niveles.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa_niveles else 9
                         nuevo_rol = st.selectbox("Rol", list(mapa_niveles.keys()), index=idx_rol, key=f"rol_{em_usr}")
                     with c4:
                         st.text("")
                         if st.button("💾 Guardar", key=f"btn_{em_usr}"):
+                            # Actualizamos los datos en la estructura
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["estado"] = nuevo_estado
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["rol"] = nuevo_rol
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["nivel"] = mapa_niveles[nuevo_rol]
+                            # Guardamos al archivo JSON y recargamos la app instantáneamente
                             guardar_y_recargar()
 
         # --- PORTFOLIO Y LINKS ---
