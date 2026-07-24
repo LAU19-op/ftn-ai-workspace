@@ -6,13 +6,6 @@ import os
 import base64
 from streamlit_drawable_canvas import st_canvas
 
-# Intentamos cargar el módulo de Google por si acaso
-try:
-    from streamlit_google_auth import Authenticate
-    GOOGLE_AUTH_DISPONIBLE = True
-except:
-    GOOGLE_AUTH_DISPONIBLE = False
-
 # --- 1. CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="FTN AI | Workspace", page_icon="⚡", layout="wide")
 
@@ -41,7 +34,13 @@ def inicializar_bd():
                 if "_CONFIG_" not in data_cargada:
                     data_cargada["_CONFIG_"] = {
                         "usuarios": {
-                            "lau@admin.com": {"nombre": "Lau", "rol": "Super Admin", "nivel": "jefe_supremo"}
+                            "lau@admin.com": {
+                                "nombre": "Lau (Admin)", 
+                                "pass": "1234", 
+                                "rol": "Super Admin", 
+                                "nivel": "jefe_supremo", 
+                                "estado": "Aprobado"
+                            }
                         }
                     }
                 
@@ -53,6 +52,12 @@ def inicializar_bd():
                 ]
                 for nombre_proy, datos_proy in data_cargada.items():
                     if nombre_proy == "_CONFIG_": 
+                        # Asegurar campos nuevos en la configuración de usuarios si faltaban
+                        for email_u, info_u in datos_proy.get("usuarios", {}).items():
+                            if "estado" not in info_u:
+                                info_u["estado"] = "Aprobado"
+                            if "pass" not in info_u:
+                                info_u["pass"] = "1234"
                         continue
                     if "contexto_aprobado" not in datos_proy:
                         datos_proy["contexto_aprobado"] = "Proyecto actualizado."
@@ -65,7 +70,13 @@ def inicializar_bd():
             st.session_state["proyectos"] = {
                 "_CONFIG_": {
                     "usuarios": {
-                        "lau@admin.com": {"nombre": "Lau", "rol": "Super Admin", "nivel": "jefe_supremo"}
+                        "lau@admin.com": {
+                            "nombre": "Lau (Admin)", 
+                            "pass": "1234", 
+                            "rol": "Super Admin", 
+                            "nivel": "jefe_supremo", 
+                            "estado": "Aprobado"
+                        }
                     }
                 },
                 "Piloto Serie Web": {
@@ -301,117 +312,82 @@ def ventana_desglose(proyecto):
             st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc})
             guardar_y_recargar()
 
-# --- 4. MOTOR DE SESIÓN HÍBRIDO (GOOGLE + USUARIOS LIBRES) ---
+# --- 4. GESTIÓN DE SESIÓN Y LOGIN LOCAL ---
 
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-google_conectado = False
-foto_google = None
-nombre_google = None
-email_google = None
-
-if GOOGLE_AUTH_DIPONIBLE if 'GOOGLE_AUTH_DIPONIBLE' in locals() else GOOGLE_AUTH_DISPONIBLE:
-    try:
-        if not os.path.exists("google_credentials.json"):
-            creds = {
-                "web": {
-                    "client_id": st.secrets["GOOGLE_CLIENT_ID"],
-                    "project_id": "ftn-ai-workspace",
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                    "client_secret": st.secrets["GOOGLE_CLIENT_SECRET"],
-                    "redirect_uris": [st.secrets["REDIRECT_URI"]]
-                }
-            }
-            with open("google_credentials.json", "w") as f:
-                json.dump(creds, f)
-
-        authenticator = Authenticate(
-            secret_credentials_path='google_credentials.json',
-            cookie_name='ftn_cookie',
-            cookie_key='firma_super_secreta_ftn_123',
-            redirect_uri=st.secrets["REDIRECT_URI"]
-        )
-        authenticator.check_authentification()
-        if st.session_state.get('connected'):
-            google_conectado = True
-            user_info = st.session_state['user_info']
-            email_google = user_info.get('email').lower()
-            nombre_google = user_info.get('name', 'Usuario Google')
-            foto_google = user_info.get('picture')
-    except:
-        pass
-
-# --- 5. PANTALLA DE ACCESO HÍBRIDA ---
-if not google_conectado and st.session_state["usuario_logueado"] is None:
+# --- 5. PANTALLA DE ACCESO Y REGISTRO ---
+if st.session_state["usuario_logueado"] is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         st.markdown("<h1 style='text-align: center; letter-spacing: 2px;'>⚡ FTN AI</h1>", unsafe_allow_html=True)
-        st.info("🔐 Acceso al Workspace de Producción.")
         
-        # Opción A: Botón de Google (Si está configurado)
-        if GOOGLE_AUTH_DISPONIBLE:
-            try:
-                authenticator.login()
-            except:
-                st.caption("*(Botón de Google no disponible temporalmente)*")
+        tab_login, tab_registro = st.tabs(["🔑 Iniciar Sesión", "📝 Registrarse"])
         
-        st.markdown("---")
-        st.write("O creá tu usuario rápido acá abajo:")
+        db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
         
-        # Opción B: Crear usuario libre al instante ("así nomás")
-        with st.form("registro_libre", border=True):
-            email_libre = st.text_input("Correo electrónico").lower().strip()
-            nombre_libre = st.text_input("Tu Nombre")
-            
-            if st.form_submit_button("ENTRAR AL WORKSPACE", use_container_width=True):
-                if email_libre and nombre_libre:
-                    if email_libre == "lau": 
-                        email_libre = "lau@admin.com"
-                    
-                    db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
-                    if email_libre not in db_users:
-                        db_users[email_libre] = {"nombre": nombre_libre, "rol": "Invitado", "nivel": "lectura"}
-                        guardar_y_recargar()
-                    
-                    st.session_state["usuario_logueado"] = email_libre
-                    st.rerun()
-                else:
-                    st.error("Completá tu correo y tu nombre para ingresar.")
+        with tab_login:
+            with st.form("form_login", border=True):
+                email_ingreso = st.text_input("Correo electrónico").lower().strip()
+                pass_ingreso = st.text_input("Contraseña", type="password")
+                
+                if st.form_submit_button("ENTRAR", use_container_width=True):
+                    if email_ingreso in db_users:
+                        if db_users[email_ingreso]["pass"] == pass_ingreso:
+                            if db_users[email_ingreso]["estado"] == "Aprobado":
+                                st.session_state["usuario_logueado"] = email_ingreso
+                                st.rerun()
+                            else:
+                                st.warning("⏳ Tu cuenta está pendiente de aprobación por el Administrador.")
+                        else:
+                            st.error("Contraseña incorrecta.")
+                    else:
+                        st.error("El usuario no existe. Registrate en la otra pestaña.")
+                        
+        with tab_registro:
+            with st.form("form_registro", border=True):
+                nombre_reg = st.text_input("Nombre y Apellido")
+                email_reg = st.text_input("Correo electrónico (Mail)").lower().strip()
+                pass_reg = st.text_input("Contraseña", type="password")
+                
+                if st.form_submit_button("CREAR CUENTA", use_container_width=True):
+                    if nombre_reg and email_reg and pass_reg:
+                        if email_reg in db_users:
+                            st.error("Ese correo ya está registrado. Iniciá sesión.")
+                        else:
+                            # Se crea con estado Pendiente y rol Invitado
+                            db_users[email_reg] = {
+                                "nombre": nombre_reg, 
+                                "pass": pass_reg, 
+                                "rol": "Invitado", 
+                                "nivel": "lectura", 
+                                "estado": "Pendiente"
+                            }
+                            guardar_y_recargar()
+                            st.success("¡Cuenta creada con éxito! Esperá a que el Administrador te apruebe para ingresar.")
+                    else:
+                        st.error("Completá todos los campos.")
 
 # --- 6. PLATAFORMA CENTRAL ---
 else:
-    # Resolver quién entró (vía Google o vía Usuario Libre)
-    if google_conectado:
-        try:
-            mail_admin = st.secrets["SUPER_ADMIN_EMAIL"].lower()
-        except:
-            mail_admin = "ninguno"
+    usuario_actual = st.session_state["usuario_logueado"]
+    db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
+    
+    if usuario_actual not in db_users or db_users[usuario_actual]["estado"] != "Aprobado":
+        st.error("Tu cuenta ya no está autorizada o fue bloqueada.")
+        if st.button("Volver"):
+            st.session_state["usuario_logueado"] = None
+            st.rerun()
+        st.stop()
 
-        if email_google == mail_admin:
-            email_google = "lau@admin.com"
-
-        db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
-        if email_google not in db_users:
-            db_users[email_google] = {"nombre": nombre_google, "rol": "Invitado", "nivel": "lectura"}
-            guardar_y_recargar()
-        
-        usuario_actual = email_google
-    else:
-        usuario_actual = st.session_state["usuario_logueado"]
-
-    mis_datos = st.session_state["proyectos"]["_CONFIG_"]["usuarios"][usuario_actual]
+    mis_datos = db_users[usuario_actual]
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
     with st.sidebar:
         st.markdown("### ⚡ FTN AI")
-        if foto_google:
-            st.image(foto_google, width=50) 
-        
         if nivel_actual == "jefe_supremo": st.error(f"👑 **{mis_datos['nombre']}** | {rol_actual}")
         elif nivel_actual == "jefe": st.success(f"🎬 **{mis_datos['nombre']}** | {rol_actual}")
         elif nivel_actual == "asistente": st.warning(f"🛠️ **{mis_datos['nombre']}** | {rol_actual}")
@@ -468,36 +444,38 @@ else:
         seccion_elegida = st.radio("Navegación:", opciones_nav, label_visibility="collapsed")
         st.divider()
         if st.button("Cerrar Sesión", use_container_width=True):
-            if google_conectado:
-                try:
-                    authenticator.logout()
-                except:
-                    pass
             st.session_state["usuario_logueado"] = None
             st.rerun()
 
     if proyecto_elegido:
         p_data = st.session_state["proyectos"][proyecto_elegido]
         
+        # --- PANEL DE APROBACIÓN DE USUARIOS (SUPER ADMIN) ---
         if seccion_elegida == "⟡ Gestión de Accesos":
-            st.markdown("## 👑 Panel de Permisos (Super Admin)")
-            st.write("Cambiá el rol del equipo. Los cambios se guardan automáticamente al tocar 'Guardar Cambios'.")
+            st.markdown("## 👑 Panel de Aprobación y Permisos")
+            st.write("Aprobá a los nuevos usuarios que se registren y asignales su rol dentro del equipo.")
+            
             mapa_niveles = {
                 "Super Admin": "jefe_supremo", "Producción": "jefe", "Dirección": "jefe", 
                 "Dirección de Fotografía": "jefe", "Dirección de Arte": "jefe", "Director de Sonido": "jefe",
                 "Asistente de Sonido": "asistente", "Guion": "jefe", "Continuidad": "jefe", "Invitado": "lectura"
             }
+            
             for em_usr, dt_usr in st.session_state["proyectos"]["_CONFIG_"]["usuarios"].items():
                 with st.container(border=True):
-                    col1, col2, col3 = st.columns([2, 2, 1])
-                    with col1:
+                    c1, c2, c3, c4 = st.columns([2, 1.5, 1.5, 1])
+                    with c1:
                         st.markdown(f"**{dt_usr['nombre']}**")
                         st.caption(em_usr)
-                    with col2:
+                    with c2:
+                        nuevo_estado = st.selectbox("Estado", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"est_{em_usr}")
+                    with c3:
                         idx_rol = list(mapa_niveles.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa_niveles else 9
-                        nuevo_rol = st.selectbox("Rol Asignado", list(mapa_niveles.keys()), index=idx_rol, key=f"rol_{em_usr}")
-                    with col3:
-                        if st.button("Guardar Cambios", key=f"btn_{em_usr}"):
+                        nuevo_rol = st.selectbox("Rol", list(mapa_niveles.keys()), index=idx_rol, key=f"rol_{em_usr}")
+                    with c4:
+                        st.text("")
+                        if st.button("💾 Guardar", key=f"btn_{em_usr}"):
+                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["estado"] = nuevo_estado
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["rol"] = nuevo_rol
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["nivel"] = mapa_niveles[nuevo_rol]
                             guardar_y_recargar()
