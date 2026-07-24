@@ -5,7 +5,13 @@ import json
 import os
 import base64
 from streamlit_drawable_canvas import st_canvas
-from streamlit_google_auth import Authenticate
+
+# Intentamos cargar el módulo de Google por si acaso
+try:
+    from streamlit_google_auth import Authenticate
+    GOOGLE_AUTH_DISPONIBLE = True
+except:
+    GOOGLE_AUTH_DISPONIBLE = False
 
 # --- 1. CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="FTN AI | Workspace", page_icon="⚡", layout="wide")
@@ -115,7 +121,7 @@ def ventana_crew(proyecto):
     nombre = st.text_input("Nombre Completo")
     c1, c2 = st.columns(2)
     rol = c1.text_input("Rol en el set")
-    telefono = c2.text_input("Teléfono de contacto")
+    telefono = st.text_input("Teléfono de contacto")
     obra_social = st.text_input("Obra Social / ART")
     if st.button("Fichar en Proyecto", use_container_width=True):
         if nombre:
@@ -295,76 +301,109 @@ def ventana_desglose(proyecto):
             st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc})
             guardar_y_recargar()
 
-# --- 4. MOTOR DE GOOGLE LOGIN (OAUTH 2.0) ---
+# --- 4. MOTOR DE SESIÓN HÍBRIDO (GOOGLE + USUARIOS LIBRES) ---
 
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-if not os.path.exists("google_credentials.json"):
+google_conectado = False
+foto_google = None
+nombre_google = None
+email_google = None
+
+if GOOGLE_AUTH_DIPONIBLE if 'GOOGLE_AUTH_DIPONIBLE' in locals() else GOOGLE_AUTH_DISPONIBLE:
     try:
-        creds = {
-            "web": {
-                "client_id": st.secrets["GOOGLE_CLIENT_ID"],
-                "project_id": "ftn-ai-workspace",
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "client_secret": st.secrets["GOOGLE_CLIENT_SECRET"],
-                "redirect_uris": [st.secrets["REDIRECT_URI"]]
+        if not os.path.exists("google_credentials.json"):
+            creds = {
+                "web": {
+                    "client_id": st.secrets["GOOGLE_CLIENT_ID"],
+                    "project_id": "ftn-ai-workspace",
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "client_secret": st.secrets["GOOGLE_CLIENT_SECRET"],
+                    "redirect_uris": [st.secrets["REDIRECT_URI"]]
+                }
             }
-        }
-        with open("google_credentials.json", "w") as f:
-            json.dump(creds, f)
-    except Exception as e:
-        st.error("⚠️ Falta configurar los Secrets de Google en Streamlit Cloud.")
+            with open("google_credentials.json", "w") as f:
+                json.dump(creds, f)
 
-try:
-    authenticator = Authenticate(
-        secret_credentials_path='google_credentials.json',
-        cookie_name='ftn_cookie',
-        cookie_key='firma_super_secreta_ftn_123',
-        redirect_uri=st.secrets["REDIRECT_URI"]
-    )
-    authenticator.check_authentification()
-except:
-    pass
+        authenticator = Authenticate(
+            secret_credentials_path='google_credentials.json',
+            cookie_name='ftn_cookie',
+            cookie_key='firma_super_secreta_ftn_123',
+            redirect_uri=st.secrets["REDIRECT_URI"]
+        )
+        authenticator.check_authentification()
+        if st.session_state.get('connected'):
+            google_conectado = True
+            user_info = st.session_state['user_info']
+            email_google = user_info.get('email').lower()
+            nombre_google = user_info.get('name', 'Usuario Google')
+            foto_google = user_info.get('picture')
+    except:
+        pass
 
-# --- 5. PANTALLA DE ACCESO ---
-if not st.session_state.get('connected'):
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
+# --- 5. PANTALLA DE ACCESO HÍBRIDA ---
+if not google_conectado and st.session_state["usuario_logueado"] is None:
+    st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         st.markdown("<h1 style='text-align: center; letter-spacing: 2px;'>⚡ FTN AI</h1>", unsafe_allow_html=True)
-        st.info("🔐 Acceso Exclusivo para Equipo de Producción.")
-        try:
-            authenticator.login()
-        except:
-            st.warning("El botón de Google está cargando o falta configuración de red.")
+        st.info("🔐 Acceso al Workspace de Producción.")
+        
+        # Opción A: Botón de Google (Si está configurado)
+        if GOOGLE_AUTH_DISPONIBLE:
+            try:
+                authenticator.login()
+            except:
+                st.caption("*(Botón de Google no disponible temporalmente)*")
+        
+        st.markdown("---")
+        st.write("O creá tu usuario rápido acá abajo:")
+        
+        # Opción B: Crear usuario libre al instante ("así nomás")
+        with st.form("registro_libre", border=True):
+            email_libre = st.text_input("Correo electrónico").lower().strip()
+            nombre_libre = st.text_input("Tu Nombre")
+            
+            if st.form_submit_button("ENTRAR AL WORKSPACE", use_container_width=True):
+                if email_libre and nombre_libre:
+                    if email_libre == "lau": 
+                        email_libre = "lau@admin.com"
+                    
+                    db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
+                    if email_libre not in db_users:
+                        db_users[email_libre] = {"nombre": nombre_libre, "rol": "Invitado", "nivel": "lectura"}
+                        guardar_y_recargar()
+                    
+                    st.session_state["usuario_logueado"] = email_libre
+                    st.rerun()
+                else:
+                    st.error("Completá tu correo y tu nombre para ingresar.")
 
 # --- 6. PLATAFORMA CENTRAL ---
 else:
-    user_info = st.session_state['user_info']
-    email_google = user_info.get('email').lower()
-    nombre_google = user_info.get('name', 'Usuario')
-    foto_google = user_info.get('picture')
+    # Resolver quién entró (vía Google o vía Usuario Libre)
+    if google_conectado:
+        try:
+            mail_admin = st.secrets["SUPER_ADMIN_EMAIL"].lower()
+        except:
+            mail_admin = "ninguno"
 
-    # HACK DEL SUPER ADMIN: Leemos tu mail secreto de la caja fuerte de Streamlit
-    try:
-        mail_admin = st.secrets["SUPER_ADMIN_EMAIL"].lower()
-    except:
-        mail_admin = "ninguno"
+        if email_google == mail_admin:
+            email_google = "lau@admin.com"
 
-    if email_google == mail_admin:
-        email_google = "lau@admin.com"
+        db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
+        if email_google not in db_users:
+            db_users[email_google] = {"nombre": nombre_google, "rol": "Invitado", "nivel": "lectura"}
+            guardar_y_recargar()
+        
+        usuario_actual = email_google
+    else:
+        usuario_actual = st.session_state["usuario_logueado"]
 
-    db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
-    
-    if email_google not in db_users:
-        db_users[email_google] = {"nombre": nombre_google, "rol": "Invitado", "nivel": "lectura"}
-        guardar_y_recargar()
-
-    st.session_state["usuario_logueado"] = email_google
-    mis_datos = db_users[email_google]
+    mis_datos = st.session_state["proyectos"]["_CONFIG_"]["usuarios"][usuario_actual]
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
@@ -429,7 +468,11 @@ else:
         seccion_elegida = st.radio("Navegación:", opciones_nav, label_visibility="collapsed")
         st.divider()
         if st.button("Cerrar Sesión", use_container_width=True):
-            authenticator.logout()
+            if google_conectado:
+                try:
+                    authenticator.logout()
+                except:
+                    pass
             st.session_state["usuario_logueado"] = None
             st.rerun()
 
