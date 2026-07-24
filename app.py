@@ -19,7 +19,7 @@ st.markdown(hide_st_style, unsafe_allow_html=True)
 
 ARCHIVO_BD = "ftn_database.json"
 
-# --- 2. MOTOR DE MEMORIA PERMANENTE ---
+# --- 2. MOTOR DE MEMORIA PERMANENTE Y PARCHE AUTOMÁTICO ---
 def guardar_y_recargar():
     with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
         json.dump(st.session_state["proyectos"], f, ensure_ascii=False, indent=4)
@@ -29,7 +29,22 @@ def inicializar_bd():
     if "proyectos" not in st.session_state:
         if os.path.exists(ARCHIVO_BD):
             with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
-                st.session_state["proyectos"] = json.load(f)
+                data_cargada = json.load(f)
+                
+                claves_necesarias = [
+                    "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
+                    "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
+                    "personajes", "locaciones", "crew", "catering", "links", "presupuesto", 
+                    "casting", "desglose"
+                ]
+                for nombre_proy, datos_proy in data_cargada.items():
+                    if "contexto_aprobado" not in datos_proy:
+                        datos_proy["contexto_aprobado"] = "Proyecto actualizado."
+                    for clave in claves_necesarias:
+                        if clave not in datos_proy:
+                            datos_proy[clave] = []
+                            
+                st.session_state["proyectos"] = data_cargada
         else:
             st.session_state["proyectos"] = {
                 "Piloto Serie Web": {
@@ -275,6 +290,7 @@ def ventana_desglose(proyecto):
             guardar_y_recargar()
 
 # --- 4. BASE DE USUARIOS Y SESIÓN ---
+
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
@@ -448,6 +464,18 @@ else:
             col4.metric("Pedidos Ptes.", len(p_data["pedidos_equipos"]))
             st.divider()
             
+            st.markdown("### ⚡ Inteligencia Artificial Central")
+            if st.button("Generar Call Sheet Automático con IA", use_container_width=True):
+                CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                genai.configure(api_key=CLAVE_API)
+                modelo = genai.GenerativeModel('gemini-3.5-flash')
+                datos = f"Avisos: {p_data['avisos']} | Equipo: {p_data['crew']} | Catering: {p_data['catering']} | Locaciones: {p_data['locaciones']}"
+                prompt = f"Sos FTN AI. Proyecto: {proyecto_elegido}. Datos actuales: {datos}. Redactá una hoja de llamado (Call Sheet) profesional resumiendo citaciones, locaciones y dietas."
+                with st.spinner("Procesando datos del rodaje..."):
+                    respuesta = modelo.generate_content(prompt)
+                    st.success("Call Sheet generado:")
+                    st.write(respuesta.text)
+            
         # --- SOLICITAR EQUIPOS ---
         elif seccion_elegida == "⟡ Solicitar Equipos":
             colA, colB = st.columns([3, 1])
@@ -510,7 +538,7 @@ else:
         # --- IA VISUAL ---
         elif seccion_elegida == "⟡ DF: Referencias Visuales IA":
             st.markdown("## 🧠 Laboratorio Visual IA")
-            CLAVE_API = "AQ.Ab8RN6IdbXS0MzxLKjTW00bpzv-Vey1OWhysVKd-o1TM0xYILg" 
+            CLAVE_API = st.secrets["GEMINI_API_KEY"]
             genai.configure(api_key=CLAVE_API)
             mod_foto = genai.GenerativeModel('gemini-3.5-flash')
             instruccion_foto = "Sos un DF experto. Cuando recomiendes algo visual, poné este link exacto en Markdown: [🖼️ Ver referencias de ESTO](https://www.google.com/search?tbm=isch&q=TERMINOS)"
@@ -679,7 +707,7 @@ else:
         # --- CHAT CENTRAL IA ---
         elif seccion_elegida == "⟡ Chat Central IA":
             st.markdown("## ⚡ Asistente FTN AI Central")
-            CLAVE_API = "AQ.Ab8RN6IdbXS0MzxLKjTW00bpzv-Vey1OWhysVKd-o1TM0xYILg" 
+            CLAVE_API = st.secrets["GEMINI_API_KEY"]
             genai.configure(api_key=CLAVE_API)
             modelo = genai.GenerativeModel('gemini-3.5-flash')
             instruccion = f"Sos FTN AI. Hablás con: {mis_datos['nombre']} ({rol_actual}). Contexto: {p_data['contexto_aprobado']}"
