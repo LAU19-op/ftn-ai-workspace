@@ -31,6 +31,15 @@ def inicializar_bd():
             with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
                 data_cargada = json.load(f)
                 
+                # CREAR MOTOR DE USUARIOS SI NO EXISTE
+                if "_CONFIG_" not in data_cargada:
+                    data_cargada["_CONFIG_"] = {
+                        "usuarios": {
+                            "lau@admin.com": {"nombre": "Lau", "rol": "Super Admin", "nivel": "jefe_supremo"}
+                        }
+                    }
+                
+                # PARCHE DE MÓDULOS DE PROYECTO
                 claves_necesarias = [
                     "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
                     "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
@@ -38,6 +47,8 @@ def inicializar_bd():
                     "casting", "desglose"
                 ]
                 for nombre_proy, datos_proy in data_cargada.items():
+                    if nombre_proy == "_CONFIG_": 
+                        continue
                     if "contexto_aprobado" not in datos_proy:
                         datos_proy["contexto_aprobado"] = "Proyecto actualizado."
                     for clave in claves_necesarias:
@@ -47,6 +58,11 @@ def inicializar_bd():
                 st.session_state["proyectos"] = data_cargada
         else:
             st.session_state["proyectos"] = {
+                "_CONFIG_": {
+                    "usuarios": {
+                        "lau@admin.com": {"nombre": "Lau", "rol": "Super Admin", "nivel": "jefe_supremo"}
+                    }
+                },
                 "Piloto Serie Web": {
                     "contexto_aprobado": "Comedia negra en una oficina.",
                     "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], 
@@ -294,39 +310,45 @@ def ventana_desglose(proyecto):
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-usuarios = {
-    "lau": {"nombre": "Lau", "rol": "Super Admin", "nivel": "jefe_supremo", "pass": "1234"},
-    "juan": {"nombre": "Juan", "rol": "Director de Sonido", "nivel": "jefe", "pass": "1234"},
-    "pedro": {"nombre": "Pedro", "rol": "Asistente de Sonido", "nivel": "asistente", "pass": "1234"},
-    "dani": {"nombre": "Dani", "rol": "Dirección de Fotografía", "nivel": "jefe", "pass": "1234"},
-    "mario": {"nombre": "Mario", "rol": "Guion", "nivel": "jefe", "pass": "1234"},
-    "ana": {"nombre": "Ana", "rol": "Producción", "nivel": "jefe", "pass": "1234"},
-    "lucia": {"nombre": "Lucía", "rol": "Dirección de Arte", "nivel": "jefe", "pass": "1234"},
-    "leo": {"nombre": "Leo", "rol": "Dirección", "nivel": "jefe", "pass": "1234"},
-    "clara": {"nombre": "Clara", "rol": "Continuidad", "nivel": "jefe", "pass": "1234"},
-    "invitado": {"nombre": "Cliente", "rol": "Invitado", "nivel": "lectura", "pass": "0000"}
-}
-
-# --- 5. LOGIN ---
+# --- 5. LOGIN DINÁMICO ---
 if st.session_state["usuario_logueado"] is None:
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         st.markdown("<h1 style='text-align: center; letter-spacing: 2px;'>⚡ FTN AI</h1>", unsafe_allow_html=True)
+        st.info("👋 Ingresá con tu correo electrónico. Los usuarios nuevos ingresan como 'Invitados'.")
+        
         with st.form("login", border=True):
-            user = st.text_input("ID de Usuario").lower()
-            password = st.text_input("Clave de Acceso", type="password")
-            if st.form_submit_button("INICIAR SESIÓN", use_container_width=True):
-                if user in usuarios and usuarios[user]["pass"] == password:
-                    st.session_state["usuario_logueado"] = user
-                    st.rerun()
+            email = st.text_input("Correo Electrónico (Gmail)").lower().strip()
+            nombre = st.text_input("Tu Nombre (Solo si es tu primera vez en la app)")
+            
+            if st.form_submit_button("INGRESAR AL WORKSPACE", use_container_width=True):
+                if email:
+                    # HACK PARA VOS LAU: Si ponés "lau", te mapeo a tu correo de Super Admin
+                    if email == "lau":
+                        email = "lau@admin.com"
+                        
+                    db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
+                    
+                    if email in db_users:
+                        st.session_state["usuario_logueado"] = email
+                        st.rerun()
+                    else:
+                        if nombre:
+                            # REGISTRO DE USUARIO NUEVO
+                            db_users[email] = {"nombre": nombre, "rol": "Invitado", "nivel": "lectura"}
+                            guardar_y_recargar()
+                            st.session_state["usuario_logueado"] = email
+                            st.rerun()
+                        else:
+                            st.error("Como sos un usuario nuevo, por favor escribí tu nombre para registrarte.")
                 else:
-                    st.error("Credenciales inválidas.")
+                    st.error("Por favor ingresá un correo.")
 
 # --- 6. PLATAFORMA CENTRAL ---
 else:
-    usuario = st.session_state["usuario_logueado"]
-    mis_datos = usuarios[usuario]
+    usuario_email = st.session_state["usuario_logueado"]
+    mis_datos = st.session_state["proyectos"]["_CONFIG_"]["usuarios"][usuario_email]
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
@@ -351,8 +373,9 @@ else:
                         }
                         guardar_y_recargar()
                         
-        if len(st.session_state["proyectos"]) > 0:
-            proyecto_elegido = st.selectbox("❖ PROYECTO", list(st.session_state["proyectos"].keys()))
+        lista_proyectos = [p for p in st.session_state["proyectos"].keys() if p != "_CONFIG_"]
+        if len(lista_proyectos) > 0:
+            proyecto_elegido = st.selectbox("❖ PROYECTO", lista_proyectos)
         else:
             proyecto_elegido = None
         st.divider()
@@ -362,6 +385,7 @@ else:
         
         if rol_actual == "Super Admin":
             opciones_nav.extend([
+                "⟡ Gestión de Accesos", # <--- NUEVA PESTAÑA SOLO PARA VOS
                 "⟡ Control de Presupuesto", "⟡ Bandeja de Pedidos (Prod)", "⟡ Locaciones y Scouting", "⟡ Registro de Crew", "⟡ Casting y Actores", "⟡ Planilla de Catering",
                 "⟡ Desglose de Guion", "⟡ Laboratorio de Guion", 
                 "⟡ Inventario General", "⟡ Plan de Rodaje (AD)", "⟡ Planos y Dirección", 
@@ -393,8 +417,41 @@ else:
     if proyecto_elegido:
         p_data = st.session_state["proyectos"][proyecto_elegido]
         
+        # --- NUEVO: GESTIÓN DE ACCESOS (SOLO SUPER ADMIN) ---
+        if seccion_elegida == "⟡ Gestión de Accesos":
+            st.markdown("## 👑 Panel de Permisos (Super Admin)")
+            st.write("Acá podés cambiarle el rol a cualquier persona que haya ingresado a la plataforma.")
+            
+            mapa_niveles = {
+                "Super Admin": "jefe_supremo",
+                "Producción": "jefe",
+                "Dirección": "jefe",
+                "Dirección de Fotografía": "jefe",
+                "Dirección de Arte": "jefe",
+                "Director de Sonido": "jefe",
+                "Asistente de Sonido": "asistente",
+                "Guion": "jefe",
+                "Continuidad": "jefe",
+                "Invitado": "lectura"
+            }
+            
+            for em_usr, dt_usr in st.session_state["proyectos"]["_CONFIG_"]["usuarios"].items():
+                with st.container(border=True):
+                    col1, col2, col3 = st.columns([2, 2, 1])
+                    with col1:
+                        st.markdown(f"**{dt_usr['nombre']}**")
+                        st.caption(em_usr)
+                    with col2:
+                        idx_rol = list(mapa_niveles.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa_niveles else 9
+                        nuevo_rol = st.selectbox("Rol Asignado", list(mapa_niveles.keys()), index=idx_rol, key=f"rol_{em_usr}")
+                    with col3:
+                        if st.button("Guardar Cambios", key=f"btn_{em_usr}"):
+                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["rol"] = nuevo_rol
+                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["nivel"] = mapa_niveles[nuevo_rol]
+                            guardar_y_recargar()
+                            
         # --- PORTFOLIO Y LINKS ---
-        if seccion_elegida == "⟡ Portfolio y Links":
+        elif seccion_elegida == "⟡ Portfolio y Links":
             colA, colB = st.columns([3, 1])
             with colA: st.markdown("## Archivo de Enlaces")
             with colB:
@@ -466,15 +523,19 @@ else:
             
             st.markdown("### ⚡ Inteligencia Artificial Central")
             if st.button("Generar Call Sheet Automático con IA", use_container_width=True):
-                CLAVE_API = st.secrets["GEMINI_API_KEY"]
-                genai.configure(api_key=CLAVE_API)
-                modelo = genai.GenerativeModel('gemini-3.5-flash')
-                datos = f"Avisos: {p_data['avisos']} | Equipo: {p_data['crew']} | Catering: {p_data['catering']} | Locaciones: {p_data['locaciones']}"
-                prompt = f"Sos FTN AI. Proyecto: {proyecto_elegido}. Datos actuales: {datos}. Redactá una hoja de llamado (Call Sheet) profesional resumiendo citaciones, locaciones y dietas."
-                with st.spinner("Procesando datos del rodaje..."):
-                    respuesta = modelo.generate_content(prompt)
-                    st.success("Call Sheet generado:")
-                    st.write(respuesta.text)
+                # Aca va la clave segura leyendo de los Secrets
+                try:
+                    CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                    genai.configure(api_key=CLAVE_API)
+                    modelo = genai.GenerativeModel('gemini-3.5-flash')
+                    datos = f"Avisos: {p_data['avisos']} | Equipo: {p_data['crew']} | Locaciones: {p_data['locaciones']}"
+                    prompt = f"Sos FTN AI. Proyecto: {proyecto_elegido}. Datos actuales: {datos}. Redactá un Call Sheet profesional."
+                    with st.spinner("Procesando datos del rodaje..."):
+                        respuesta = modelo.generate_content(prompt)
+                        st.success("Call Sheet generado:")
+                        st.write(respuesta.text)
+                except Exception as e:
+                    st.error("Error al conectar con la IA. Asegurate de configurar tu clave en los Secrets de Streamlit.")
             
         # --- SOLICITAR EQUIPOS ---
         elif seccion_elegida == "⟡ Solicitar Equipos":
@@ -538,15 +599,18 @@ else:
         # --- IA VISUAL ---
         elif seccion_elegida == "⟡ DF: Referencias Visuales IA":
             st.markdown("## 🧠 Laboratorio Visual IA")
-            CLAVE_API = st.secrets["GEMINI_API_KEY"]
-            genai.configure(api_key=CLAVE_API)
-            mod_foto = genai.GenerativeModel('gemini-3.5-flash')
-            instruccion_foto = "Sos un DF experto. Cuando recomiendes algo visual, poné este link exacto en Markdown: [🖼️ Ver referencias de ESTO](https://www.google.com/search?tbm=isch&q=TERMINOS)"
-            msg_foto = st.chat_input("Ej: Iluminación de Roger Deakins...")
-            if msg_foto:
-                st.markdown(f"**Vos:** {msg_foto}")
-                resp_foto = mod_foto.generate_content(f"{instruccion_foto} \n\nConsulta: {msg_foto}")
-                st.markdown(f"**🧠 IA Visual:** {resp_foto.text}")
+            try:
+                CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                genai.configure(api_key=CLAVE_API)
+                mod_foto = genai.GenerativeModel('gemini-3.5-flash')
+                instruccion_foto = "Sos un DF experto. Cuando recomiendes algo visual, poné este link exacto en Markdown: [🖼️ Ver referencias de ESTO](https://www.google.com/search?tbm=isch&q=TERMINOS)"
+                msg_foto = st.chat_input("Ej: Iluminación de Roger Deakins...")
+                if msg_foto:
+                    st.markdown(f"**Vos:** {msg_foto}")
+                    resp_foto = mod_foto.generate_content(f"{instruccion_foto} \n\nConsulta: {msg_foto}")
+                    st.markdown(f"**🧠 IA Visual:** {resp_foto.text}")
+            except:
+                st.error("Error al conectar con la IA. Asegurate de configurar tu clave en los Secrets de Streamlit.")
 
         # --- LOCACIONES ---
         elif seccion_elegida == "⟡ Locaciones y Scouting":
@@ -707,12 +771,15 @@ else:
         # --- CHAT CENTRAL IA ---
         elif seccion_elegida == "⟡ Chat Central IA":
             st.markdown("## ⚡ Asistente FTN AI Central")
-            CLAVE_API = st.secrets["GEMINI_API_KEY"]
-            genai.configure(api_key=CLAVE_API)
-            modelo = genai.GenerativeModel('gemini-3.5-flash')
-            instruccion = f"Sos FTN AI. Hablás con: {mis_datos['nombre']} ({rol_actual}). Contexto: {p_data['contexto_aprobado']}"
-            mensaje = st.chat_input("Escribí tu consulta técnica...")
-            if mensaje:
-                st.markdown(f"**{mis_datos['nombre']}:** {mensaje}")
-                respuesta = modelo.generate_content(f"{instruccion} \n\nUsuario: {mensaje}")
-                st.markdown(f"**⚡ FTN AI:** {respuesta.text}")
+            try:
+                CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                genai.configure(api_key=CLAVE_API)
+                modelo = genai.GenerativeModel('gemini-3.5-flash')
+                instruccion = f"Sos FTN AI. Hablás con: {mis_datos['nombre']} ({rol_actual}). Contexto: {p_data['contexto_aprobado']}"
+                mensaje = st.chat_input("Escribí tu consulta técnica...")
+                if mensaje:
+                    st.markdown(f"**{mis_datos['nombre']}:** {mensaje}")
+                    respuesta = modelo.generate_content(f"{instruccion} \n\nUsuario: {mensaje}")
+                    st.markdown(f"**⚡ FTN AI:** {respuesta.text}")
+            except:
+                st.error("Error al conectar con la IA. Asegurate de configurar tu clave en los Secrets de Streamlit.")
