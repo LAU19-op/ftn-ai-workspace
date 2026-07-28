@@ -17,104 +17,117 @@ import random
 import time
 
 # --- 1. CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Fetén Workspace", page_icon="☀", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="Fetén Workspace Pro", page_icon="☀", layout="wide", initial_sidebar_state="auto")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
-# --- 2. DISEÑO UI/UX "STUDIO IVORY" + ADAPTATIVO MÓVIL ---
+# --- 2. DISEÑO UI/UX MODERNIZADO (TENDENCIA MERCADO: STRIPE / LINEAR / NOTION) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
     
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
+    html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif !important; }
     #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
     
-    /* Fondo General */
+    /* Fondo con gradiente moderno de alta gama */
     .stApp {
-        background-color: #FDFCF8 !important;
-        background-image: radial-gradient(circle at 50% 0%, rgba(251, 175, 59, 0.05) 0%, transparent 60%) !important;
-        color: #332F2C !important;
+        background-color: #FAFAFA !important;
+        background-image: radial-gradient(circle at 50% 0%, rgba(251, 175, 59, 0.08) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(180, 113, 63, 0.04) 0%, transparent 40%) !important;
+        color: #1A1A1A !important;
     }
 
     /* Logo PNG transparente */
-    .logo-blend { mix-blend-mode: multiply; filter: contrast(1.1); }
+    .logo-blend { mix-blend-mode: multiply; filter: contrast(1.15); }
 
-    /* Tarjetas Modulares Estilo Notion/Stripe */
+    /* Tarjetas Modulares Glass/Clean estilo actual */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #EBE8E0 !important;
-        border-radius: 20px !important;
-        padding: 1.5rem !important;
-        box-shadow: 0 4px 15px -5px rgba(180, 113, 63, 0.1) !important;
-        transition: all 0.3s ease !important;
-        margin-bottom: 10px !important;
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(230, 225, 215, 0.8) !important;
+        border-radius: 24px !important;
+        padding: 1.8rem !important;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        margin-bottom: 12px !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: #FBAF3B !important;
-        box-shadow: 0 10px 25px -5px rgba(251, 175, 59, 0.2) !important;
+        border-color: rgba(251, 175, 59, 0.5) !important;
+        box-shadow: 0 20px 40px -15px rgba(251, 175, 59, 0.15) !important;
+        transform: translateY(-2px);
     }
     
-    /* Casilleros de Texto (Welcome Banner) */
+    /* Welcome Banner sofisticado */
     .welcome-card {
-        background: linear-gradient(135deg, #FFFFFF 0%, #FFFDF8 100%);
-        border: 1px solid #EBE8E0;
-        border-radius: 20px; padding: 24px; margin-bottom: 20px;
-        box-shadow: 0 8px 20px -10px rgba(180, 113, 63, 0.15);
+        background: linear-gradient(135deg, #FFFFFF 0%, #F9F7F2 100%);
+        border: 1px solid #EBE6DC;
+        border-radius: 24px; padding: 32px; margin-bottom: 24px;
+        box-shadow: 0 15px 35px -10px rgba(180, 113, 63, 0.08);
         display: flex; justify-content: space-between; align-items: center;
     }
     .section-title-card {
-        background: #F9F8F4; border: 1px solid #EBE8E0;
-        border-radius: 12px; padding: 10px 16px; margin-bottom: 15px;
-        font-weight: 700; color: #B4713F; display: inline-block;
+        background: #F4F1EA; border: 1px solid #E6E1D6;
+        border-radius: 14px; padding: 12px 20px; margin-bottom: 18px;
+        font-weight: 700; color: #9A5B2C; display: inline-block;
+        font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase;
     }
 
-    /* Títulos Orgánicos */
-    h1, h2 { color: #B4713F !important; font-weight: 800 !important; letter-spacing: -1px !important; }
-    h3, h4 { color: #2D2926 !important; font-weight: 700 !important; }
+    /* Tipografía refinada */
+    h1, h2 { color: #2C2622 !important; font-weight: 800 !important; letter-spacing: -1.2px !important; }
+    h3, h4 { color: #3D3630 !important; font-weight: 700 !important; }
     
-    /* Inputs minimalistas */
+    /* Inputs de diseño actual */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea {
-        background-color: #F9F8F4 !important; border: 1px solid #EBE8E0 !important; color: #332F2C !important;
-        border-radius: 12px !important; padding: 12px 16px !important; transition: all 0.3s ease !important;
+        background-color: #FFFFFF !important; border: 1px solid #E6E1D6 !important; color: #1A1A1A !important;
+        border-radius: 14px !important; padding: 14px 18px !important; transition: all 0.2s ease !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.01);
     }
-    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { border-color: #B4713F !important; background-color: #FFFFFF !important; }
+    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { 
+        border-color: #FBAF3B !important; background-color: #FFFFFF !important; 
+        box-shadow: 0 0 0 4px rgba(251, 175, 59, 0.15) !important;
+    }
     
-    /* Botones adaptativos */
+    /* Botones de alta conversión */
     .stButton button {
         background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%) !important; border: none !important; color: white !important;
-        border-radius: 12px !important; font-weight: 600 !important; padding: 0.6rem 1.2rem !important; transition: all 0.3s ease !important;
-        width: 100% !important;
+        border-radius: 14px !important; font-weight: 700 !important; padding: 0.7rem 1.4rem !important; transition: all 0.2s ease !important;
+        width: 100% !important; box-shadow: 0 4px 12px rgba(180, 113, 63, 0.2);
     }
     .stButton button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 20px rgba(251, 175, 59, 0.4) !important; }
-    .stButton button p { color: white !important; font-weight: 600 !important; }
-    [data-testid="stBaseButton-secondary"] { background: transparent !important; border: 2px solid #EBE8E0 !important; color: #B4713F !important; box-shadow: none !important; width: 100% !important; }
-    [data-testid="stBaseButton-secondary"]:hover { border-color: #B4713F !important; background: rgba(180, 113, 63, 0.05) !important; }
-    [data-testid="stBaseButton-secondary"] p { color: #B4713F !important; }
+    .stButton button p { color: white !important; font-weight: 700 !important; }
+    
+    [data-testid="stBaseButton-secondary"] { 
+        background: #FFFFFF !important; border: 1px solid #E6E1D6 !important; color: #9A5B2C !important; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; width: 100% !important; 
+    }
+    [data-testid="stBaseButton-secondary"]:hover { border-color: #B4713F !important; background: #FAF7F2 !important; }
+    [data-testid="stBaseButton-secondary"] p { color: #9A5B2C !important; }
 
     /* Avatares */
-    .avatar-circle { border-radius: 50%; object-fit: cover; border: 3px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.2); }
+    .avatar-circle { border-radius: 50%; object-fit: cover; border: 3px solid #FBAF3B; box-shadow: 0 6px 15px rgba(180, 113, 63, 0.25); }
     
-    /* Credencial VIP + QR */
+    /* Credencial VIP Moderna con QR */
     .credencial-feten {
-        background: linear-gradient(135deg, #2D2926 0%, #1A1816 100%); border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 24px; padding: 20px; width: 100%; max-width: 380px; margin: 10px auto; text-align: center;
-        box-shadow: 0 25px 50px -15px rgba(0,0,0,0.4); position: relative;
+        background: linear-gradient(145deg, #1E1B18 0%, #0F0E0D 100%); border: 1px solid rgba(251, 175, 59, 0.3);
+        border-radius: 30px; padding: 35px 25px; width: 100%; max-width: 360px; margin: 20px auto; text-align: center;
+        box-shadow: 0 30px 60px -20px rgba(0,0,0,0.5); position: relative; overflow: hidden;
     }
-    .credencial-logo-img { width: 80px; margin-bottom: 10px; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5)); mix-blend-mode: screen;}
-    .credencial-img { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #FBAF3B; margin-bottom: 10px; object-fit: cover;}
-    .credencial-name { font-size: 20px; font-weight: 800; margin: 0; color: #FDFCF8 !important;}
-    .credencial-role { font-size: 10px; color: #FBAF3B !important; margin-top: 5px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 3px;}
-    .qr-box { background: white; padding: 8px; border-radius: 10px; display: inline-block; margin-bottom: 10px;}
-    .credencial-id-box { background: rgba(255,255,255,0.05); padding: 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
-    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 14px; letter-spacing: 3px; color: #FFFFFF !important;}
+    .credencial-feten::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px;
+        background: linear-gradient(90deg, #FBAF3B, #B4713F);
+    }
+    .credencial-logo-img { width: 95px; margin-bottom: 20px; filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.6)); mix-blend-mode: screen;}
+    .credencial-img { width: 110px; height: 110px; border-radius: 50%; border: 3px solid #FBAF3B; margin-bottom: 18px; object-fit: cover; box-shadow: 0 8px 20px rgba(0,0,0,0.4);}
+    .credencial-name { font-size: 22px; font-weight: 800; margin: 0; color: #FFFFFF !important;}
+    .credencial-role { font-size: 11px; color: #FBAF3B !important; margin-top: 6px; margin-bottom: 22px; text-transform: uppercase; letter-spacing: 3.5px; font-weight: 700;}
+    .qr-box { background: white; padding: 12px; border-radius: 16px; display: inline-block; margin-bottom: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);}
+    .credencial-id-box { background: rgba(255,255,255,0.06); padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); }
+    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 15px; letter-spacing: 4px; color: #FBAF3B !important;}
     
-    /* Métricas Dashboard */
-    [data-testid="stMetricValue"] { color: #B4713F !important; font-size: 2rem !important; font-weight: 800 !important; }
-    [data-testid="stMetricLabel"] { color: #8A8179 !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; }
+    /* Métricas con diseño actual */
+    [data-testid="stMetricValue"] { color: #9A5B2C !important; font-size: 2.3rem !important; font-weight: 800 !important; }
+    [data-testid="stMetricLabel"] { color: #7A7067 !important; text-transform: uppercase !important; letter-spacing: 1.2px !important; font-size: 0.75rem !important; font-weight: 700 !important; }
 
-    /* MEDIA QUERIES PARA CELULARES (Móvil First Adaptations) */
+    /* Adaptabilidad total para celulares */
     @media (max-width: 768px) {
-        /* Forzar columnas a apilarse verticalmente en pantallas chicas */
         [data-testid="column"] {
             width: 100% !important;
             flex: 100% !important;
@@ -125,12 +138,12 @@ st.markdown("""
             flex-direction: column;
             text-align: center;
             gap: 15px;
+            padding: 20px;
         }
-        /* Reducir márgenes globales en móvil */
         .block-container {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            padding-top: 2rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            padding-top: 1.5rem !important;
         }
     }
     </style>
@@ -550,7 +563,7 @@ if st.session_state["usuario_logueado"] is None:
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
         st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' width='240' class='logo-blend' style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h4 style='text-align: center; color: #8A8179 !important; letter-spacing: 4px; font-weight: 500; margin-top: -15px;'>WORKSPACE</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; color: #7A7067 !important; letter-spacing: 4px; font-weight: 500; margin-top: -15px;'>WORKSPACE</h4>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
         tab_login, tab_registro = st.tabs(["Autenticación", "Solicitar Acceso"])
@@ -567,7 +580,7 @@ if st.session_state["usuario_logueado"] is None:
                             st.session_state["usuario_logueado"] = email_ingreso
                             st.session_state["ruta"] = "Inicio"
                             st.rerun()
-                        else: st.warning("Cuenta en revisión.")
+                        else: st.warning("Cuenta en revisión por el Administrador.")
                     else: st.error("Credenciales inválidas.")
                         
         with tab_registro:
@@ -584,8 +597,8 @@ if st.session_state["usuario_logueado"] is None:
                             "foto": foto_b64, "credencial": f"FTN-{random.randint(1000, 9999)}", "edad": "", "roles_fav": "", "dieta": "", "specs": "", "cv": "", "portfolio": ""
                         }
                         guardar_y_recargar()
-                        st.success("Solicitud enviada.")
-                    else: st.error("Completar todo.")
+                        st.success("Solicitud enviada con éxito.")
+                    else: st.error("Completar todos los campos y adjuntar foto.")
 
 # --- 7. PLATAFORMA CENTRAL ---
 else:
@@ -621,7 +634,7 @@ else:
             <div class="welcome-card">
                 <div>
                     <h1 style='margin:0; font-size: 1.8rem;'>¡Hola, {mis_datos['nombre']}!</h1>
-                    <p style='color:#B4713F !important; font-weight:600; font-size:1rem; margin:0;'>{rol_actual.upper()}</p>
+                    <p style='color:#9A5B2C !important; font-weight:600; font-size:1rem; margin:0;'>{rol_actual.upper()}</p>
                 </div>
                 <div style='text-align:right;'>
                     <span style='font-size:24px;'>🎬</span>
@@ -679,11 +692,11 @@ else:
                         st.markdown(f"<div style='font-weight:700; font-size:14px; color:#2D2926;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
     # ==========================================
-    # VISTA 2: PERFIL Y CREDENCIAL VIP
+    # VISTA 2: PERFIL Y CREDENCIAL VIP (RESTAURADO COMPLETO)
     # ==========================================
     elif st.session_state["ruta"] == "Perfil":
-        st.markdown("<div class='section-title-card'>⚙ CONFIGURACIÓN DE CUENTA</div>", unsafe_allow_html=True)
-        tab_misdatos, tab_cred, tab_dir = st.tabs(["Mi Perfil", "Credencial VIP", "Directorio"])
+        st.markdown("<div class='section-title-card'>⚙ CONFIGURACIÓN DE CUENTA Y ACCESOS</div>", unsafe_allow_html=True)
+        tab_misdatos, tab_cred, tab_dir, tab_admin = st.tabs(["Mi Perfil", "Credencial VIP con QR", "Directorio y Amigos", "Administración de Usuarios"])
         
         with tab_misdatos:
             with st.container(border=True):
@@ -733,26 +746,47 @@ else:
                     <h2 class="credencial-name">{mis_datos['nombre']}</h2>
                     <p class="credencial-role">{mis_datos['rol']}</p>
                     <div class="qr-box">
-                        <img src="data:image/png;base64,{qr_b64}" width="90">
+                        <img src="data:image/png;base64,{qr_b64}" width="100">
                     </div>
                     <div class="credencial-id-box">
                         <span class="credencial-id">ID: {mis_datos.get('credencial', 'FTN-0000')}</span>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-            st.caption("Presentá el Código QR en locaciones o rentals para verificar tu identidad.")
+            st.caption("Presentá el Código QR en locaciones o rentals para verificar tu identidad como miembro oficial.")
 
         with tab_dir:
-            busqueda = st.text_input("Buscar talento...", placeholder="Ej: Director...")
+            st.markdown("### Directorio Corporativo y Conexiones")
+            busqueda = st.text_input("Buscar miembros por nombre o rol...", placeholder="Ej: Productor, Director...")
             st.markdown("<br>", unsafe_allow_html=True)
             for em, info in db_users.items():
                 if info["estado"] == "Aprobado" and (busqueda.lower() in info["nombre"].lower() or busqueda.lower() in info["rol"].lower()):
                     with st.container(border=True):
-                        colD1, colD2 = st.columns([1, 8])
+                        colD1, colD2, colD3 = st.columns([1, 6, 2])
                         with colD1:
-                            if info.get("foto"): st.markdown(f"<img src='data:image/jpeg;base64,{info['foto']}' class='avatar-circle' style='width:40px;height:40px;'>", unsafe_allow_html=True)
+                            f_usr = f"data:image/jpeg;base64,{info['foto']}" if info.get("foto") else "https://via.placeholder.com/150"
+                            st.markdown(f"<img src='{f_usr}' class='avatar-circle' style='width:45px;height:45px;'>", unsafe_allow_html=True)
                         with colD2:
-                            st.markdown(f"<h4 style='margin:0; font-size:15px;'>{info['nombre']} <span style='color:#B4713F;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
+                            st.markdown(f"<h4 style='margin:0; font-size:15px;'>{info['nombre']} <span style='color:#9A5B2C;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
+                            st.caption(f"Contacto: {em} | Especialidad: {info.get('roles_fav', 'No especificada')}")
+                        with colD3:
+                            if info.get('portfolio'):
+                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#9A5B2C;'>Ver Portafolio</a>", unsafe_allow_html=True)
+
+        with tab_admin:
+            st.markdown("### Gestión de Accesos y Solicitudes de Usuarios")
+            st.caption("Aprobación y asignación de roles para nuevas cuentas registradas.")
+            mapa_roles = {"Super Admin": "jefe_supremo", "Producción": "jefe", "Dirección": "jefe", "Dirección de Fotografía": "jefe", "Dirección de Arte": "jefe", "Director de Sonido": "jefe", "Asistente de Sonido": "asistente", "Guion": "jefe", "Continuidad": "jefe", "Invitado": "lectura"}
+            
+            for em_usr, dt_usr in db_users.items():
+                with st.container(border=True):
+                    c1, c2, c3, c4 = st.columns([2, 1.5, 1.5, 1])
+                    c1.markdown(f"**{dt_usr['nombre']}**<br><span style='font-size:12px; color:gray;'>{em_usr}</span>", unsafe_allow_html=True)
+                    est = c2.selectbox("Estado", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"est_{em_usr}")
+                    rol = c3.selectbox("Rol", list(mapa_roles.keys()), index=list(mapa_roles.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa_roles else 9, key=f"rol_{em_usr}")
+                    if c4.button("Guardar", key=f"btn_adm_{em_usr}", use_container_width=True):
+                        db_users[em_usr].update({"estado": est, "rol": rol, "nivel": mapa_roles[rol]})
+                        guardar_y_recargar()
 
     # ==========================================
     # VISTA 3: PROYECTO (USANDO OPTION_MENU)
@@ -815,11 +849,11 @@ else:
             seccion_elegida = option_menu(
                 menu_title="DEPARTAMENTOS", options=nav_final, icons=iconos_final, menu_icon="cast", default_index=0,
                 styles={
-                    "container": {"padding": "10px", "background-color": "#FFFFFF", "border-radius": "16px", "border": "1px solid #EBE8E0"},
+                    "container": {"padding": "10px", "background-color": "#FFFFFF", "border-radius": "16px", "border": "1px solid #E6E1D6"},
                     "icon": {"color": "#FBAF3B", "font-size": "15px"},
-                    "menu-title": {"color": "#8A8179", "font-size": "11px", "letter-spacing": "2px", "font-weight": "800"},
-                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "2px 0", "color": "#4A4541", "border-radius": "8px", "padding": "8px"},
-                    "nav-link-selected": {"background-color": "rgba(251, 175, 59, 0.15)", "color": "#B4713F", "font-weight": "700", "border-left": "4px solid #FBAF3B"},
+                    "menu-title": {"color": "#7A7067", "font-size": "11px", "letter-spacing": "2px", "font-weight": "800"},
+                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "2px 0", "color": "#3D3630", "border-radius": "8px", "padding": "8px"},
+                    "nav-link-selected": {"background-color": "rgba(251, 175, 59, 0.15)", "color": "#9A5B2C", "font-weight": "700", "border-left": "4px solid #FBAF3B"},
                 }
             )
         
@@ -838,8 +872,8 @@ else:
                         modelo = genai.GenerativeModel('gemini-1.5-flash')
                         datos = f"Avisos: {p_data.get('avisos', [])} | Locaciones: {p_data.get('locaciones', [])}"
                         prompt = f"Sos Productor. Proyecto: {proyecto_elegido}. Datos: {datos}. Redactá un Call Sheet profesional en Markdown."
-                        st.markdown(f"<div style='background:#F9F8F4; padding:15px; border-radius:12px; border: 1px solid #EBE8E0; overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
-                    except: st.error("Falta API Key Gemini.")
+                        st.markdown(f"<div style='background:#F9F7F2; padding:15px; border-radius:12px; border: 1px solid #E6E1D6; overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
+                    except: st.error("Falta configurar la API Key de Gemini en Secrets.")
 
             elif seccion_elegida == "Tablero Kanban":
                 c1, c2 = st.columns([2.5, 1])
@@ -942,13 +976,13 @@ else:
                             total_cart += item["precio"]
                             with cols_cart[i % 2]:
                                 with st.container(border=True):
-                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#B4713F; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#9A5B2C; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
                                     st.markdown(f"<p style='font-weight:700; margin:0; font-size:13px; color:#2D2926;'>{item['nombre'][:25]}...</p>", unsafe_allow_html=True)
                                     st.markdown(f"**${item['precio']:,.2f}**")
                                     if st.button("Remover", key=f"quit_cart_{i}", use_container_width=True):
                                         p_data["carrito_rentals"].pop(i)
                                         guardar_y_recargar()
-                        st.markdown(f"<h4 style='text-align:right; color:#B4713F; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
+                        st.markdown(f"<h4 style='text-align:right; color:#9A5B2C; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
                 
                 st.markdown("### Base Analizada")
                 rentals_lista = p_data.get("comparador_rentals", [])
@@ -965,10 +999,10 @@ else:
                             with cols[i % 2]:
                                 with st.container(border=True):
                                     if r["precio"] == menor_precio and r["precio"] > 0:
-                                        st.markdown("<span style='background:rgba(251,175,59,0.2); border: 1px solid #FBAF3B; color:#B4713F; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#B4713F; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                        st.markdown("<span style='background:rgba(251,175,59,0.2); border: 1px solid #FBAF3B; color:#9A5B2C; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#9A5B2C; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
                                     st.markdown(f"<p style='margin:0; font-weight:600; font-size:13px; color:#2D2926;'>{r['nombre']}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<h3 style='margin:0; color:#B4713F; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
+                                    st.markdown(f"<h3 style='margin:0; color:#9A5B2C; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
                                     c_add, c_del = st.columns(2)
                                     if c_add.button("Añadir", key=f"add_{idx_orig}", use_container_width=True, type="primary"):
                                         p_data["carrito_rentals"].append(r)
@@ -1042,7 +1076,7 @@ else:
                 if p_data.get("presupuesto"):
                     df_presupuesto = pd.DataFrame(p_data["presupuesto"])
                     total = df_presupuesto['costo'].sum()
-                    st.markdown(f"<h3 style='color:#B4713F; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
+                    st.markdown(f"<h3 style='color:#9A5B2C; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
                     fig = px.pie(df_presupuesto, values='costo', names='area', title='Distribución', color_discrete_sequence=px.colors.sequential.YlOrBr)
                     st.plotly_chart(fig, use_container_width=True)
                     st.download_button("Exportar CSV", data=df_presupuesto.to_csv(index=False).encode('utf-8'), file_name="budget.csv", mime="text/csv", use_container_width=True)
