@@ -15,13 +15,17 @@ from PIL import Image
 from datetime import datetime, date
 import random
 import time
+import numpy as np
+import matplotlib.pyplot as plt
+import librosa
+import scipy.signal
 
 # --- 1. CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Fetén Workspace Pro", page_icon="☀", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="Fetén Workspace Pro", page_icon="⚡", layout="wide", initial_sidebar_state="auto")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
-# --- 2. DISEÑO UI/UX MODERNIZADO (TENDENCIA MERCADO: STRIPE / LINEAR / NOTION) ---
+# --- 2. DISEÑO UI/UX ESTILO CLASE MUNDIAL (LINEAR / STRIPE / NOTION) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -29,11 +33,11 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif !important; }
     #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
     
-    /* Fondo con gradiente moderno de alta gama */
+    /* Fondo con gradiente moderno de alta gama y contraste optimizado */
     .stApp {
-        background-color: #FAFAFA !important;
-        background-image: radial-gradient(circle at 50% 0%, rgba(251, 175, 59, 0.08) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(180, 113, 63, 0.04) 0%, transparent 40%) !important;
-        color: #1A1A1A !important;
+        background-color: #F8F9FA !important;
+        background-image: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.03) 0%, transparent 30%) !important;
+        color: #0F172A !important;
     }
 
     /* Logo PNG transparente */
@@ -41,92 +45,97 @@ st.markdown("""
 
     /* Tarjetas Modulares Glass/Clean estilo actual */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: rgba(255, 255, 255, 0.85) !important;
-        backdrop-filter: blur(16px) !important;
-        border: 1px solid rgba(230, 225, 215, 0.8) !important;
-        border-radius: 24px !important;
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 20px !important;
         padding: 1.8rem !important;
-        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        margin-bottom: 12px !important;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        margin-bottom: 14px !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: rgba(251, 175, 59, 0.5) !important;
-        box-shadow: 0 20px 40px -15px rgba(251, 175, 59, 0.15) !important;
+        border-color: #6366F1 !important;
+        box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.15) !important;
         transform: translateY(-2px);
     }
     
     /* Welcome Banner sofisticado */
     .welcome-card {
-        background: linear-gradient(135deg, #FFFFFF 0%, #F9F7F2 100%);
-        border: 1px solid #EBE6DC;
+        background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+        border: 1px solid #E2E8F0;
         border-radius: 24px; padding: 32px; margin-bottom: 24px;
-        box-shadow: 0 15px 35px -10px rgba(180, 113, 63, 0.08);
+        box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.06);
         display: flex; justify-content: space-between; align-items: center;
     }
     .section-title-card {
-        background: #F4F1EA; border: 1px solid #E6E1D6;
-        border-radius: 14px; padding: 12px 20px; margin-bottom: 18px;
-        font-weight: 700; color: #9A5B2C; display: inline-block;
-        font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase;
+        background: #F1F5F9; border: 1px solid #E2E8F0;
+        border-radius: 12px; padding: 10px 18px; margin-bottom: 16px;
+        font-weight: 700; color: #4F46E5; display: inline-block;
+        font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
     }
 
     /* Tipografía refinada */
-    h1, h2 { color: #2C2622 !important; font-weight: 800 !important; letter-spacing: -1.2px !important; }
-    h3, h4 { color: #3D3630 !important; font-weight: 700 !important; }
+    h1, h2, h3, h4 { color: #0F172A !important; font-weight: 800 !important; letter-spacing: -0.8px !important; }
     
-    /* Inputs de diseño actual */
+    /* Inputs de diseño actual con contraste garantizado (Texto oscuro sobre fondo claro) */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea {
-        background-color: #FFFFFF !important; border: 1px solid #E6E1D6 !important; color: #1A1A1A !important;
-        border-radius: 14px !important; padding: 14px 18px !important; transition: all 0.2s ease !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+        background-color: #F8FAFC !important; 
+        border: 1px solid #CBD5E1 !important; 
+        color: #0F172A !important;
+        border-radius: 12px !important; 
+        padding: 12px 16px !important; 
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
     }
     .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { 
-        border-color: #FBAF3B !important; background-color: #FFFFFF !important; 
-        box-shadow: 0 0 0 4px rgba(251, 175, 59, 0.15) !important;
+        border-color: #6366F1 !important; 
+        background-color: #FFFFFF !important; 
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+        color: #0F172A !important;
     }
     
     /* Botones de alta conversión */
     .stButton button {
-        background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%) !important; border: none !important; color: white !important;
-        border-radius: 14px !important; font-weight: 700 !important; padding: 0.7rem 1.4rem !important; transition: all 0.2s ease !important;
-        width: 100% !important; box-shadow: 0 4px 12px rgba(180, 113, 63, 0.2);
+        background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%) !important; border: none !important; color: white !important;
+        border-radius: 12px !important; font-weight: 700 !important; padding: 0.7rem 1.4rem !important; transition: all 0.2s ease !important;
+        width: 100% !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
     }
-    .stButton button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 20px rgba(251, 175, 59, 0.4) !important; }
+    .stButton button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35) !important; }
     .stButton button p { color: white !important; font-weight: 700 !important; }
     
     [data-testid="stBaseButton-secondary"] { 
-        background: #FFFFFF !important; border: 1px solid #E6E1D6 !important; color: #9A5B2C !important; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; width: 100% !important; 
+        background: #FFFFFF !important; border: 1px solid #CBD5E1 !important; color: #4F46E5 !important; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; width: 100% !important; 
     }
-    [data-testid="stBaseButton-secondary"]:hover { border-color: #B4713F !important; background: #FAF7F2 !important; }
-    [data-testid="stBaseButton-secondary"] p { color: #9A5B2C !important; }
+    [data-testid="stBaseButton-secondary"]:hover { border-color: #4F46E5 !important; background: #F8FAFC !important; }
+    [data-testid="stBaseButton-secondary"] p { color: #4F46E5 !important; }
 
     /* Avatares */
-    .avatar-circle { border-radius: 50%; object-fit: cover; border: 3px solid #FBAF3B; box-shadow: 0 6px 15px rgba(180, 113, 63, 0.25); }
+    .avatar-circle { border-radius: 50%; object-fit: cover; border: 3px solid #6366F1; box-shadow: 0 6px 15px rgba(79, 70, 229, 0.2); }
     
     /* Credencial VIP Moderna con QR */
     .credencial-feten {
-        background: linear-gradient(145deg, #1E1B18 0%, #0F0E0D 100%); border: 1px solid rgba(251, 175, 59, 0.3);
-        border-radius: 30px; padding: 35px 25px; width: 100%; max-width: 360px; margin: 20px auto; text-align: center;
-        box-shadow: 0 30px 60px -20px rgba(0,0,0,0.5); position: relative; overflow: hidden;
+        background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 28px; padding: 35px 25px; width: 100%; max-width: 360px; margin: 20px auto; text-align: center;
+        box-shadow: 0 25px 50px -15px rgba(15, 23, 42, 0.4); position: relative; overflow: hidden;
     }
     .credencial-feten::before {
         content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px;
-        background: linear-gradient(90deg, #FBAF3B, #B4713F);
+        background: linear-gradient(90deg, #4F46E5, #06B6D4);
     }
-    .credencial-logo-img { width: 95px; margin-bottom: 20px; filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.6)); mix-blend-mode: screen;}
-    .credencial-img { width: 110px; height: 110px; border-radius: 50%; border: 3px solid #FBAF3B; margin-bottom: 18px; object-fit: cover; box-shadow: 0 8px 20px rgba(0,0,0,0.4);}
+    .credencial-logo-img { width: 90px; margin-bottom: 20px; filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.6)); mix-blend-mode: screen;}
+    .credencial-img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #6366F1; margin-bottom: 16px; object-fit: cover; box-shadow: 0 8px 20px rgba(0,0,0,0.3);}
     .credencial-name { font-size: 22px; font-weight: 800; margin: 0; color: #FFFFFF !important;}
-    .credencial-role { font-size: 11px; color: #FBAF3B !important; margin-top: 6px; margin-bottom: 22px; text-transform: uppercase; letter-spacing: 3.5px; font-weight: 700;}
-    .qr-box { background: white; padding: 12px; border-radius: 16px; display: inline-block; margin-bottom: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);}
-    .credencial-id-box { background: rgba(255,255,255,0.06); padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); }
-    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 15px; letter-spacing: 4px; color: #FBAF3B !important;}
+    .credencial-role { font-size: 11px; color: #818CF8 !important; margin-top: 6px; margin-bottom: 22px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700;}
+    .qr-box { background: white; padding: 10px; border-radius: 14px; display: inline-block; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);}
+    .credencial-id-box { background: rgba(255,255,255,0.06); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
+    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 15px; letter-spacing: 4px; color: #38BDF8 !important;}
     
-    /* Métricas con diseño actual */
-    [data-testid="stMetricValue"] { color: #9A5B2C !important; font-size: 2.3rem !important; font-weight: 800 !important; }
-    [data-testid="stMetricLabel"] { color: #7A7067 !important; text-transform: uppercase !important; letter-spacing: 1.2px !important; font-size: 0.75rem !important; font-weight: 700 !important; }
+    /* Métricas diseño corporativo */
+    [data-testid="stMetricValue"] { color: #4F46E5 !important; font-size: 2.2rem !important; font-weight: 800 !important; }
+    [data-testid="stMetricLabel"] { color: #64748B !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 700 !important; }
 
-    /* Adaptabilidad total para celulares */
+    /* Adaptabilidad total celulares */
     @media (max-width: 768px) {
         [data-testid="column"] {
             width: 100% !important;
@@ -214,7 +223,7 @@ inicializar_bd()
 if "ruta" not in st.session_state: st.session_state["ruta"] = "Inicio"
 if "proyecto_activo" not in st.session_state: st.session_state["proyecto_activo"] = None
 
-# --- 4. VENTANAS EMERGENTES (MODALES COMPLETOS) ---
+# --- 4. MODALES COMPLETOS DE GESTIÓN ---
 @st.dialog("✦ Nueva Tarea Kanban")
 def ventana_kanban(proyecto, autor):
     tarea = st.text_input("Descripción de la Tarea")
@@ -543,7 +552,7 @@ def ventana_checkout(proyecto):
             st.success(f"**Subtotal: ${total_r:,.2f} / jornada**")
             link_rental = next((d["url"] for d in directorio if d["nombre"] == r_name), None)
             if link_rental:
-                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%); color:white; padding:10px 15px; text-decoration:none; border-radius:8px; font-weight:bold; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%); color:white; padding:10px 15px; text-decoration:none; border-radius:8px; font-weight:bold; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
 
 @st.dialog("⚠️ Purga de Base de Datos")
 def ventana_vaciar_comparador(proyecto):
@@ -562,8 +571,8 @@ if st.session_state["usuario_logueado"] is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
-        st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' width='240' class='logo-blend' style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h4 style='text-align: center; color: #7A7067 !important; letter-spacing: 4px; font-weight: 500; margin-top: -15px;'>WORKSPACE</h4>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' width='220' class='logo-blend' style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; color: #64748B !important; letter-spacing: 4px; font-weight: 500; margin-top: -15px;'>WORKSPACE PRO</h4>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
         tab_login, tab_registro = st.tabs(["Autenticación", "Solicitar Acceso"])
@@ -616,7 +625,7 @@ else:
                 st.session_state["ruta"] = "Inicio"
                 st.rerun()
         else:
-            st.markdown(f"<img src='{LOGO_URL}' height='45' class='logo-blend' style='margin-top:5px;'>", unsafe_allow_html=True)
+            st.markdown(f"<img src='{LOGO_URL}' height='40' class='logo-blend' style='margin-top:5px;'>", unsafe_allow_html=True)
             
     with c_head_right:
         foto_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
@@ -634,7 +643,7 @@ else:
             <div class="welcome-card">
                 <div>
                     <h1 style='margin:0; font-size: 1.8rem;'>¡Hola, {mis_datos['nombre']}!</h1>
-                    <p style='color:#9A5B2C !important; font-weight:600; font-size:1rem; margin:0;'>{rol_actual.upper()}</p>
+                    <p style='color:#4F46E5 !important; font-weight:600; font-size:1rem; margin:0;'>{rol_actual.upper()}</p>
                 </div>
                 <div style='text-align:right;'>
                     <span style='font-size:24px;'>🎬</span>
@@ -688,15 +697,15 @@ else:
             for rec in reversed(recordatorios):
                 if rec["tipo"] == "Global (Toda la Productora)" or rec["autor"] == mis_datos["nombre"]:
                     with st.container(border=True):
-                        st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:bold;'>{rec['fecha']}</span>", unsafe_allow_html=True)
-                        st.markdown(f"<div style='font-weight:700; font-size:14px; color:#2D2926;'>{rec['titulo']}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='color:#6366F1; font-size:11px; font-weight:bold;'>{rec['fecha']}</span>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-weight:700; font-size:14px; color:#0F172A;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
     # ==========================================
-    # VISTA 2: PERFIL Y CREDENCIAL VIP (RESTAURADO COMPLETO)
+    # VISTA 2: PERFIL Y CREDENCIAL VIP (TODO INCLUIDO)
     # ==========================================
     elif st.session_state["ruta"] == "Perfil":
         st.markdown("<div class='section-title-card'>⚙ CONFIGURACIÓN DE CUENTA Y ACCESOS</div>", unsafe_allow_html=True)
-        tab_misdatos, tab_cred, tab_dir, tab_admin = st.tabs(["Mi Perfil", "Credencial VIP con QR", "Directorio y Amigos", "Administración de Usuarios"])
+        tab_misdatos, tab_cred, tab_dir, tab_admin = st.tabs(["Mi Perfil", "Credencial VIP con QR", "Directorio Corporativo", "Administración de Usuarios"])
         
         with tab_misdatos:
             with st.container(border=True):
@@ -767,11 +776,11 @@ else:
                             f_usr = f"data:image/jpeg;base64,{info['foto']}" if info.get("foto") else "https://via.placeholder.com/150"
                             st.markdown(f"<img src='{f_usr}' class='avatar-circle' style='width:45px;height:45px;'>", unsafe_allow_html=True)
                         with colD2:
-                            st.markdown(f"<h4 style='margin:0; font-size:15px;'>{info['nombre']} <span style='color:#9A5B2C;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
+                            st.markdown(f"<h4 style='margin:0; font-size:15px;'>{info['nombre']} <span style='color:#4F46E5;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
                             st.caption(f"Contacto: {em} | Especialidad: {info.get('roles_fav', 'No especificada')}")
                         with colD3:
                             if info.get('portfolio'):
-                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#9A5B2C;'>Ver Portafolio</a>", unsafe_allow_html=True)
+                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#4F46E5;'>Ver Portafolio</a>", unsafe_allow_html=True)
 
         with tab_admin:
             st.markdown("### Gestión de Accesos y Solicitudes de Usuarios")
@@ -789,7 +798,7 @@ else:
                         guardar_y_recargar()
 
     # ==========================================
-    # VISTA 3: PROYECTO (USANDO OPTION_MENU)
+    # VISTA 3: PROYECTO (CON LAS 6 NUEVAS FUNCIONES EXCLUSIVAS)
     # ==========================================
     elif st.session_state["ruta"] == "Proyecto":
         proyecto_elegido = st.session_state["proyecto_activo"]
@@ -807,8 +816,19 @@ else:
             opciones_nav.append("Solicitar a Prod.")
             iconos_nav.append("send")
             
-        opciones_nav.extend(["Bandeja Prod.", "Rentals IA", "Archivos", "Tablón", "Enlaces", "Permisos", "Presupuesto", "Scouting", "Base Crew", "Casting", "Catering", "Desglose", "Laboratorio Guion", "Inventario", "Plan Rodaje", "Monitor DIR", "Luces (Canvas)", "Ref. IA", "Arte & Vestuario", "Log Sonido", "Raccord"])
-        iconos_nav.extend(["inbox", "shop", "folder2-open", "megaphone", "link-45deg", "shield-lock", "wallet2", "geo-alt", "people", "person-video", "cup-hot", "card-text", "pen", "box", "calendar-event", "camera-reels", "lightbulb", "cpu", "palette", "headphones", "film"])
+        opciones_nav.extend([
+            "Bandeja Prod.", "Rentals IA", "Archivos", "Tablón", "Enlaces", "Permisos", "Presupuesto", "Scouting", 
+            "Base Crew", "Casting", "Catering", "Desglose", "Laboratorio Guion", "Inventario", "Plan Rodaje", 
+            "Monitor DIR", "Luces (Canvas)", "Ref. IA", "Arte & Vestuario", "Log Sonido", "Raccord",
+            "🎨 IA: Moodboard Dinámico", "🎨 IA: Auditor de Anacronismos", "🎨 IA: Guía de Utilería DIY",
+            "🎧 IA: Analizador Espectral", "🎧 IA: Matriz de Ruido", "🎧 IA: Sugerente Foley"
+        ])
+        iconos_nav.extend([
+            "inbox", "shop", "folder2-open", "megaphone", "link-45deg", "shield-lock", "wallet2", "geo-alt", 
+            "people", "person-video", "cup-hot", "card-text", "pen", "box", "calendar-event", 
+            "camera-reels", "lightbulb", "cpu", "palette", "headphones", "film",
+            "magic", "shield-check", "hammer", "soundwave", "volume-up", "mic"
+        ])
         
         nav_final = []
         iconos_final = []
@@ -828,10 +848,10 @@ else:
             elif rol_actual == "Dirección de Fotografía" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Luces (Canvas)", "Ref. IA", "Inventario", "Archivos", "Tablón", "Enlaces"]:
                 nav_final.append(op)
                 iconos_final.append(ic)
-            elif rol_actual == "Dirección de Arte" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Arte & Vestuario", "Inventario", "Archivos", "Tablón", "Enlaces"]:
+            elif rol_actual == "Dirección de Arte" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Arte & Vestuario", "Inventario", "Archivos", "Tablón", "Enlaces", "🎨 IA: Moodboard Dinámico", "🎨 IA: Auditor de Anacronismos", "🎨 IA: Guía de Utilería DIY"]:
                 nav_final.append(op)
                 iconos_final.append(ic)
-            elif "Sonido" in rol_actual and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Log Sonido", "Inventario", "Archivos", "Tablón", "Enlaces"]:
+            elif "Sonido" in rol_actual and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Log Sonido", "Inventario", "Archivos", "Tablón", "Enlaces", "🎧 IA: Analizador Espectral", "🎧 IA: Matriz de Ruido", "🎧 IA: Sugerente Foley"]:
                 nav_final.append(op)
                 iconos_final.append(ic)
             elif rol_actual == "Continuidad" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Raccord", "Archivos", "Tablón", "Enlaces"]:
@@ -849,11 +869,11 @@ else:
             seccion_elegida = option_menu(
                 menu_title="DEPARTAMENTOS", options=nav_final, icons=iconos_final, menu_icon="cast", default_index=0,
                 styles={
-                    "container": {"padding": "10px", "background-color": "#FFFFFF", "border-radius": "16px", "border": "1px solid #E6E1D6"},
-                    "icon": {"color": "#FBAF3B", "font-size": "15px"},
-                    "menu-title": {"color": "#7A7067", "font-size": "11px", "letter-spacing": "2px", "font-weight": "800"},
-                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "2px 0", "color": "#3D3630", "border-radius": "8px", "padding": "8px"},
-                    "nav-link-selected": {"background-color": "rgba(251, 175, 59, 0.15)", "color": "#9A5B2C", "font-weight": "700", "border-left": "4px solid #FBAF3B"},
+                    "container": {"padding": "10px", "background-color": "#FFFFFF", "border-radius": "16px", "border": "1px solid #E2E8F0"},
+                    "icon": {"color": "#6366F1", "font-size": "15px"},
+                    "menu-title": {"color": "#64748B", "font-size": "11px", "letter-spacing": "2px", "font-weight": "800"},
+                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "2px 0", "color": "#1E293B", "border-radius": "8px", "padding": "8px"},
+                    "nav-link-selected": {"background-color": "rgba(99, 102, 241, 0.12)", "color": "#4F46E5", "font-weight": "700", "border-left": "4px solid #6366F1"},
                 }
             )
         
@@ -872,8 +892,8 @@ else:
                         modelo = genai.GenerativeModel('gemini-1.5-flash')
                         datos = f"Avisos: {p_data.get('avisos', [])} | Locaciones: {p_data.get('locaciones', [])}"
                         prompt = f"Sos Productor. Proyecto: {proyecto_elegido}. Datos: {datos}. Redactá un Call Sheet profesional en Markdown."
-                        st.markdown(f"<div style='background:#F9F7F2; padding:15px; border-radius:12px; border: 1px solid #E6E1D6; overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
-                    except: st.error("Falta configurar la API Key de Gemini en Secrets.")
+                        st.markdown(f"<div style='background:#F8FAFC; padding:15px; border-radius:12px; border: 1px solid #E2E8F0; overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
+                    except: st.error("Falta API Key Gemini.")
 
             elif seccion_elegida == "Tablero Kanban":
                 c1, c2 = st.columns([2.5, 1])
@@ -976,13 +996,13 @@ else:
                             total_cart += item["precio"]
                             with cols_cart[i % 2]:
                                 with st.container(border=True):
-                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#9A5B2C; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:13px; color:#2D2926;'>{item['nombre'][:25]}...</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#4F46E5; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:13px; color:#0F172A;'>{item['nombre'][:25]}...</p>", unsafe_allow_html=True)
                                     st.markdown(f"**${item['precio']:,.2f}**")
                                     if st.button("Remover", key=f"quit_cart_{i}", use_container_width=True):
                                         p_data["carrito_rentals"].pop(i)
                                         guardar_y_recargar()
-                        st.markdown(f"<h4 style='text-align:right; color:#9A5B2C; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
+                        st.markdown(f"<h4 style='text-align:right; color:#4F46E5; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
                 
                 st.markdown("### Base Analizada")
                 rentals_lista = p_data.get("comparador_rentals", [])
@@ -999,10 +1019,10 @@ else:
                             with cols[i % 2]:
                                 with st.container(border=True):
                                     if r["precio"] == menor_precio and r["precio"] > 0:
-                                        st.markdown("<span style='background:rgba(251,175,59,0.2); border: 1px solid #FBAF3B; color:#9A5B2C; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#9A5B2C; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:13px; color:#2D2926;'>{r['nombre']}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<h3 style='margin:0; color:#9A5B2C; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
+                                        st.markdown("<span style='background:rgba(99, 102, 241, 0.12); border: 1px solid #6366F1; color:#4F46E5; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#4F46E5; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:13px; color:#0F172A;'>{r['nombre']}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<h3 style='margin:0; color:#4F46E5; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
                                     c_add, c_del = st.columns(2)
                                     if c_add.button("Añadir", key=f"add_{idx_orig}", use_container_width=True, type="primary"):
                                         p_data["carrito_rentals"].append(r)
@@ -1076,7 +1096,7 @@ else:
                 if p_data.get("presupuesto"):
                     df_presupuesto = pd.DataFrame(p_data["presupuesto"])
                     total = df_presupuesto['costo'].sum()
-                    st.markdown(f"<h3 style='color:#9A5B2C; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
+                    st.markdown(f"<h3 style='color:#4F46E5; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
                     fig = px.pie(df_presupuesto, values='costo', names='area', title='Distribución', color_discrete_sequence=px.colors.sequential.YlOrBr)
                     st.plotly_chart(fig, use_container_width=True)
                     st.download_button("Exportar CSV", data=df_presupuesto.to_csv(index=False).encode('utf-8'), file_name="budget.csv", mime="text/csv", use_container_width=True)
@@ -1226,3 +1246,107 @@ else:
                 st.divider()
                 for nota in reversed(p_data["continuidad"]):
                     with st.container(border=True): st.markdown(f"**ESC {nota['escena']} - T {nota['toma']}**<br>{nota['detalle']}", unsafe_allow_html=True)
+
+            # ==========================================
+            # 🎨 LAS 3 NUEVAS FUNCIONES DE ARTE CON IA
+            # ==========================================
+            elif seccion_elegida == "🎨 IA: Moodboard Dinámico":
+                st.markdown("<h2>🎨 Moodboard Dinámico por IA</h2>", unsafe_allow_html=True)
+                st.caption("Sube una foto de referencia y la IA generará una paleta de colores y texturas sugeridas.")
+                img_mb = st.file_uploader("Subir foto de referencia estética", type=["jpg", "png", "jpeg"], key="mb_upl")
+                if img_mb and st.button("Generar Paleta y Estética", use_container_width=True):
+                    with st.spinner("Analizando matices visuales..."):
+                        try:
+                            img = Image.open(img_mb)
+                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                            mod = genai.GenerativeModel('gemini-1.5-flash')
+                            resp = mod.generate_content([
+                                "Analiza esta imagen y describe detalladamente 4 códigos de color HEX sugeridos para ambientación de set, texturas de paredes recomendadas y materialidad de los muebles en formato profesional.",
+                                img
+                            ])
+                            st.success("Análisis Estético Completado:")
+                            st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                        except Exception as e: st.error(f"Error: {e}")
+
+            elif seccion_elegida == "🎨 IA: Auditor de Anacronismos":
+                st.markdown("<h2>🎨 Auditor de Anacronismos Históricos</h2>", unsafe_allow_html=True)
+                st.caption("Verifica si un objeto de utilería pertenece a la época exacta de tu guion.")
+                epoca_set = st.text_input("Época de ambientación (Ej: Buenos Aires en 1930)")
+                img_ut = st.file_uploader("Foto del objeto de utilería", type=["jpg", "png", "jpeg"], key="ut_upl")
+                if img_ut and st.button("Auditar Objeto", use_container_width=True):
+                    if epoca_set:
+                        with st.spinner("Verificando registros históricos..."):
+                            try:
+                                img = Image.open(img_ut)
+                                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                mod = genai.GenerativeModel('gemini-1.5-flash')
+                                resp = mod.generate_content([
+                                    f"Actúa como historiador de arte y utilero mayor. Analiza si este objeto es anacrónico para una producción ambientada en '{epoca_set}'. Indica si se puede usar, qué detalles cambiar o si hay un error evidente.",
+                                    img
+                                ])
+                                st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                            except Exception as e: st.error(f"Error: {e}")
+
+            elif seccion_elegida == "🎨 IA: Guía de Utilería DIY":
+                st.markdown("<h2>🎨 Guía de Utilería DIY (Hazlo Tu Mismo)</h2>", unsafe_allow_html=True)
+                st.caption("Diseña elementos de diseño de producción de bajo costo con materiales caseros.")
+                objeto_deseado = st.text_input("¿Qué elemento necesitas fabricar? (Ej: Un libro antiguo encuadernado en cuero)")
+                if st.button("Generar Instructivo de Fabricación", use_container_width=True):
+                    if objeto_deseado:
+                        with st.spinner("Diseñando guía de taller..."):
+                            try:
+                                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                mod = genai.GenerativeModel('gemini-1.5-flash')
+                                resp = mod.generate_content(f"Actúa como jefe de construcciones y escenógrafo. Crea una guía paso a paso para fabricar artesanalmente el objeto '{objeto_deseado}' con materiales económicos de ferretería o papelería, indicando tiempo estimado y herramientas necesarias.")
+                                st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                            except Exception as e: st.error(f"Error: {e}")
+
+            # ==========================================
+            # 🎧 LAS 3 NUEVAS FUNCIONES DE SONIDO
+            # ==========================================
+            elif seccion_elegida == "🎧 IA: Analizador Espectral":
+                st.markdown("<h2>🎧 Analizador Espectral Acústico</h2>", unsafe_allow_html=True)
+                st.caption("Sube un archivo de audio para visualizar su espectrograma y detectar zumbidos.")
+                audio_file = st.file_uploader("Archivo de audio (WAV / MP3)", type=["wav", "mp3"], key="aud_spec")
+                if audio_file:
+                    if st.button("Renderizar Espectrograma", use_container_width=True):
+                        with st.spinner("Calculando frecuencias..."):
+                            try:
+                                y, sr = librosa.load(audio_file, sr=None)
+                                D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
+                                fig, ax = plt.subplots(figsize=(10, 4))
+                                img = librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log', ax=ax, cmap='magma')
+                                fig.colorbar(img, ax=ax, format='%+2.0f dB')
+                                ax.set_title('Espectrograma de Frecuencias')
+                                st.pyplot(fig)
+                                st.success("Análisis espectral finalizado con éxito.")
+                            except Exception as e: st.error(f"Error al procesar audio: {e}")
+
+            elif seccion_elegida == "🎧 IA: Matriz de Ruido":
+                st.markdown("<h2>🎧 Matriz de Aislamiento Acústico (STI)</h2>", unsafe_allow_html=True)
+                st.caption("Calcula el aislamiento necesario en una locación ruidosa.")
+                col_m1, col_m2 = st.columns(2)
+                fuente_ruido = col_m1.selectbox("Fuente de contaminación sonora cercana", ["Tráfico Autopista", "Aviones / Zona Aérea", "Obradores / Construcción", "Café / Zona Urbana"])
+                distancia_mt = col_m2.number_input("Distancia a la fuente (metros)", min_value=1, value=20)
+                if st.button("Calcular Plan de Mitigación", use_container_width=True):
+                    with st.spinner("Evaluando rebotes de onda..."):
+                        try:
+                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                            mod = genai.GenerativeModel('gemini-1.5-flash')
+                            resp = mod.generate_content(f"Actúa como sonidista de rodaje y consultor acústico. Una locación está a {distancia_mt} metros de '{fuente_ruido}'. ¿Qué nivel estimado de insonorización se requiere y qué soluciones prácticas (gobos, mantas, puertas trampa) debe aplicar el equipo de sonido?")
+                            st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                        except Exception as e: st.error(f"Error: {e}")
+
+            elif seccion_elegida == "🎧 IA: Sugerente Foley":
+                st.markdown("<h2>🎧 Sugerente de Foley por IA</h2>", unsafe_allow_html=True)
+                st.caption("Describe una acción y obtén la lista exacta de efectos de sala (Foley) requeridos.")
+                accion_escena = st.text_input("Acción visual en la escena (Ej: Un pistolero entra a un salón polvoriento y saca su arma)")
+                if st.button("Generar Lista de Foley", use_container_width=True):
+                    if accion_escena:
+                        with st.spinner("Diseñando plan de sala de grabaciones..."):
+                            try:
+                                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                mod = genai.GenerativeModel('gemini-1.5-flash')
+                                resp = mod.generate_content(f"Actúa como editor de sonido y artista de Foley. Para la siguiente acción en pantalla: '{accion_escena}', enumera la lista exacta de efectos de sala que deben grabarse, especificando materiales de calzado, telas, utilería de fricción y texturas necesarias.")
+                                st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                            except Exception as e: st.error(f"Error: {e}")
