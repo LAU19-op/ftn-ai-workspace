@@ -13,9 +13,11 @@ from datetime import datetime, date
 import random
 
 # --- 1. CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Fetén Workspace", page_icon="✦", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Fetén Workspace", page_icon="☀", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 2. DISEÑO UI/UX PREMIUM (OBSIDIAN & GLASS) + ANIMACIONES ---
+LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
+
+# --- 2. DISEÑO UI/UX "STUDIO IVORY" (ADAPTADO AL LOGO) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -30,123 +32,132 @@ st.markdown("""
     
     /* Animación de entrada general */
     @keyframes fadeUp {
-        0% { opacity: 0; transform: translateY(20px); }
+        0% { opacity: 0; transform: translateY(15px); }
         100% { opacity: 1; transform: translateY(0); }
     }
     .block-container {
         animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    /* Fondo Obsidian Dark */
+    /* Fondo Studio Ivory (Claro, cálido, orgánico) */
     .stApp {
-        background-color: #09090b !important;
-        background-image: radial-gradient(circle at 50% -20%, rgba(79, 70, 229, 0.15) 0%, transparent 70%) !important;
-        color: #e2e8f0 !important;
+        background-color: #FDFCF8 !important;
+        background-image: radial-gradient(circle at 50% 0%, rgba(251, 175, 59, 0.05) 0%, transparent 60%) !important;
+        color: #332F2C !important;
     }
 
-    /* Títulos Elegantes */
+    /* Títulos Orgánicos */
     h1, h2 {
-        background: -webkit-linear-gradient(0deg, #c7d2fe, #818cf8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #B4713F !important; /* Marrón del logo */
         font-weight: 800 !important;
         letter-spacing: -1px !important;
     }
-    h3, h4 { color: #f8fafc !important; font-weight: 600 !important; }
-    p, span, div { color: #94a3b8 !important; }
+    h3, h4 { color: #2D2926 !important; font-weight: 700 !important; }
+    p, span, div { color: #4A4541 !important; } /* Texto base gris cálido */
 
-    /* Tarjetas Modulares (Casilleros redondeados y de otro color) */
+    /* Tarjetas Modulares (Blancas con sombras suaves cálidas) */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #111116 !important; /* Color ligeramente más claro que el fondo */
-        border: 1px solid #23232f !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #EBE8E0 !important;
         border-radius: 20px !important;
         padding: 1.5rem !important;
-        box-shadow: 0 10px 30px -15px rgba(0,0,0,0.7) !important;
+        box-shadow: 0 10px 30px -15px rgba(180, 113, 63, 0.15) !important;
         transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: #4f46e5 !important;
+        border-color: #FBAF3B !important; /* Amarillo del logo */
         transform: translateY(-4px) !important;
-        box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.2) !important;
+        box-shadow: 0 15px 40px -10px rgba(251, 175, 59, 0.25) !important;
     }
     
-    /* Inputs minimalistas */
+    /* Inputs minimalistas claros */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input {
-        background-color: #0d0d12 !important;
-        border: 1px solid #2a2a35 !important;
-        color: white !important;
+        background-color: #F9F8F4 !important;
+        border: 1px solid #EBE8E0 !important;
+        color: #332F2C !important;
         border-radius: 12px !important;
         padding: 12px 16px !important;
         transition: all 0.3s ease !important;
     }
     .stTextInput input:focus, .stSelectbox select:focus {
-        border-color: #6366f1 !important;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+        border-color: #B4713F !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 0 0 3px rgba(180, 113, 63, 0.15) !important;
     }
     
-    /* Botones de alta conversión */
+    /* Botones de alta conversión (Estilo Sol/Tierra) */
     .stButton button {
-        background: linear-gradient(180deg, #4f46e5 0%, #3730a3 100%) !important;
-        border: 1px solid #4338ca !important;
+        background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%) !important;
+        border: none !important;
         color: white !important;
         border-radius: 12px !important;
         font-weight: 600 !important;
         letter-spacing: 0.5px !important;
         padding: 0.6rem 1.2rem !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(55, 48, 163, 0.4) !important;
+        box-shadow: 0 6px 15px rgba(180, 113, 63, 0.3) !important;
     }
     .stButton button:hover {
-        background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%) !important;
+        background: linear-gradient(135deg, #FFC15E 0%, #C7824E 100%) !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5) !important;
-        border-color: #818cf8 !important;
+        box-shadow: 0 8px 20px rgba(251, 175, 59, 0.4) !important;
     }
     .stButton button p { color: white !important; font-weight: 600 !important; }
 
-    /* Avatares y Animación de Perfil */
+    /* Botones Secundarios (Outline) */
+    [data-testid="stBaseButton-secondary"] {
+        background: transparent !important;
+        border: 2px solid #EBE8E0 !important;
+        color: #B4713F !important;
+        box-shadow: none !important;
+    }
+    [data-testid="stBaseButton-secondary"]:hover {
+        border-color: #B4713F !important;
+        background: rgba(180, 113, 63, 0.05) !important;
+    }
+    [data-testid="stBaseButton-secondary"] p { color: #B4713F !important; }
+
+    /* Avatares */
     .avatar-circle {
         border-radius: 50%; object-fit: cover;
         width: 55px; height: 55px;
-        border: 2px solid #6366f1;
-        box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: 3px solid #FBAF3B;
+        box-shadow: 0 4px 10px rgba(180, 113, 63, 0.2);
+        transition: transform 0.3s ease;
     }
-    .avatar-circle:hover { 
-        transform: scale(1.1) rotate(5deg); 
-        box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
-    }
+    .avatar-circle:hover { transform: scale(1.08) rotate(3deg); }
     
-    /* Credencial VIP (Levitación 3D) */
+    /* Credencial VIP (Contraste oscuro para que resalte) */
     @keyframes cardFloat {
         0%, 100% { transform: translateY(0) rotateX(0); }
-        50% { transform: translateY(-10px) rotateX(2deg); }
+        50% { transform: translateY(-8px) rotateX(2deg); }
     }
     .credencial-feten {
-        background: linear-gradient(135deg, #111116 0%, #1a1a24 100%);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background: linear-gradient(135deg, #2D2926 0%, #1A1816 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 24px; padding: 40px 30px; width: 100%; max-width: 380px;
         margin: 20px auto; text-align: center;
-        box-shadow: 0 30px 60px -15px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.1);
+        box-shadow: 0 25px 50px -15px rgba(0,0,0,0.4);
         position: relative; overflow: hidden;
         animation: cardFloat 6s ease-in-out infinite;
     }
-    .credencial-feten::after {
-        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 50%);
-        pointer-events: none; transform: rotate(30deg);
-    }
-    .credencial-logo { font-size: 15px; font-weight: 800; letter-spacing: 6px; color: #6366f1; margin-bottom: 25px; text-transform: uppercase;}
-    .credencial-img { width: 130px; height: 130px; border-radius: 50%; border: 3px solid #2a2a35; margin-bottom: 20px; object-fit: cover; box-shadow: 0 10px 25px rgba(0,0,0,0.8);}
-    .credencial-name { font-size: 26px; font-weight: 800; margin: 0; color: white !important;}
-    .credencial-role { font-size: 12px; color: #818cf8 !important; margin-top: 5px; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 3px;}
-    .credencial-id-box { background: rgba(0,0,0,0.5); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
-    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 18px; letter-spacing: 4px; color: #a5b4fc !important;}
+    .credencial-logo-img { width: 100px; margin-bottom: 20px; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5));}
+    .credencial-img { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #FBAF3B; margin-bottom: 20px; object-fit: cover; box-shadow: 0 8px 20px rgba(0,0,0,0.5);}
+    .credencial-name { font-size: 26px; font-weight: 800; margin: 0; color: #FDFCF8 !important;}
+    .credencial-role { font-size: 12px; color: #FBAF3B !important; margin-top: 5px; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 3px;}
+    .credencial-id-box { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 18px; letter-spacing: 4px; color: #FFFFFF !important;}
     
     /* Métricas Dashboard */
-    [data-testid="stMetricValue"] { color: #818cf8 !important; font-size: 2.8rem !important; font-weight: 800 !important; }
-    [data-testid="stMetricLabel"] { color: #64748b !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.8rem !important; }
+    [data-testid="stMetricValue"] { color: #B4713F !important; font-size: 2.8rem !important; font-weight: 800 !important; }
+    [data-testid="stMetricLabel"] { color: #8A8179 !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.8rem !important; }
+    
+    /* Dialogs/Modales */
+    div[data-testid="stDialog"] > div {
+        background-color: #FDFCF8 !important;
+        border-radius: 20px;
+        border: 1px solid #EBE8E0;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -163,7 +174,6 @@ def inicializar_bd():
         if os.path.exists(ARCHIVO_BD):
             with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
                 data_cargada = json.load(f)
-                
                 if "_CONFIG_" not in data_cargada:
                     data_cargada["_CONFIG_"] = {
                         "usuarios": {
@@ -173,9 +183,7 @@ def inicializar_bd():
                             }
                         }, "recordatorios": []
                     }
-                
                 if "recordatorios" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["recordatorios"] = []
-                
                 claves_necesarias = [
                     "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
                     "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
@@ -199,7 +207,6 @@ def inicializar_bd():
                     if "contexto_aprobado" not in datos_proy: datos_proy["contexto_aprobado"] = "Proyecto actualizado."
                     for clave in claves_necesarias:
                         if clave not in datos_proy: datos_proy[clave] = []
-                            
                 st.session_state["proyectos"] = data_cargada
         else:
             st.session_state["proyectos"] = {
@@ -544,7 +551,7 @@ def ventana_checkout(proyecto):
             st.success(f"**Subtotal: ${total_r:,.2f} / jornada**")
             link_rental = next((d["url"] for d in directorio if d["nombre"] == r_name), None)
             if link_rental:
-                st.markdown(f"<a href='{link_rental}' target='_blank' style='background-color:#4f46e5; color:white; padding:10px 15px; text-decoration:none; border-radius:8px; font-weight:bold; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%); color:white; padding:10px 15px; text-decoration:none; border-radius:8px; font-weight:bold; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
 
 @st.dialog("⚠️ Purga de Base de Datos")
 def ventana_vaciar_comparador(proyecto):
@@ -558,12 +565,13 @@ def ventana_vaciar_comparador(proyecto):
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-# --- 6. PANTALLA DE ACCESO Y REGISTRO ---
+# --- 6. PANTALLA DE ACCESO Y REGISTRO (CON LOGO OFICIAL) ---
 if st.session_state["usuario_logueado"] is None:
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
-        st.markdown("<h1 style='text-align: center; font-size: 3rem;'>Fetén<span style='color: #6366f1;'>.</span></h1>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' width='250' style='margin-bottom: 20px; drop-shadow(0px 4px 10px rgba(0,0,0,0.1));'></div>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; color: #8A8179 !important; letter-spacing: 3px; font-weight: 500; margin-top: -15px;'>WORKSPACE</h4>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
         tab_login, tab_registro = st.tabs(["Autenticación", "Solicitar Acceso"])
@@ -624,7 +632,7 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
-    # --- NAVBAR MINIMALISTA ---
+    # --- NAVBAR CON LOGO ---
     c_head_left, c_head_space, c_head_right = st.columns([2, 5, 1])
     with c_head_left:
         if st.session_state["ruta"] != "Inicio":
@@ -632,7 +640,7 @@ else:
                 st.session_state["ruta"] = "Inicio"
                 st.rerun()
         else:
-            st.markdown("<h3 style='margin:0; padding-top:10px;'>Fetén Workspace</h3>", unsafe_allow_html=True)
+            st.markdown(f"<img src='{LOGO_URL}' height='50' style='margin-top:5px;'>", unsafe_allow_html=True)
             
     with c_head_right:
         foto_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
@@ -647,7 +655,7 @@ else:
     # ==========================================
     if st.session_state["ruta"] == "Inicio":
         st.markdown(f"<h1 style='margin-bottom:0px;'>{mis_datos['nombre']}</h1>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#a5b4fc !important; font-weight:600; font-size:1.1rem;'>{rol_actual.upper()}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#B4713F !important; font-weight:600; font-size:1.1rem;'>{rol_actual.upper()}</p>", unsafe_allow_html=True)
         st.markdown("<br><br>", unsafe_allow_html=True)
         
         c_main, c_side = st.columns([2.5, 1])
@@ -691,13 +699,13 @@ else:
             for rec in reversed(recordatorios):
                 if rec["tipo"] == "Global (Toda la Productora)" or rec["autor"] == mis_datos["nombre"]:
                     with st.container(border=True):
-                        color_t = "#818cf8" if "Global" in rec["tipo"] else "#94a3b8"
+                        color_t = "#FBAF3B" if "Global" in rec["tipo"] else "#8A8179"
                         st.markdown(f"<span style='color:{color_t}; font-size:12px; font-weight:bold;'>{rec['fecha']}</span>", unsafe_allow_html=True)
-                        st.markdown(f"<div style='font-weight:600; font-size:15px; color:white;'>{rec['titulo']}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-weight:600; font-size:15px; color:#332F2C;'>{rec['titulo']}</div>", unsafe_allow_html=True)
                         st.caption(f"Asignado por: {rec['autor']}")
 
     # ==========================================
-    # VISTA 2: PERFIL (CON UPDATE DE FOTO)
+    # VISTA 2: PERFIL Y CREDENCIAL
     # ==========================================
     elif st.session_state["ruta"] == "Perfil":
         st.markdown("<h1>Configuración de Cuenta</h1>", unsafe_allow_html=True)
@@ -742,7 +750,8 @@ else:
             foto_cred = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
             st.markdown(f"""
                 <div class="credencial-feten">
-                    <div class="credencial-logo">FETÉN CORP.</div>
+                    <img src="{LOGO_URL}" class="credencial-logo-img">
+                    <br>
                     <img src="{foto_cred}" class="credencial-img">
                     <h2 class="credencial-name">{mis_datos['nombre']}</h2>
                     <p class="credencial-role">{mis_datos['rol']}</p>
@@ -762,7 +771,7 @@ else:
                         with colD1:
                             if info.get("foto"): st.markdown(f"<img src='data:image/jpeg;base64,{info['foto']}' class='avatar-circle' style='width:60px;height:60px;'>", unsafe_allow_html=True)
                         with colD2:
-                            st.markdown(f"<h4 style='margin:0;'>{info['nombre']} <span style='color:#818cf8;font-size:14px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
+                            st.markdown(f"<h4 style='margin:0;'>{info['nombre']} <span style='color:#B4713F;font-size:14px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
                             st.caption(f"**Notas:** {info.get('specs', 'N/A')}")
                             if info.get("portfolio"): st.markdown(f"[⧉ Ver Trabajos]({info['portfolio']})")
 
@@ -827,7 +836,6 @@ else:
                 iconos_nav.append("film")
 
         with col_nav:
-            # MAGIA: Menú lateral profesional
             seccion_elegida = option_menu(
                 menu_title="DEPARTAMENTOS",
                 options=opciones_nav,
@@ -835,11 +843,11 @@ else:
                 menu_icon="cast",
                 default_index=0,
                 styles={
-                    "container": {"padding": "10px", "background-color": "#111116", "border-radius": "16px", "border": "1px solid #23232f"},
-                    "icon": {"color": "#818cf8", "font-size": "16px"},
-                    "menu-title": {"color": "#64748b", "font-size": "12px", "letter-spacing": "2px", "font-weight": "800"},
-                    "nav-link": {"font-size": "14px", "text-align": "left", "margin": "2px 0", "color": "#cbd5e1", "border-radius": "8px", "padding": "10px"},
-                    "nav-link-selected": {"background-color": "rgba(79, 70, 229, 0.2)", "color": "white", "font-weight": "600", "border-left": "4px solid #818cf8"},
+                    "container": {"padding": "10px", "background-color": "#FFFFFF", "border-radius": "16px", "border": "1px solid #EBE8E0"},
+                    "icon": {"color": "#FBAF3B", "font-size": "16px"},
+                    "menu-title": {"color": "#8A8179", "font-size": "12px", "letter-spacing": "2px", "font-weight": "800"},
+                    "nav-link": {"font-size": "14px", "text-align": "left", "margin": "2px 0", "color": "#4A4541", "border-radius": "8px", "padding": "10px"},
+                    "nav-link-selected": {"background-color": "rgba(251, 175, 59, 0.15)", "color": "#B4713F", "font-weight": "700", "border-left": "4px solid #FBAF3B"},
                 }
             )
         
@@ -863,7 +871,7 @@ else:
                             datos = f"Avisos: {p_data['avisos']} | Equipo: {p_data['crew']} | Locaciones: {p_data['locaciones']}"
                             prompt = f"Sos FTN AI. Proyecto: {proyecto_elegido}. Datos: {datos}. Redactá un Call Sheet profesional."
                             with st.spinner("Compilando variables..."):
-                                st.markdown(f"<div style='background:rgba(255,255,255,0.02); padding:20px; border-radius:15px; border: 1px solid #23232f;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='background:#F9F8F4; padding:20px; border-radius:15px; border: 1px solid #EBE8E0;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
                         except: st.error("Falta API Key Gemini.")
 
             elif seccion_elegida == "Solicitar a Prod.":
@@ -922,13 +930,13 @@ else:
                             total_cart += item["precio"]
                             with cols_cart[i % 3]:
                                 with st.container(border=True):
-                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#818cf8; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:14px;'>{item['nombre'][:30]}...</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#B4713F; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:14px; color:#2D2926;'>{item['nombre'][:30]}...</p>", unsafe_allow_html=True)
                                     st.markdown(f"**${item['precio']:,.2f}**")
                                     if st.button("Remover", key=f"quit_cart_{i}", use_container_width=True):
                                         p_data["carrito_rentals"].pop(i)
                                         guardar_y_recargar()
-                        st.markdown(f"<h4 style='text-align:right; color:#c7d2fe;'>Total Estimado: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
+                        st.markdown(f"<h4 style='text-align:right; color:#B4713F;'>Total Estimado: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
                 
                 st.markdown("### Base Analizada")
                 rentals_lista = p_data.get("comparador_rentals", [])
@@ -945,10 +953,10 @@ else:
                             with cols[i % 2]:
                                 with st.container(border=True):
                                     if r["precio"] == menor_precio and r["precio"] > 0:
-                                        st.markdown("<span style='background:rgba(16,185,129,0.2); border: 1px solid #10b981; color:#10b981; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#818cf8; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:14px;'>{r['nombre']}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<h3 style='margin:0; color:#f8fafc; font-size:20px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
+                                        st.markdown("<span style='background:rgba(251,175,59,0.2); border: 1px solid #FBAF3B; color:#B4713F; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#B4713F; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:14px; color:#2D2926;'>{r['nombre']}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<h3 style='margin:0; color:#B4713F; font-size:20px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
                                     c_add, c_del = st.columns(2)
                                     if c_add.button("Añadir", key=f"add_{idx_orig}", use_container_width=True, type="primary"):
                                         p_data["carrito_rentals"].append(r)
@@ -969,7 +977,7 @@ else:
                     grosor = st.slider("Grosor", 1, 10, 3)
                     if st.button("Guardar Diseño"): st.success("Registrado.")
                 with col_c:
-                    st_canvas(fill_color="rgba(255,255,255,0)", stroke_width=grosor, stroke_color=color_mapping[tipo], background_color="#18181b", width=500, height=450, drawing_mode=modo, key="canvas_luces_pro")
+                    st_canvas(fill_color="rgba(255,255,255,0)", stroke_width=grosor, stroke_color=color_mapping[tipo], background_color="#2D2926", width=500, height=450, drawing_mode=modo, key="canvas_luces_pro")
 
             elif seccion_elegida == "Permisos":
                 st.markdown("<h2>Control de Accesos</h2>", unsafe_allow_html=True)
@@ -1002,7 +1010,7 @@ else:
                     if p_data["presupuesto"]: st.download_button("Exportar CSV", data=pd.DataFrame(p_data["presupuesto"]).to_csv(index=False).encode('utf-8'), file_name="budget.csv", mime="text/csv", use_container_width=True)
                 st.divider()
                 total = sum(i['costo'] for i in p_data["presupuesto"])
-                st.markdown(f"<h3 style='color:#10b981;'>Total Comprometido: ${total:,.2f}</h3>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='color:#B4713F;'>Total Comprometido: ${total:,.2f}</h3>", unsafe_allow_html=True)
                 for item in p_data["presupuesto"]:
                     with st.container(border=True): st.markdown(f"**{item['estado']}** | ${item['costo']:,.2f} - {item['item']} ({item['area']})")
 
@@ -1035,7 +1043,7 @@ else:
                     if st.button("✦ Add Slot", use_container_width=True): ventana_cronograma(proyecto_elegido)
                 st.divider()
                 for a in sorted(p_data["plan_rodaje"], key=lambda x: x.get('hora', '00:00')):
-                    with st.container(border=True): st.markdown(f"<h3 style='margin:0; color:#818cf8;'>{a.get('hora', '')}</h3><p style='margin:0; font-size:16px;'>{a['actividad']}</p>", unsafe_allow_html=True)
+                    with st.container(border=True): st.markdown(f"<h3 style='margin:0; color:#B4713F;'>{a.get('hora', '')}</h3><p style='margin:0; font-size:16px;'>{a['actividad']}</p>", unsafe_allow_html=True)
 
             elif seccion_elegida == "Ref. IA":
                 st.markdown("<h2>Laboratorio Visual</h2>", unsafe_allow_html=True)
