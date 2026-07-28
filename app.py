@@ -7,6 +7,7 @@ import base64
 import requests
 from bs4 import BeautifulSoup
 from streamlit_drawable_canvas import st_canvas
+from PIL import Image
 
 # --- 1. CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="FTN AI | Workspace", page_icon="⚡", layout="wide")
@@ -344,50 +345,121 @@ def ventana_desglose(proyecto):
             st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc})
             guardar_y_recargar()
 
-@st.dialog("🕷️ Escanear URL de Rental con IA")
+@st.dialog("➕ Cargar Equipos (URL, Excel o Foto)")
 def ventana_comparador_rental(proyecto):
-    st.write("Pegá el link de una tienda (ej: página de cámaras) y la IA intentará extraer los equipos y precios.")
-    url_rental = st.text_input("🔗 URL del Rental")
+    st.write("Elegí cómo querés extraer los productos y precios usando IA:")
+    tab_url, tab_excel, tab_img = st.tabs(["🔗 Link (URL)", "📊 Excel / CSV", "📸 Imagen / Captura"])
     
-    if st.button("Escanear y Extraer", use_container_width=True):
-        if url_rental:
-            with st.spinner("🤖 Navegando la web y leyendo productos... esto puede demorar unos segundos."):
-                try:
-                    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-                    req = requests.get(url_rental, headers=headers, timeout=15)
-                    
-                    soup = BeautifulSoup(req.text, 'html.parser')
-                    texto_web = soup.get_text(separator=' ', strip=True)[:20000] 
-                    
-                    CLAVE_API = st.secrets["GEMINI_API_KEY"]
-                    genai.configure(api_key=CLAVE_API)
-                    modelo = genai.GenerativeModel('gemini-3.5-flash')
-                    
-                    # PROMPT MEJORADO PARA FORZAR EL PRECIO COMO NÚMERO
-                    prompt = f"""
-                    Actúa como un extractor de datos JSON. Analiza el siguiente texto de una web de alquiler de equipos audiovisuales.
-                    Encuentra todos los equipos y sus precios. 
-                    REGLA OBLIGATORIA PARA EL PRECIO: Extrae solo el valor numérico. Elimina TODOS los símbolos de moneda ($), comas, puntos o letras (ej: si dice "$ 15.000 /día", debes poner el número entero 15000). Si no encuentras ningún precio, pon 0.
-                    Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin formato markdown ni comillas):
-                    [
-                      {{"nombre": "Nombre del equipo", "precio": 15000, "estado": "Disponible", "url": "{url_rental}", "foto": ""}}
-                    ]
-                    Texto web: {texto_web}
-                    """
-                    
-                    respuesta = modelo.generate_content(prompt)
-                    texto_json = respuesta.text.strip().replace("```json", "").replace("```", "")
-                    productos_extraidos = json.loads(texto_json)
-                    
-                    if len(productos_extraidos) > 0:
-                        for prod in productos_extraidos:
-                            st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
-                        guardar_y_recargar()
-                    else:
-                        st.warning("La IA no pudo encontrar productos claros en esta URL.")
+    # --- TAB 1: ESCANEO POR URL ---
+    with tab_url:
+        url_rental = st.text_input("🔗 Pegá la URL del Rental")
+        if st.button("Escanear URL", use_container_width=True):
+            if url_rental:
+                with st.spinner("🤖 Navegando la web y leyendo productos..."):
+                    try:
+                        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                        req = requests.get(url_rental, headers=headers, timeout=15)
+                        soup = BeautifulSoup(req.text, 'html.parser')
+                        texto_web = soup.get_text(separator=' ', strip=True)[:20000] 
                         
-                except Exception as e:
-                    st.error(f"Hubo un error técnico al escanear: {e}")
+                        CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                        genai.configure(api_key=CLAVE_API)
+                        modelo = genai.GenerativeModel('gemini-3.5-flash')
+                        
+                        prompt = f"""
+                        Actúa como un extractor de datos JSON. Analiza el siguiente texto de una web de alquiler.
+                        REGLA DEL PRECIO: Extrae solo el valor numérico. Elimina TODOS los símbolos de moneda, comas, puntos o letras (ej: si dice "$ 15.000 /día", pon 15000). Si no encuentras ningún precio, pon 0.
+                        Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin formato markdown):
+                        [
+                          {{"nombre": "Nombre del equipo", "precio": 15000, "estado": "Disponible", "url": "{url_rental}", "foto": ""}}
+                        ]
+                        Texto web: {texto_web}
+                        """
+                        
+                        respuesta = modelo.generate_content(prompt)
+                        texto_json = respuesta.text.strip().replace("```json", "").replace("```", "")
+                        productos_extraidos = json.loads(texto_json)
+                        
+                        if len(productos_extraidos) > 0:
+                            st.session_state["proyectos"][proyecto]["comparador_rentals"].extend(productos_extraidos)
+                            guardar_y_recargar()
+                        else:
+                            st.warning("La IA no encontró productos claros en esta URL.")
+                    except Exception as e:
+                        st.error(f"Hubo un error al escanear: {e}")
+
+    # --- TAB 2: EXCEL / CSV ---
+    with tab_excel:
+        st.info("Subí una planilla que te haya pasado el rental.")
+        archivo_ex = st.file_uploader("Cargar Excel (.xlsx) o CSV", type=["xlsx", "csv"])
+        if st.button("Procesar Archivo", use_container_width=True):
+            if archivo_ex:
+                with st.spinner("🤖 Leyendo filas y columnas..."):
+                    try:
+                        if archivo_ex.name.endswith('.csv'):
+                            df = pd.read_csv(archivo_ex)
+                        else:
+                            df = pd.read_excel(archivo_ex)
+                        
+                        texto_datos = df.to_csv(index=False)[:20000]
+                        CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                        genai.configure(api_key=CLAVE_API)
+                        modelo = genai.GenerativeModel('gemini-3.5-flash')
+                        
+                        prompt = f"""
+                        Actúa como un extractor de datos JSON. Analiza estos datos extraídos de un Excel/CSV de alquiler.
+                        REGLA DEL PRECIO: Extrae solo el valor numérico (ej: 15000). Si no hay precio, pon 0.
+                        Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin formato markdown):
+                        [
+                          {{"nombre": "Equipo", "precio": 15000, "estado": "Disponible", "url": "N/A", "foto": ""}}
+                        ]
+                        Datos: {texto_datos}
+                        """
+                        respuesta = modelo.generate_content(prompt)
+                        texto_json = respuesta.text.strip().replace("```json", "").replace("```", "")
+                        productos_extraidos = json.loads(texto_json)
+                        
+                        if len(productos_extraidos) > 0:
+                            st.session_state["proyectos"][proyecto]["comparador_rentals"].extend(productos_extraidos)
+                            guardar_y_recargar()
+                        else:
+                            st.warning("No se encontraron productos en el archivo.")
+                    except Exception as e:
+                        st.error(f"Error al leer el archivo: {e}")
+
+    # --- TAB 3: IMAGEN / CAPTURA ---
+    with tab_img:
+        st.info("Subí una foto o captura de pantalla de un catálogo, lista de Instagram o presupuesto.")
+        archivo_img = st.file_uploader("Cargar Imagen", type=["jpg", "png", "jpeg"])
+        if st.button("Analizar Imagen", use_container_width=True):
+            if archivo_img:
+                with st.spinner("🤖 La IA visual está leyendo los productos de la foto..."):
+                    try:
+                        img = Image.open(archivo_img)
+                        CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                        genai.configure(api_key=CLAVE_API)
+                        modelo = genai.GenerativeModel('gemini-3.5-flash')
+                        
+                        prompt = """
+                        Actúa como un extractor de datos JSON. Analiza esta imagen que contiene una lista, catálogo o presupuesto de alquiler de equipos audiovisuales.
+                        Extrae los nombres de los equipos y sus precios. 
+                        REGLA DEL PRECIO: Extrae solo el valor numérico (ej: 15000). Si no hay, pon 0.
+                        Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin formato markdown):
+                        [
+                          {"nombre": "Nombre del equipo", "precio": 15000, "estado": "Disponible", "url": "N/A", "foto": ""}
+                        ]
+                        """
+                        respuesta = modelo.generate_content([prompt, img])
+                        texto_json = respuesta.text.strip().replace("```json", "").replace("```", "")
+                        productos_extraidos = json.loads(texto_json)
+                        
+                        if len(productos_extraidos) > 0:
+                            st.session_state["proyectos"][proyecto]["comparador_rentals"].extend(productos_extraidos)
+                            guardar_y_recargar()
+                        else:
+                            st.warning("No se detectaron equipos o precios en la imagen.")
+                    except Exception as e:
+                        st.error(f"Error al analizar la imagen: {e}")
 
 # --- 4. GESTIÓN DE SESIÓN Y LOGIN LOCAL ---
 
@@ -533,7 +605,7 @@ else:
             colA, colB = st.columns([3, 1])
             with colA: st.markdown("## 🛒 Comparador Inteligente de Rentals")
             with colB:
-                if st.button("🕷️ Escanear URL de Rental", use_container_width=True):
+                if st.button("➕ Cargar Equipos (IA)", use_container_width=True):
                     ventana_comparador_rental(proyecto_elegido)
             st.divider()
             
@@ -555,7 +627,7 @@ else:
                         with st.container(border=True):
                             st.markdown(f"**{item['nombre']}**")
                             st.markdown(f"💰 **${item['precio']:,.2f} / día**")
-                            if item.get('url'):
+                            if item.get('url') and item['url'] != "N/A":
                                 st.markdown(f"[🔗 Ir a alquilar]({item['url']})", unsafe_allow_html=True)
                             if st.button("❌ Quitar", key=f"quit_cart_{i}"):
                                 p_data["carrito_rentals"].pop(i)
@@ -569,7 +641,7 @@ else:
             rentals_lista = p_data.get("comparador_rentals", [])
             
             if not rentals_lista:
-                st.info("No hay rentals cargados. Hacé clic en 'Escanear URL' para extraer productos automáticamente con IA.")
+                st.info("No hay rentals cargados. Hacé clic en 'Cargar Equipos' para extraer productos automáticamente con IA desde un Link, Excel o Foto.")
             else:
                 texto_busqueda = st.text_input("Buscador de equipos (Ej: Lentes, Cámara, Luces)... 🔎", "")
                 
@@ -577,7 +649,7 @@ else:
                 rentals_mostrar = []
                 for idx, r in enumerate(rentals_lista):
                     if texto_busqueda == "" or texto_busqueda.lower() in r['nombre'].lower():
-                        rentals_mostrar.append((idx, r)) # Guardamos el índice original para poder borrarlo
+                        rentals_mostrar.append((idx, r))
                         
                 if not rentals_mostrar:
                     st.warning("No se encontraron equipos con ese nombre.")
