@@ -3,3 +3,4 @@ google-generativeai
 pandas
 streamlit-drawable-canvas
 streamlit-google-auth
+beatifulsoup4
