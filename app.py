@@ -4,6 +4,8 @@ import pandas as pd
 import json
 import os
 import base64
+import requests
+from bs4 import BeautifulSoup
 from streamlit_drawable_canvas import st_canvas
 
 # --- 1. CONFIGURACIÓN INICIAL ---
@@ -346,20 +348,54 @@ def ventana_desglose(proyecto):
             st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc})
             guardar_y_recargar()
 
-@st.dialog("🏬 Agregar Comparación de Rental")
+@st.dialog("🕷️ Escanear URL de Rental con IA")
 def ventana_comparador_rental(proyecto):
-    nombre_rental = st.text_input("Nombre del Rental / Tienda")
-    url_rental = st.text_input("URL del Producto en el Rental")
-    precio = st.number_input("Precio por día ($)", min_value=0.0)
-    estado_stock = st.selectbox("Estado", ["Disponible", "Consultar Stock", "No disponible"])
-    foto_prod = st.file_uploader("Foto del producto", type=["jpg", "png", "jpeg"])
-    if st.button("Agregar a la Comparativa", use_container_width=True):
-        if nombre_rental:
-            foto_b64 = base64.b64encode(foto_prod.read()).decode('utf-8') if foto_prod else None
-            st.session_state["proyectos"][proyecto]["comparador_rentals"].append({
-                "nombre": nombre_rental, "url": url_rental, "precio": precio, "estado": estado_stock, "foto": foto_b64
-            })
-            guardar_y_recargar()
+    st.write("Pegá el link de una tienda (ej: página de cámaras) y la IA intentará extraer los equipos y precios.")
+    url_rental = st.text_input("🔗 URL del Rental")
+    
+    if st.button("Escanear y Extraer", use_container_width=True):
+        if url_rental:
+            with st.spinner("🤖 Navegando la web y leyendo productos... esto puede demorar unos segundos."):
+                try:
+                    # 1. Simulamos ser un navegador para que la web no nos bloquee
+                    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                    req = requests.get(url_rental, headers=headers, timeout=10)
+                    
+                    # 2. Extraemos todo el texto visible de la web
+                    soup = BeautifulSoup(req.text, 'html.parser')
+                    texto_web = soup.get_text(separator=' ', strip=True)[:15000] # Limitamos a 15mil caracteres
+                    
+                    # 3. Le pedimos a la IA que estructure ese desastre de texto
+                    CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                    genai.configure(api_key=CLAVE_API)
+                    modelo = genai.GenerativeModel('gemini-3.5-flash')
+                    
+                    prompt = f"""
+                    Actúa como un extractor de datos JSON. A continuación te paso el texto crudo extraído de una página web de alquiler de equipos de cine.
+                    Encuentra todos los equipos y sus precios. 
+                    Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin markdown, sin comillas invertidas, solo el texto JSON puro):
+                    [
+                      {{"nombre": "Nombre del equipo", "precio": 15000, "estado": "Disponible", "url": "{url_rental}", "foto": ""}}
+                    ]
+                    Si no encuentras precio, pon 0. Si el texto no tiene productos, devuelve un array vacío [].
+                    Texto de la web: {texto_web}
+                    """
+                    
+                    respuesta = modelo.generate_content(prompt)
+                    
+                    # Limpiamos la respuesta por si la IA agrega "```json"
+                    texto_json = respuesta.text.strip().replace("```json", "").replace("```", "")
+                    productos_extraidos = json.loads(texto_json)
+                    
+                    if len(productos_extraidos) > 0:
+                        for prod in productos_extraidos:
+                            st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
+                        guardar_y_recargar()
+                    else:
+                        st.warning("La IA no pudo encontrar productos claros en esta URL. (Puede que la página bloquee bots o cargue con JavaScript).")
+                        
+                except Exception as e:
+                    st.error(f"Hubo un error técnico al escanear: {e}")
 
 # --- 4. GESTIÓN DE SESIÓN Y LOGIN LOCAL ---
 
@@ -503,17 +539,16 @@ else:
         # --- NUEVO MÓDULO: COMPARADOR DE RENTALS ---
         if seccion_elegida == "⟡ Comparador de Rentals":
             colA, colB = st.columns([3, 1])
-            with colA: st.markdown("## 🛒 Comparador de Precios por Rental")
+            with colA: st.markdown("## 🛒 Comparador Inteligente de Rentals")
             with colB:
-                if st.button("➕ Agregar Rental", use_container_width=True):
+                if st.button("🕷️ Escanear URL de Rental", use_container_width=True):
                     ventana_comparador_rental(proyecto_elegido)
             st.divider()
             
             rentals_lista = p_data.get("comparador_rentals", [])
             if not rentals_lista:
-                st.info("No hay rentals cargados todavía. Agregá enlaces y precios para comparar tarifas con foto incluida.")
+                st.info("No hay rentals cargados. Hacé clic en 'Escanear URL' para extraer productos automáticamente con IA.")
             else:
-                # Encontrar el menor precio para destacar
                 precios_validos = [r["precio"] for r in rentals_lista if r["precio"] > 0]
                 menor_precio = min(precios_validos) if precios_validos else 0
 
@@ -521,20 +556,22 @@ else:
                 for idx, r in enumerate(rentals_lista):
                     with cols[idx % 3]:
                         es_mejor = (r["precio"] == menor_precio and r["precio"] > 0)
-                        border_style = "border: 2px solid #6366f1; border-radius: 20px; padding: 20px; background: white;" if es_mejor else "border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; background: white;"
                         
                         with st.container(border=True):
                             if es_mejor:
                                 st.markdown("<span style='background:#6366f1; color:white; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold;'>¡MEJOR PRECIO!</span>", unsafe_allow_html=True)
                             
-                            if r.get("foto"):
+                            # Si la IA extrajo base64 de alguna forma manual la mostramos, sino icono.
+                            if r.get("foto") and len(r["foto"]) > 10:
                                 st.image(base64.b64decode(r["foto"]), use_container_width=True)
+                            else:
+                                st.markdown("<div style='height: 120px; background: #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 15px;'>📷</div>", unsafe_allow_html=True)
                             
                             st.markdown(f"### {r['nombre']}")
                             st.markdown(f"**Precio:** ${r['precio']:,.2f} / día")
                             st.caption(f"Estado: {r['estado']}")
                             if r['url']:
-                                st.markdown(f"[🔗 Ver en sitio del rental]({r['url']})", unsafe_allow_html=True)
+                                st.markdown(f"[🔗 Visitar Rental]({r['url']})", unsafe_allow_html=True)
                             
                             if st.button("🗑️ Eliminar", key=f"del_rental_{idx}"):
                                 p_data["comparador_rentals"].pop(idx)
