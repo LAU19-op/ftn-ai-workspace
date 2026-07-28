@@ -12,7 +12,6 @@ streamlit-lottie
 folium
 streamlit-folium
 fpdf
-wordcloud
 matplotlib
 python-barcode
 networkx
@@ -21,16 +20,7 @@ bcrypt
 psutil
 colorthief
 suntime
-audio-recorder-streamlit
-SpeechRecognition
 altair
 geopy
 pytz
-textblob
 Faker
-opencv-python-headless
-imutils
-numpy
-librosa
-pydub
-scipy
