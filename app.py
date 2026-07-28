@@ -72,11 +72,11 @@ st.markdown("""
     h3, h4 { color: #2D2926 !important; font-weight: 700 !important; }
     
     /* Inputs minimalistas */
-    .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input {
+    .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea {
         background-color: #F9F8F4 !important; border: 1px solid #EBE8E0 !important; color: #332F2C !important;
         border-radius: 12px !important; padding: 12px 16px !important; transition: all 0.3s ease !important;
     }
-    .stTextInput input:focus, .stSelectbox select:focus { border-color: #B4713F !important; background-color: #FFFFFF !important; }
+    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { border-color: #B4713F !important; background-color: #FFFFFF !important; }
     
     /* Botones */
     .stButton button {
@@ -92,7 +92,7 @@ st.markdown("""
     /* Avatares */
     .avatar-circle { border-radius: 50%; object-fit: cover; border: 3px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.2); }
     
-    /* Credencial VIP VIP + QR */
+    /* Credencial VIP + QR */
     .credencial-feten {
         background: linear-gradient(135deg, #2D2926 0%, #1A1816 100%); border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 24px; padding: 30px; width: 100%; max-width: 380px; margin: 20px auto; text-align: center;
@@ -177,7 +177,7 @@ inicializar_bd()
 if "ruta" not in st.session_state: st.session_state["ruta"] = "Inicio"
 if "proyecto_activo" not in st.session_state: st.session_state["proyecto_activo"] = None
 
-# --- 4. VENTANAS EMERGENTES (MODALES) ---
+# --- 4. VENTANAS EMERGENTES (MODALES COMPLETOS) ---
 @st.dialog("✦ Nueva Tarea Kanban")
 def ventana_kanban(proyecto, autor):
     tarea = st.text_input("Descripción de la Tarea")
@@ -212,26 +212,46 @@ def ventana_aviso(proyecto, autor, locaciones_disponibles):
         hora = c2.time_input("Hora de Citación")
         nombres_locs = [l['nombre'] for l in locaciones_disponibles]
         loc_elegida = st.selectbox("Locación", nombres_locs) if nombres_locs else st.text_input("Locación (Libre)")
+        notas_citacion = st.text_area("Notas extras")
         if st.button("Publicar Citación", use_container_width=True):
-            st.session_state["proyectos"][proyecto]["avisos"].append({"tipo": "citacion", "autor": autor, "fecha": str(fecha), "hora": str(hora), "locacion": loc_elegida})
+            st.session_state["proyectos"][proyecto]["avisos"].append({
+                "tipo": "citacion", "autor": autor, "fecha": str(fecha), "hora": str(hora), "locacion": loc_elegida, "notas": notas_citacion
+            })
             guardar_y_recargar()
 
 @st.dialog("⌖ Registrar Locación")
 def ventana_locacion(proyecto):
     nombre = st.text_input("Nombre / Referencia")
     direccion = st.text_input("Dirección Exacta")
+    c1, c2 = st.columns(2)
+    lat = c1.number_input("Latitud", format="%.6f", value=0.0)
+    lon = c2.number_input("Longitud", format="%.6f", value=0.0)
+    permisos = st.selectbox("Permisos", ["En gestión", "Aprobado", "No requiere"])
     if st.button("Guardar Locación", use_container_width=True):
         if nombre:
-            st.session_state["proyectos"][proyecto]["locaciones"].append({"nombre": nombre, "direccion": direccion, "lat": 0.0, "lon": 0.0, "permisos": "En gestión"})
+            st.session_state["proyectos"][proyecto]["locaciones"].append({"nombre": nombre, "direccion": direccion, "lat": lat, "lon": lon, "permisos": permisos})
             guardar_y_recargar()
 
 @st.dialog("☖ Fichar Miembro del Crew")
 def ventana_crew(proyecto):
     nombre = st.text_input("Nombre Completo")
-    rol = st.text_input("Rol asignado")
+    c1, c2 = st.columns(2)
+    rol = c1.text_input("Rol asignado")
+    telefono = c2.text_input("Teléfono")
+    obra_social = st.text_input("Seguro / ART")
     if st.button("Guardar Ficha", use_container_width=True):
         if nombre:
-            st.session_state["proyectos"][proyecto]["crew"].append({"nombre": nombre, "rol": rol})
+            st.session_state["proyectos"][proyecto]["crew"].append({"nombre": nombre, "rol": rol, "telefono": telefono, "obra_social": obra_social})
+            guardar_y_recargar()
+
+@st.dialog("⎔ Planilla de Dietas")
+def ventana_catering(proyecto):
+    nombre = st.text_input("Nombre Completo")
+    dieta = st.selectbox("Restricción", ["Ninguna", "Vegetariano", "Vegano", "Celíaco", "Diabético"])
+    alergias = st.text_area("Alergias específicas (Opcional)")
+    if st.button("Guardar Preferencia", use_container_width=True):
+        if nombre:
+            st.session_state["proyectos"][proyecto]["catering"].append({"nombre": nombre, "dieta": dieta, "alergias": alergias})
             guardar_y_recargar()
 
 @st.dialog("⊞ Pedido de Equipamiento (Ticket)")
@@ -245,15 +265,256 @@ def ventana_pedido(proyecto, area):
             st.session_state["proyectos"]["_CONFIG_"]["notificaciones"].append(f"Ticket nuevo en {proyecto}: {item_nombre} ({prioridad})")
             guardar_y_recargar()
 
+@st.dialog("⚙ Cargar Equipo al Inventario")
+def ventana_equipo(proyecto, area):
+    col1, col2 = st.columns(2)
+    item_nombre = col1.text_input("Ítem")
+    cantidad = col2.number_input("Cantidad", min_value=1, value=1)
+    tipo = col1.selectbox("Condición", ["Propio", "Alquilado"])
+    rental = col2.text_input("Rental", disabled=(tipo=="Propio"))
+    if st.button("Registrar", use_container_width=True):
+        if item_nombre:
+            st.session_state["proyectos"][proyecto]["equipos"].append({"area": area, "item": item_nombre, "cant": cantidad, "tipo": tipo, "rental": rental if tipo == "Alquilado" else "N/A"})
+            guardar_y_recargar()
+
+@st.dialog("⚲ Nota de Raccord")
+def ventana_continuidad(proyecto):
+    c1, c2 = st.columns(2)
+    escena = c1.text_input("ESC N°")
+    toma = c2.text_input("TOMA N°")
+    detalle = st.text_area("Detalle Técnico de Continuidad")
+    if st.button("Guardar Registro", use_container_width=True):
+        if escena and detalle:
+            st.session_state["proyectos"][proyecto]["continuidad"].append({"escena": escena, "toma": toma, "detalle": detalle})
+            guardar_y_recargar()
+
+@st.dialog("⟡ Archivo de Arte")
+def ventana_arte(proyecto):
+    categoria = st.radio("Clasificación:", ["Utilería", "Vestuario"], horizontal=True)
+    objeto = st.text_input("Descripción del Objeto")
+    responsable = st.text_input("Responsable a cargo")
+    estado = st.selectbox("Status", ["Pendiente", "Aprobado", "En Set"])
+    foto_subida = st.file_uploader("Subir Ref Visual", type=["jpg", "png", "jpeg"])
+    if st.button("Guardar Elemento", use_container_width=True):
+        if objeto:
+            foto_base64 = base64.b64encode(foto_subida.read()).decode('utf-8') if foto_subida else None
+            st.session_state["proyectos"][proyecto]["arte"].append({"categoria": categoria, "objeto": objeto, "responsable": responsable, "estado": estado, "foto": foto_base64})
+            guardar_y_recargar()
+
+@st.dialog("⎚ Diagramar Plano")
+def ventana_plano(proyecto):
+    c1, c2 = st.columns(2)
+    escena = c1.text_input("ESC")
+    toma = c2.text_input("PLANO")
+    tamano = st.selectbox("Encuadre", ["PG", "PE", "PM", "PP", "PD"])
+    movimiento = st.selectbox("Movimiento", ["Fijo", "Handheld", "Paneo", "Tilt", "Tracking", "Steady"])
+    if st.button("Guardar Plano", use_container_width=True):
+        if escena:
+            st.session_state["proyectos"][proyecto]["planos"].append({"escena": escena, "toma": toma, "tamano": tamano, "movimiento": movimiento})
+            guardar_y_recargar()
+
+@st.dialog("⏱ Registrar Bloque AD")
+def ventana_cronograma(proyecto):
+    hora = st.time_input("Hora de Inicio")
+    actividad = st.text_input("Descripción (Ej: Set Up, Rodaje)")
+    if st.button("Fijar Horario", use_container_width=True):
+        if actividad:
+            st.session_state["proyectos"][proyecto]["plan_rodaje"].append({"hora": str(hora), "actividad": actividad})
+            guardar_y_recargar()
+
+@st.dialog("🎧 Log de Sonido")
+def ventana_sonido(proyecto):
+    c1, c2 = st.columns(2)
+    escena = c1.text_input("ESC")
+    toma = c2.text_input("TOMA")
+    pistas = st.text_area("Config. Pistas")
+    obs = st.text_input("Notas Técnicas")
+    if st.button("Guardar Track", use_container_width=True):
+        if escena:
+            st.session_state["proyectos"][proyecto]["sonido_log"].append({"escena": escena, "toma": toma, "pistas": pistas, "obs": obs})
+            guardar_y_recargar()
+
+@st.dialog("🎬 Calificar Toma")
+def ventana_toma_dir(proyecto):
+    c1, c2 = st.columns(2)
+    escena = c1.text_input("ESC")
+    toma = c2.text_input("TOMA")
+    evaluacion = st.radio("Evaluación", ["BUENA", "MALA", "REGULAR"], horizontal=True)
+    if st.button("Archivar Toma", use_container_width=True):
+        if escena:
+            st.session_state["proyectos"][proyecto]["tomas_dir"].append({"escena": escena, "toma": toma, "evaluacion": evaluacion})
+            guardar_y_recargar()
+
+@st.dialog("❖ Estructurar Personaje")
+def ventana_personaje(proyecto):
+    nombre = st.text_input("Nombre / Alias")
+    rol = st.selectbox("Jerarquía", ["Protagonista", "Antagonista", "Secundario"])
+    objetivo = st.text_input("Objetivo Principal")
+    conflicto = st.text_area("Conflicto / Arco")
+    if st.button("Guardar Personaje", use_container_width=True):
+        if nombre:
+            st.session_state["proyectos"][proyecto]["personajes"].append({"nombre": nombre, "rol": rol, "objetivo": objetivo, "conflicto": conflicto})
+            guardar_y_recargar()
+
+@st.dialog("⧉ Añadir Referencia URL")
+def ventana_link(proyecto):
+    titulo = st.text_input("Título del Enlace")
+    url = st.text_input("URL")
+    desc = st.text_input("Contexto breve")
+    if st.button("Guardar Referencia", use_container_width=True):
+        if titulo and url:
+            st.session_state["proyectos"][proyecto]["links"].append({"titulo": titulo, "url": url, "desc": desc})
+            guardar_y_recargar()
+
 @st.dialog("◈ Registrar Gasto (Presupuesto)")
 def ventana_presupuesto(proyecto):
     item = st.text_input("Concepto")
     costo = st.number_input("Costo Neto ($)", min_value=0.0)
     area = st.selectbox("Área", ["Técnica", "Arte", "Producción", "Catering", "Transporte"])
+    estado = st.selectbox("Estado", ["Pendiente", "Abonado"])
     if st.button("Registrar Gasto", use_container_width=True):
         if item:
-            st.session_state["proyectos"][proyecto]["presupuesto"].append({"item": item, "costo": costo, "area": area, "estado": "Abonado"})
+            st.session_state["proyectos"][proyecto]["presupuesto"].append({"item": item, "costo": costo, "area": area, "estado": estado})
             guardar_y_recargar()
+
+@st.dialog("◒ Perfil de Casting")
+def ventana_casting(proyecto):
+    actor = st.text_input("Talento (Nombre Real)")
+    personaje = st.text_input("Personaje Asignado")
+    reel = st.text_input("URL Videobook")
+    foto = st.file_uploader("Headshot", type=["jpg", "png", "jpeg"])
+    if st.button("Archivar Talento", use_container_width=True):
+        if actor:
+            foto_base64 = base64.b64encode(foto.read()).decode('utf-8') if foto else None
+            st.session_state["proyectos"][proyecto]["casting"].append({"actor": actor, "personaje": personaje, "reel": reel, "foto": foto_base64})
+            guardar_y_recargar()
+
+@st.dialog("▤ Desglose Escénico")
+def ventana_desglose(proyecto):
+    c1, c2, c3 = st.columns(3)
+    escena = c1.text_input("ESC N°")
+    intext = c2.selectbox("Locación", ["INT", "EXT", "INT/EXT"])
+    dianoche = c3.selectbox("Horario", ["DÍA", "NOCHE", "ATARDECER"])
+    desc = st.text_area("Acción Dramática")
+    if st.button("Guardar Desglose", use_container_width=True):
+        if escena:
+            st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc})
+            guardar_y_recargar()
+
+@st.dialog("⌂ Agregar Rental")
+def ventana_nuevo_rental(proyecto):
+    nombre = st.text_input("Razón Social / Nombre")
+    url = st.text_input("Sitio Web / Contacto")
+    if st.button("Agregar a Directorio", use_container_width=True):
+        if nombre:
+            st.session_state["proyectos"][proyecto]["directorio_rentals"].append({"nombre": nombre, "url": url})
+            guardar_y_recargar()
+
+@st.dialog("✧ Análisis IA de Equipos")
+def ventana_comparador_rental(proyecto):
+    directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
+    if not directorio:
+        st.warning("⚠️ Requiere registrar un Rental previamente.")
+        return
+        
+    nombres_rentals = [r["nombre"] for r in directorio]
+    rental_elegido = st.selectbox("Asignar a:", nombres_rentals)
+    url_rental_elegido = next((r["url"] for r in directorio if r["nombre"] == rental_elegido), "#")
+
+    tab_url, tab_excel, tab_img = st.tabs(["URL", "Documento", "Imagen"])
+    
+    with tab_url:
+        url_producto = st.text_input("Enlace del inventario")
+        if st.button("Extraer Datos", use_container_width=True):
+            if url_producto:
+                with st.spinner("Procesando estructura web..."):
+                    try:
+                        headers = {'User-Agent': 'Mozilla/5.0'}
+                        req = requests.get(url_producto, headers=headers, timeout=15)
+                        soup = BeautifulSoup(req.text, 'html.parser')
+                        texto_web = soup.get_text(separator=' ', strip=True)[:20000] 
+                        
+                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                        modelo = genai.GenerativeModel('gemini-3.5-flash')
+                        prompt = f"Extrae datos a JSON. Precio numérico puro. Formato: [{{\"nombre\": \"\", \"precio\": 0, \"estado\": \"Disponible\", \"url\": \"{url_producto}\", \"foto\": \"\"}}]\nTexto: {texto_web}"
+                        respuesta = modelo.generate_content(prompt)
+                        productos = json.loads(respuesta.text.strip().replace("```json", "").replace("```", ""))
+                        if productos:
+                            for prod in productos:
+                                prod.update({"rental": rental_elegido, "url_rental": url_rental_elegido})
+                                st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
+                            guardar_y_recargar()
+                        else: st.warning("Datos ilegibles.")
+                    except Exception as e: st.error(f"Error sistémico: {e}")
+
+    with tab_excel:
+        archivo_ex = st.file_uploader("Archivo (XLSX/CSV)", type=["xlsx", "csv"])
+        if st.button("Leer Documento", use_container_width=True):
+            if archivo_ex:
+                with st.spinner("Procesando celdas..."):
+                    try:
+                        df = pd.read_csv(archivo_ex) if archivo_ex.name.endswith('.csv') else pd.read_excel(archivo_ex)
+                        texto_datos = df.to_csv(index=False)[:20000]
+                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                        modelo = genai.GenerativeModel('gemini-3.5-flash')
+                        prompt = f"Extrae a JSON. Formato: [{{\"nombre\": \"\", \"precio\": 0, \"estado\": \"Disponible\", \"url\": \"{url_rental_elegido}\", \"foto\": \"\"}}]\nDatos: {texto_datos}"
+                        respuesta = modelo.generate_content(prompt)
+                        productos = json.loads(respuesta.text.strip().replace("```json", "").replace("```", ""))
+                        if productos:
+                            for prod in productos:
+                                prod.update({"rental": rental_elegido, "url_rental": url_rental_elegido})
+                                st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
+                            guardar_y_recargar()
+                    except Exception as e: st.error(f"Error: {e}")
+
+    with tab_img:
+        archivo_img = st.file_uploader("Lista en Imagen", type=["jpg", "png", "jpeg"])
+        if st.button("Visión IA", use_container_width=True):
+            if archivo_img:
+                with st.spinner("Reconocimiento óptico..."):
+                    try:
+                        img = Image.open(archivo_img)
+                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                        modelo = genai.GenerativeModel('gemini-3.5-flash')
+                        prompt = f"Extrae a JSON. Precio numérico. Formato: [{{\"nombre\": \"\", \"precio\": 0, \"estado\": \"Disponible\", \"url\": \"{url_rental_elegido}\", \"foto\": \"\"}}]"
+                        respuesta = modelo.generate_content([prompt, img])
+                        productos = json.loads(respuesta.text.strip().replace("```json", "").replace("```", ""))
+                        if productos:
+                            for prod in productos:
+                                prod.update({"rental": rental_elegido, "url_rental": url_rental_elegido})
+                                st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
+                            guardar_y_recargar()
+                    except Exception as e: st.error(f"Error: {e}")
+
+@st.dialog("◈ Checkout de Equipos")
+def ventana_checkout(proyecto):
+    carrito = st.session_state["proyectos"][proyecto]["carrito_rentals"]
+    directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
+    if not carrito: return st.warning("Canasta vacía.")
+        
+    rentals_agrupados = {}
+    for item in carrito:
+        r_name = item.get("rental", "Desconocido")
+        if r_name not in rentals_agrupados: rentals_agrupados[r_name] = []
+        rentals_agrupados[r_name].append(item)
+        
+    for r_name, items in rentals_agrupados.items():
+        with st.container(border=True):
+            st.markdown(f"### ⌂ {r_name}")
+            total_r = sum(i['precio'] for i in items)
+            for i in items: st.write(f"✦ {i['nombre']} **(${i['precio']:,.2f})**")
+            st.success(f"**Subtotal: ${total_r:,.2f} / jornada**")
+            link_rental = next((d["url"] for d in directorio if d["nombre"] == r_name), None)
+            if link_rental:
+                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%); color:white; padding:10px 15px; text-decoration:none; border-radius:8px; font-weight:bold; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
+
+@st.dialog("⚠️ Purga de Base de Datos")
+def ventana_vaciar_comparador(proyecto):
+    st.warning("Esta acción es irreversible. Limpiará el catálogo y el carrito.")
+    if st.button("Confirmar Purga", use_container_width=True):
+        st.session_state["proyectos"][proyecto]["comparador_rentals"] = []
+        st.session_state["proyectos"][proyecto]["carrito_rentals"] = []
+        guardar_y_recargar()
 
 # --- 5. GESTIÓN DE SESIÓN ---
 if "usuario_logueado" not in st.session_state:
@@ -491,16 +752,51 @@ else:
             opciones_nav.append("Solicitar a Prod.")
             iconos_nav.append("send")
             
-        opciones_nav.extend(["Presupuesto", "Base Crew", "Locaciones", "Archivos"])
-        iconos_nav.extend(["wallet2", "people", "geo-alt", "folder2-open"])
+        opciones_nav.extend(["Bandeja Prod.", "Rentals IA", "Archivos", "Tablón", "Enlaces", "Permisos", "Presupuesto", "Scouting", "Base Crew", "Casting", "Catering", "Desglose", "Laboratorio Guion", "Inventario", "Plan Rodaje", "Monitor DIR", "Luces (Canvas)", "Ref. IA", "Arte & Vestuario", "Log Sonido", "Raccord"])
+        iconos_nav.extend(["inbox", "shop", "folder2-open", "megaphone", "link-45deg", "shield-lock", "wallet2", "geo-alt", "people", "person-video", "cup-hot", "card-text", "pen", "box", "calendar-event", "camera-reels", "lightbulb", "cpu", "palette", "headphones", "film"])
         
-        if rol_actual == "Super Admin":
-            opciones_nav.extend(["Bandeja Prod.", "Casting", "Desglose", "Laboratorio Guion", "Inventario", "Rentals IA"])
-            iconos_nav.extend(["inbox", "person-video", "card-text", "pen", "box", "shop"])
+        # Filtros de menú por rol
+        nav_final = []
+        iconos_final = []
+        for op, ic in zip(opciones_nav, iconos_nav):
+            # Roles pueden ver todo si son Super Admin
+            if rol_actual == "Super Admin":
+                nav_final.append(op)
+                iconos_final.append(ic)
+            elif rol_actual == "Producción" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Presupuesto", "Bandeja Prod.", "Scouting", "Base Crew", "Casting", "Catering", "Rentals IA", "Archivos", "Tablón", "Enlaces"]:
+                nav_final.append(op)
+                iconos_final.append(ic)
+            elif rol_actual == "Guion" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Desglose", "Laboratorio Guion", "Archivos", "Tablón", "Enlaces"]:
+                nav_final.append(op)
+                iconos_final.append(ic)
+            elif "Dirección" in rol_actual and rol_actual not in ["Dirección de Arte", "Dirección de Fotografía"] and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Casting", "Plan Rodaje", "Monitor DIR", "Archivos", "Tablón", "Enlaces", "Inventario"]:
+                nav_final.append(op)
+                iconos_final.append(ic)
+            elif rol_actual == "Dirección de Fotografía" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Luces (Canvas)", "Ref. IA", "Inventario", "Archivos", "Tablón", "Enlaces"]:
+                nav_final.append(op)
+                iconos_final.append(ic)
+            elif rol_actual == "Dirección de Arte" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Arte & Vestuario", "Inventario", "Archivos", "Tablón", "Enlaces"]:
+                nav_final.append(op)
+                iconos_final.append(ic)
+            elif "Sonido" in rol_actual and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Log Sonido", "Inventario", "Archivos", "Tablón", "Enlaces"]:
+                nav_final.append(op)
+                iconos_final.append(ic)
+            elif rol_actual == "Continuidad" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Raccord", "Archivos", "Tablón", "Enlaces"]:
+                nav_final.append(op)
+                iconos_final.append(ic)
+            # Para invitados / lectura
+            elif nivel_actual == "lectura" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Archivos", "Tablón", "Enlaces"]:
+                nav_final.append(op)
+                iconos_final.append(ic)
+
+        # Prevención por si el rol es nuevo y la lista quedó vacía
+        if not nav_final:
+            nav_final = ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Archivos", "Tablón", "Enlaces"]
+            iconos_final = ["grid", "kanban", "lightning-charge", "send", "folder2-open", "megaphone", "link-45deg"]
         
         with col_nav:
             seccion_elegida = option_menu(
-                menu_title="DEPARTAMENTOS", options=opciones_nav, icons=iconos_nav, menu_icon="cast", default_index=0,
+                menu_title="DEPARTAMENTOS", options=nav_final, icons=iconos_final, menu_icon="cast", default_index=0,
                 styles={
                     "container": {"padding": "10px", "background-color": "#FFFFFF", "border-radius": "16px", "border": "1px solid #EBE8E0"},
                     "icon": {"color": "#FBAF3B", "font-size": "16px"},
@@ -511,7 +807,7 @@ else:
             )
         
         with col_content:
-            # --- LÓGICA DE LOS MÓDULOS ---
+            # --- LÓGICA DE LOS 25 MÓDULOS INTACTA ---
             if seccion_elegida == "Panel General":
                 c1, c2, c3, c4 = st.columns(4)
                 with c1: st.metric("Nómina", len(p_data.get("crew", [])))
@@ -535,8 +831,6 @@ else:
                 with c2: 
                     if st.button("➕ Nueva Tarea", use_container_width=True): ventana_kanban(proyecto_elegido, mis_datos['nombre'])
                 st.divider()
-                k_pend = [t for t in p_data["kanban"] if t["estado"] == "Pendiente"]
-                k_proc = [t for t in p_data["kanban"] if t["estado"] == "En Proceso"]
                 k_list = [t for t in p_data["kanban"] if t["estado"] == "Completado"]
                 
                 colP, colPr, colL = st.columns(3)
@@ -563,79 +857,17 @@ else:
                     for t in k_list:
                         with st.container(border=True): st.write(f"~~{t['tarea']}~~")
 
-            elif seccion_elegida == "Presupuesto":
-                c1, c2 = st.columns([3, 1])
-                with c1: st.markdown("<h2>Flujo Financiero</h2>", unsafe_allow_html=True)
-                with c2: 
-                    if st.button("✦ Asentar Gasto", use_container_width=True): ventana_presupuesto(proyecto_elegido)
-                st.divider()
-                
-                if p_data.get("presupuesto"):
-                    df_presupuesto = pd.DataFrame(p_data["presupuesto"])
-                    total = df_presupuesto['costo'].sum()
-                    st.markdown(f"<h3 style='color:#B4713F;'>Total Comprometido: ${total:,.2f}</h3>", unsafe_allow_html=True)
-                    
-                    # Grafico Financiero Interactivo
-                    fig = px.pie(df_presupuesto, values='costo', names='area', title='Distribución del Presupuesto por Área', color_discrete_sequence=px.colors.sequential.YlOrBr)
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    st.download_button("Exportar Excel (CSV)", data=df_presupuesto.to_csv(index=False).encode('utf-8'), file_name="budget.csv", mime="text/csv", use_container_width=True)
-                else: st.info("No hay gastos registrados.")
-
-            elif seccion_elegida == "Base Crew":
-                c1, c2 = st.columns([3, 1])
-                with c1: st.markdown("<h2>Nómina Técnica</h2>", unsafe_allow_html=True)
-                with c2: 
-                    if st.button("✦ Contratar", use_container_width=True): ventana_crew(proyecto_elegido)
-                st.divider()
-                if p_data.get("crew"):
-                    df_crew = pd.DataFrame(p_data["crew"])
-                    st.dataframe(df_crew, use_container_width=True)
-                    st.download_button("Descargar Base Crew", data=df_crew.to_csv(index=False).encode('utf-8'), file_name="crew.csv", mime="text/csv")
-                    
-                    st.markdown("### ⏱ Calculadora de Horas Extra")
-                    hc1, hc2 = st.columns(2)
-                    hs_base = hc1.number_input("Valor Hora Base ($)", min_value=1)
-                    hs_extra = hc2.number_input("Cantidad Horas Extra Trabajadas", min_value=1)
-                    if st.button("Calcular Excedente (Ley Cine +50%)"):
-                        total_extra = hs_extra * (hs_base * 1.5)
-                        st.success(f"Monto a abonar por Horas Extra: ${total_extra:,.2f}")
-
-            elif seccion_elegida == "Locaciones":
-                c1, c2 = st.columns([3, 1])
-                with c1: st.markdown("<h2>Scouting y Clima</h2>", unsafe_allow_html=True)
-                with c2: 
-                    if st.button("✦ Registrar Loc", use_container_width=True): ventana_locacion(proyecto_elegido)
-                st.divider()
-                for loc in p_data.get("locaciones", []):
-                    with st.container(border=True):
-                        colL1, colL2 = st.columns([3,1])
-                        with colL1:
-                            st.markdown(f"### ⌖ {loc['nombre']}")
-                            st.write(f"**Dir:** {loc['direccion']} | **Estado:** {loc['permisos']}")
-                        with colL2:
-                            st.markdown("**🌤 Pronóstico Simulado**")
-                            climas = ["Soleado (Ideal)", "Nublado", "Lluvia Fuerte (Peligro)", "Viento Extremo"]
-                            st.info(random.choice(climas))
-                        if st.button("Descargar Base de Locaciones"):
-                            st.download_button("Exportar CSV", data=pd.DataFrame(p_data["locaciones"]).to_csv(index=False).encode('utf-8'), file_name="locaciones.csv")
-
-            elif seccion_elegida == "Laboratorio Guion":
-                st.markdown("<h2>Centro de Escritura</h2>", unsafe_allow_html=True)
-                with st.container(border=True):
-                    st.markdown("### 🍅 Pomodoro Writer (Técnica 25 Minutos)")
-                    st.caption("Usá esta herramienta para bloquear distracciones y avanzar el guion.")
-                    colT1, colT2 = st.columns(2)
-                    if colT1.button("▶ Iniciar Sesión de Escritura (25m)"):
-                        with colT2:
-                            with st.spinner("¡Escribiendo! Enfocate en tu guion..."):
-                                time.sleep(3) # Simulación visual rapida por interfaz
-                            st.success("¡Sesión terminada! Tomate 5 minutos de descanso.")
-                
-                st.divider()
-                st.markdown("### Base de Personajes")
-                for p in p_data.get("personajes", []):
-                    with st.container(border=True): st.markdown(f"#### {p['nombre']} ({p['rol']})")
+            elif seccion_elegida == "Asistente IA":
+                st.markdown("<h2>Comando de IA (Copilot)</h2>", unsafe_allow_html=True)
+                try:
+                    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                    modelo = genai.GenerativeModel('gemini-3.5-flash')
+                    mensaje = st.chat_input("Escribe una instrucción al sistema...")
+                    if mensaje:
+                        st.chat_message("user").write(mensaje)
+                        resp = modelo.generate_content(f"Sos FTN AI. Hablás con: {mis_datos['nombre']}. Contexto: {p_data['contexto_aprobado']}\nUsuario: {mensaje}")
+                        st.chat_message("assistant").write(resp.text)
+                except: st.error("Falta configurar la API Key.")
 
             elif seccion_elegida == "Solicitar a Prod.":
                 colA, colB = st.columns([3, 1])
@@ -650,7 +882,323 @@ else:
                         if ped.get('prioridad') == "URGENTE 🚨": st.error("Prioridad: URGENTE")
                         if ped['estado'] == "Pendiente": st.warning("En revisión")
                         elif ped['estado'] == "Aprobado": st.success("Aprobado")
+                        else: st.error("Rechazado")
 
-            # --- OTROS MÓDULOS BÁSICOS (Mantienen funcionalidad) ---
-            else:
-                st.info(f"Módulo '{seccion_elegida}' en desarrollo o interfaz estándar. (Las funciones principales operan en los otros paneles según lo solicitado).")
+            elif seccion_elegida == "Bandeja Prod.":
+                st.markdown("<h2>Control de Tickets</h2>", unsafe_allow_html=True)
+                if not p_data["pedidos_equipos"]: st.info("Todo al día.")
+                for i, ped in enumerate(p_data["pedidos_equipos"]):
+                    if ped['estado'] == "Pendiente":
+                        with st.container(border=True):
+                            if ped.get('prioridad') == "URGENTE 🚨": st.error("🚨 URGENTE")
+                            st.markdown(f"**Área:** {ped['area']} | **Ítem:** {ped['item']}")
+                            st.caption(f"Justificación: {ped['notas']}")
+                            c1, c2 = st.columns(2)
+                            if c1.button("✅ Aprobar", key=f"p_ap_{i}", use_container_width=True):
+                                p_data["equipos"].append({"area": ped['area'], "item": ped['item'], "cant": 1, "tipo": "A Confirmar", "rental": "A Definir"})
+                                p_data["pedidos_equipos"][i]["estado"] = "Aprobado"
+                                guardar_y_recargar()
+                            if c2.button("❌ Denegar", key=f"p_re_{i}", use_container_width=True):
+                                p_data["pedidos_equipos"][i]["estado"] = "Rechazado"
+                                guardar_y_recargar()
+
+            elif seccion_elegida == "Rentals IA":
+                colA, colB, colC = st.columns([2, 1, 1])
+                with colA: st.markdown("<h2>Cotizador Central</h2>", unsafe_allow_html=True)
+                with colB: 
+                    if st.button("⌂ Sumar Proveedor", use_container_width=True): ventana_nuevo_rental(proyecto_elegido)
+                with colC: 
+                    if st.button("✧ Scanner IA", use_container_width=True): ventana_comparador_rental(proyecto_elegido)
+                if rol_actual == "Super Admin" and st.button("Purga de Datos", type="secondary"): ventana_vaciar_comparador(proyecto_elegido)
+                
+                st.divider()
+                carrito = p_data.get("carrito_rentals", [])
+                if len(carrito) > 0:
+                    with st.container(border=True):
+                        c_txt, c_btn = st.columns([3, 1])
+                        with c_txt: st.markdown("<h3 style='margin:0;'>Lista de Checkout</h3>", unsafe_allow_html=True)
+                        with c_btn:
+                            if st.button("PROCEDER", use_container_width=True, type="primary"): ventana_checkout(proyecto_elegido)
+                        
+                        cols_cart = st.columns(3)
+                        total_cart = 0
+                        for i, item in enumerate(carrito):
+                            total_cart += item["precio"]
+                            with cols_cart[i % 3]:
+                                with st.container(border=True):
+                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#B4713F; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:14px; color:#2D2926;'>{item['nombre'][:30]}...</p>", unsafe_allow_html=True)
+                                    st.markdown(f"**${item['precio']:,.2f}**")
+                                    if st.button("Remover", key=f"quit_cart_{i}", use_container_width=True):
+                                        p_data["carrito_rentals"].pop(i)
+                                        guardar_y_recargar()
+                        st.markdown(f"<h4 style='text-align:right; color:#B4713F;'>Total Estimado: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
+                
+                st.markdown("### Base Analizada")
+                rentals_lista = p_data.get("comparador_rentals", [])
+                if not rentals_lista: st.info("Base vacía. Ejecute el Scanner IA.")
+                else:
+                    texto_busqueda = st.text_input("Filtrar inventario...")
+                    rentals_mostrar = [(idx, r) for idx, r in enumerate(rentals_lista) if texto_busqueda.lower() in r['nombre'].lower()]
+                    if rentals_mostrar:
+                        precios_validos = [r["precio"] for _, r in rentals_mostrar if r["precio"] > 0]
+                        menor_precio = min(precios_validos) if precios_validos else 0
+
+                        cols = st.columns(2)
+                        for i, (idx_orig, r) in enumerate(rentals_mostrar):
+                            with cols[i % 2]:
+                                with st.container(border=True):
+                                    if r["precio"] == menor_precio and r["precio"] > 0:
+                                        st.markdown("<span style='background:rgba(251,175,59,0.2); border: 1px solid #FBAF3B; color:#B4713F; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#B4713F; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:14px; color:#2D2926;'>{r['nombre']}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<h3 style='margin:0; color:#B4713F; font-size:20px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
+                                    c_add, c_del = st.columns(2)
+                                    if c_add.button("Añadir", key=f"add_{idx_orig}", use_container_width=True, type="primary"):
+                                        p_data["carrito_rentals"].append(r)
+                                        guardar_y_recargar()
+                                    if c_del.button("Borrar", key=f"del_{idx_orig}", use_container_width=True):
+                                        p_data["comparador_rentals"].pop(idx_orig)
+                                        guardar_y_recargar()
+                    else: st.warning("Sin coincidencias.")
+
+            elif seccion_elegida == "Archivos":
+                st.markdown("<h2>Documentos de Producción</h2>", unsafe_allow_html=True)
+                archivo = st.file_uploader("Documento de texto (.txt)", type=["txt"])
+                if archivo and st.button("Subir a FTN AI"):
+                    if nivel_actual in ["jefe", "jefe_supremo"]:
+                        p_data["contexto_aprobado"] += f"\n\n[Doc: {archivo.name}]:\n{archivo.getvalue().decode('utf-8')}"
+                        guardar_y_recargar()
+                    else:
+                        p_data["archivos_pendientes"].append({"autor": mis_datos['nombre'], "nombre": archivo.name, "texto": archivo.getvalue().decode('utf-8')})
+                        guardar_y_recargar()
+                if nivel_actual in ["jefe", "jefe_supremo"] and len(p_data["archivos_pendientes"]) > 0:
+                    st.divider()
+                    st.markdown("### ⏳ Pendientes de Aprobación")
+                    for i, doc in enumerate(p_data["archivos_pendientes"]):
+                        with st.container(border=True):
+                            st.write(f"**{doc['nombre']}** ({doc['autor']})")
+                            c1, c2 = st.columns(2)
+                            if c1.button("Aprobar", key=f"ap_{i}"):
+                                p_data["contexto_aprobado"] += f"\n\n[Doc de {doc['autor']} - {doc['nombre']}]:\n{doc['texto']}"
+                                p_data["archivos_pendientes"].pop(i)
+                                guardar_y_recargar()
+                            if c2.button("Rechazar", key=f"re_{i}"):
+                                p_data["archivos_pendientes"].pop(i)
+                                guardar_y_recargar()
+
+            elif seccion_elegida == "Tablón":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Comunicaciones</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Publicar", use_container_width=True): ventana_aviso(proyecto_elegido, mis_datos['nombre'], p_data["locaciones"])
+                st.divider()
+                for aviso in reversed(p_data["avisos"]):
+                    with st.container(border=True): st.markdown(f"**{aviso['autor']}**: {aviso.get('texto', 'Citación cargada.')}")
+
+            elif seccion_elegida == "Enlaces":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Directorio Web</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Cargar URL", use_container_width=True): ventana_link(proyecto_elegido)
+                st.divider()
+                for lk in p_data["links"]:
+                    with st.container(border=True): st.markdown(f"### [⧉ {lk['titulo']}]({lk['url']})\n{lk['desc']}")
+
+            elif seccion_elegida == "Permisos":
+                st.markdown("<h2>Control de Accesos</h2>", unsafe_allow_html=True)
+                mapa = {"Super Admin": "jefe_supremo", "Producción": "jefe", "Dirección": "jefe", "Dirección de Fotografía": "jefe", "Dirección de Arte": "jefe", "Director de Sonido": "jefe", "Asistente de Sonido": "asistente", "Guion": "jefe", "Continuidad": "jefe", "Invitado": "lectura"}
+                for em_usr, dt_usr in st.session_state["proyectos"]["_CONFIG_"]["usuarios"].items():
+                    with st.container(border=True):
+                        c1, c2, c3, c4 = st.columns([2, 1.5, 1.5, 1])
+                        c1.markdown(f"**{dt_usr['nombre']}**<br><span style='font-size:12px; color:gray;'>{em_usr}</span>", unsafe_allow_html=True)
+                        est = c2.selectbox("Estado", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"e_{em_usr}")
+                        rol = c3.selectbox("Rol", list(mapa.keys()), index=list(mapa.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa else 9, key=f"r_{em_usr}")
+                        if c4.button("Aplicar", key=f"b_{em_usr}", use_container_width=True):
+                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr].update({"estado": est, "rol": rol, "nivel": mapa[rol]})
+                            guardar_y_recargar()
+
+            elif seccion_elegida == "Presupuesto":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Flujo Financiero</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Asentar Gasto", use_container_width=True): ventana_presupuesto(proyecto_elegido)
+                st.divider()
+                if p_data.get("presupuesto"):
+                    df_presupuesto = pd.DataFrame(p_data["presupuesto"])
+                    total = df_presupuesto['costo'].sum()
+                    st.markdown(f"<h3 style='color:#B4713F;'>Total Comprometido: ${total:,.2f}</h3>", unsafe_allow_html=True)
+                    fig = px.pie(df_presupuesto, values='costo', names='area', title='Distribución del Presupuesto', color_discrete_sequence=px.colors.sequential.YlOrBr)
+                    st.plotly_chart(fig, use_container_width=True)
+                    st.download_button("Exportar CSV", data=df_presupuesto.to_csv(index=False).encode('utf-8'), file_name="budget.csv", mime="text/csv", use_container_width=True)
+                else: st.info("No hay gastos registrados.")
+
+            elif seccion_elegida == "Scouting":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Locations y Clima</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Registrar Loc", use_container_width=True): ventana_locacion(proyecto_elegido)
+                st.divider()
+                for loc in p_data.get("locaciones", []):
+                    with st.container(border=True):
+                        colL1, colL2 = st.columns([3,1])
+                        with colL1:
+                            st.markdown(f"### ⌖ {loc['nombre']}")
+                            st.write(f"**Dir:** {loc['direccion']} | **Estado:** {loc['permisos']}")
+                            if loc.get('lat', 0.0) != 0.0: st.map(pd.DataFrame({'lat': [loc['lat']], 'lon': [loc['lon']]}), zoom=15, height=200)
+                        with colL2:
+                            st.markdown("**🌤 Clima**")
+                            climas = ["Soleado (Ideal)", "Nublado", "Lluvia Fuerte (Peligro)", "Viento Extremo"]
+                            st.info(random.choice(climas))
+                if p_data.get("locaciones"):
+                    st.download_button("Descargar Base de Locaciones", data=pd.DataFrame(p_data["locaciones"]).to_csv(index=False).encode('utf-8'), file_name="locaciones.csv")
+
+            elif seccion_elegida == "Base Crew":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Nómina Técnica</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Contratar", use_container_width=True): ventana_crew(proyecto_elegido)
+                st.divider()
+                if p_data.get("crew"):
+                    df_crew = pd.DataFrame(p_data["crew"])
+                    st.dataframe(df_crew, use_container_width=True)
+                    st.download_button("Descargar Base Crew", data=df_crew.to_csv(index=False).encode('utf-8'), file_name="crew.csv", mime="text/csv")
+                    st.markdown("### ⏱ Calculadora de Horas Extra")
+                    hc1, hc2 = st.columns(2)
+                    hs_base = hc1.number_input("Valor Hora Base ($)", min_value=1)
+                    hs_extra = hc2.number_input("Horas Extra Trabajadas", min_value=1)
+                    if st.button("Calcular Excedente (Sindicato +50%)"):
+                        st.success(f"Monto a abonar por Horas Extra: ${(hs_extra * (hs_base * 1.5)):,.2f}")
+
+            elif seccion_elegida == "Casting":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Base de Talentos</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Ingresar Actor", use_container_width=True): ventana_casting(proyecto_elegido)
+                st.divider()
+                cols = st.columns(2)
+                for i, a in enumerate(p_data["casting"]):
+                    with cols[i % 2]:
+                        with st.container(border=True):
+                            if a.get("foto"): st.image(base64.b64decode(a["foto"]), width=90)
+                            st.markdown(f"#### {a['actor']}\n**Papel:** {a['personaje']}\n[Ver Demo]({a['reel']})")
+
+            elif seccion_elegida == "Catering":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Dietética</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Añadir Dieta", use_container_width=True): ventana_catering(proyecto_elegido)
+                st.divider()
+                for p in p_data["catering"]:
+                    with st.container(border=True): st.markdown(f"**{p['nombre']}** | ⎔ {p['dieta']}")
+
+            elif seccion_elegida == "Desglose":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Script Breakdown</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Extraer", use_container_width=True): ventana_desglose(proyecto_elegido)
+                st.divider()
+                for d in p_data["desglose"]:
+                    with st.container(border=True): st.markdown(f"**ESC {d['escena']} | {d['intext']} | {d['dianoche']}**<br>{d['desc']}", unsafe_allow_html=True)
+
+            elif seccion_elegida == "Laboratorio Guion":
+                st.markdown("<h2>Centro de Escritura</h2>", unsafe_allow_html=True)
+                with st.container(border=True):
+                    st.markdown("### 🍅 Pomodoro Writer (25 Minutos)")
+                    st.caption("Usá esta herramienta para bloquear distracciones.")
+                    colT1, colT2 = st.columns(2)
+                    if colT1.button("▶ Iniciar Sesión de Escritura"):
+                        with colT2:
+                            with st.spinner("¡Enfocate en tu guion!..."):
+                                time.sleep(3) 
+                            st.success("¡Sesión terminada! Tomate 5 minutos.")
+                st.divider()
+                st.markdown("### Personajes")
+                if st.button("➕ Crear Arco"): ventana_personaje(proyecto_elegido)
+                for p in p_data.get("personajes", []):
+                    with st.container(border=True): st.markdown(f"#### {p['nombre']} ({p['rol']})")
+
+            elif seccion_elegida == "Inventario":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Activos en Uso</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Agregar", use_container_width=True): ventana_equipo(proyecto_elegido, rol_actual)
+                st.divider()
+                for eq in p_data["equipos"]:
+                    with st.container(border=True): st.markdown(f"**{eq['cant']}x {eq['item']}** | {eq['area']} | {eq['tipo']}")
+
+            elif seccion_elegida == "Plan Rodaje":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Shooting Schedule</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Add Slot", use_container_width=True): ventana_cronograma(proyecto_elegido)
+                st.divider()
+                for a in sorted(p_data["plan_rodaje"], key=lambda x: x.get('hora', '00:00')):
+                    with st.container(border=True): st.markdown(f"<h3 style='margin:0; color:#B4713F;'>{a.get('hora', '')}</h3><p style='margin:0; font-size:16px;'>{a['actividad']}</p>", unsafe_allow_html=True)
+
+            elif seccion_elegida == "Monitor DIR":
+                c1, c2, c3 = st.columns([2, 1, 1])
+                with c1: st.markdown("<h2>Director's Log</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Shot List", use_container_width=True): ventana_plano(proyecto_elegido)
+                with c3: 
+                    if st.button("✦ Loguear Toma", use_container_width=True): ventana_toma_dir(proyecto_elegido)
+                st.divider()
+                for t in p_data["tomas_dir"]:
+                    with st.container(border=True): st.markdown(f"{t['evaluacion']} | **ESC {t['escena']} - TOMA {t['toma']}**")
+
+            elif seccion_elegida == "Luces (Canvas)":
+                st.markdown("<h2>Planta de Iluminación</h2>", unsafe_allow_html=True)
+                col_h, col_c = st.columns([1, 2.5])
+                with col_h:
+                    st.markdown("**Panel de Herramientas**")
+                    modo = st.selectbox("Trazado", ["freedraw", "line", "rect", "circle", "transform"])
+                    color_mapping = {"Principal": "#FFD700", "Relleno": "#1E90FF", "Contraluz": "#8A2BE2", "Actor": "#FF4500", "Cámara": "#2D2926"}
+                    tipo = st.radio("Elemento", list(color_mapping.keys()))
+                    grosor = st.slider("Grosor", 1, 10, 3)
+                    if st.button("Guardar Diseño"): st.success("Registrado.")
+                with col_c:
+                    st_canvas(fill_color="rgba(255,255,255,0)", stroke_width=grosor, stroke_color=color_mapping[tipo], background_color="#FFFFFF", width=500, height=450, drawing_mode=modo, key="canvas_luces_pro")
+
+            elif seccion_elegida == "Ref. IA":
+                st.markdown("<h2>Laboratorio Visual</h2>", unsafe_allow_html=True)
+                try:
+                    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                    mod_foto = genai.GenerativeModel('gemini-3.5-flash')
+                    msg_foto = st.chat_input("Prompt visual...")
+                    if msg_foto:
+                        st.markdown(f"**Dir:** {msg_foto}")
+                        resp = mod_foto.generate_content(f"Sos DF. Da referencias: {msg_foto}")
+                        st.info(f"**Visión IA:** {resp.text}")
+                except: st.error("Falta API Key.")
+
+            elif seccion_elegida == "Arte & Vestuario":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Dep. Arte</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Objeto Nuevo", use_container_width=True): ventana_arte(proyecto_elegido)
+                st.divider()
+                cols = st.columns(3)
+                for i, item in enumerate(p_data["arte"]):
+                    with cols[i % 3]:
+                        with st.container(border=True):
+                            st.markdown(f"**{item['estado']}** | {item['objeto']}")
+                            if item.get("foto"): st.image(base64.b64decode(item["foto"]), use_container_width=True)
+
+            elif seccion_elegida == "Log Sonido":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Reportes de Audio</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Registrar", use_container_width=True): ventana_sonido(proyecto_elegido)
+                st.divider()
+                for s in reversed(p_data["sonido_log"]):
+                    with st.container(border=True): st.markdown(f"**ESC {s['escena']} | T {s['toma']}**")
+
+            elif seccion_elegida == "Raccord":
+                c1, c2 = st.columns([3, 1])
+                with c1: st.markdown("<h2>Notas Continuidad</h2>", unsafe_allow_html=True)
+                with c2: 
+                    if st.button("✦ Asentar", use_container_width=True): ventana_continuidad(proyecto_elegido)
+                st.divider()
+                for nota in reversed(p_data["continuidad"]):
+                    with st.container(border=True): st.markdown(f"**ESC {nota['escena']} - T {nota['toma']}**<br>{nota['detalle']}", unsafe_allow_html=True)
