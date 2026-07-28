@@ -187,7 +187,7 @@ def ventana_catering(proyecto):
 @st.dialog("🛒 Solicitar Equipo a Producción")
 def ventana_pedido(proyecto, area):
     item_nombre = st.text_input("Equipo Solicitado")
-    justificacion = st.text_area("Notas para Producción")
+    justificacion = st.text_area("Notas para Producción (Para qué escena o uso)")
     if st.button("Enviar Pedido", use_container_width=True):
         if item_nombre:
             st.session_state["proyectos"][proyecto]["pedidos_equipos"].append({"area": area, "item": item_nombre, "notas": justificacion, "estado": "Pendiente"})
@@ -250,20 +250,6 @@ def ventana_cronograma(proyecto):
     if st.button("Sumar al Cronograma", use_container_width=True):
         if actividad:
             st.session_state["proyectos"][proyecto]["plan_rodaje"].append({"hora": str(hora), "actividad": actividad})
-            guardar_y_recargar()
-
-@st.dialog("💡 Cargar Planta de Luces")
-def ventana_luces(proyecto):
-    set_nom = st.text_input("Set / Escena")
-    key_light = st.text_input("Luz Principal (Key Light)")
-    fill_light = st.text_input("Luz de Relleno (Fill)")
-    back_light = st.text_input("Contraluz (Backlight)")
-    filtros = st.text_input("Filtros / Gelatinas / Accesorios")
-    if st.button("Guardar Esquema", use_container_width=True):
-        if set_nom:
-            st.session_state["proyectos"][proyecto]["plantas_luces"].append({
-                "set": set_nom, "key": key_light, "fill": fill_light, "back": back_light, "filtros": filtros
-            })
             guardar_y_recargar()
 
 @st.dialog("🎧 Crear Reporte de Sonido")
@@ -643,7 +629,13 @@ else:
             proyecto_elegido = None
         st.divider()
         
-        opciones_nav = ["⟡ Panel de Control", "⟡ Chat Central IA", "⟡ Comparador de Rentals", "⟡ Baúl y Archivos", "⟡ Tablón de Avisos", "⟡ Portfolio y Links"]
+        opciones_nav = ["⟡ Panel de Control", "⟡ Chat Central IA"]
+        
+        # AHORA "SOLICITAR EQUIPOS A PROD" ESTÁ FIJO PARA TODOS LOS DEPARTAMENTOS
+        if nivel_actual != "lectura":
+            opciones_nav.append("⟡ Solicitar Equipos a Prod.")
+            
+        opciones_nav.extend(["⟡ Comparador de Rentals", "⟡ Baúl y Archivos", "⟡ Tablón de Avisos", "⟡ Portfolio y Links"])
         
         if rol_actual == "Super Admin":
             opciones_nav.extend([
@@ -659,7 +651,7 @@ else:
                 opciones_nav.extend(["⟡ Control de Presupuesto", "⟡ Bandeja de Pedidos (Prod)", "⟡ Locaciones y Scouting", "⟡ Registro de Crew", "⟡ Casting y Actores", "⟡ Planilla de Catering"])
             else:
                 if nivel_actual != "lectura":
-                    opciones_nav.extend(["⟡ Solicitar Equipos", "⟡ Inventario General"])
+                    opciones_nav.extend(["⟡ Inventario General"])
             
             if rol_actual == "Guion": opciones_nav.extend(["⟡ Desglose de Guion", "⟡ Laboratorio de Guion"])
             if "Dirección" in rol_actual and rol_actual not in ["Dirección de Arte", "Dirección de Fotografía"]: 
@@ -679,8 +671,53 @@ else:
     if proyecto_elegido:
         p_data = st.session_state["proyectos"][proyecto_elegido]
         
-        # --- NUEVO MÓDULO: COMPARADOR DE RENTALS ---
-        if seccion_elegida == "⟡ Comparador de Rentals":
+        # --- NUEVO: FORMULARIO GLOBAL DE PEDIDOS PARA TODOS LOS DEPTOS ---
+        if seccion_elegida == "⟡ Solicitar Equipos a Prod.":
+            colA, colB = st.columns([3, 1])
+            with colA: st.markdown(f"## 📋 Pedidos de {rol_actual}")
+            with colB:
+                if st.button("➕ Enviar Pedido", use_container_width=True): ventana_pedido(proyecto_elegido, rol_actual)
+            st.divider()
+            
+            mis_pedidos = [p for p in p_data["pedidos_equipos"] if p["area"] == rol_actual or rol_actual == "Super Admin"]
+            if not mis_pedidos:
+                st.info("Todavía no enviaste ningún pedido a Producción.")
+            else:
+                for ped in mis_pedidos:
+                    with st.container(border=True):
+                        st.write(f"**Ítem Solicitado:** {ped['item']}")
+                        st.write(f"**Justificación/Uso:** {ped['notas']}")
+                        if ped['estado'] == "Pendiente":
+                            st.warning("🕒 Estado: Pendiente de aprobación")
+                        elif ped['estado'] == "Aprobado":
+                            st.success("✅ Estado: Aprobado")
+                        else:
+                            st.error(f"❌ Estado: {ped['estado']}")
+
+        # --- BANDEJA DE PEDIDOS PROD ---
+        elif seccion_elegida == "⟡ Bandeja de Pedidos (Prod)":
+            st.markdown("## Bandeja de Solicitudes (Aprobación)")
+            if not p_data["pedidos_equipos"]:
+                st.info("No hay pedidos pendientes de otros departamentos.")
+            for i, ped in enumerate(p_data["pedidos_equipos"]):
+                if ped['estado'] == "Pendiente":
+                    with st.container(border=True):
+                        st.write(f"**De:** {ped['area']} | **Ítem:** {ped['item']} | **Notas:** {ped['notas']}")
+                        c1, c2, c3 = st.columns(3)
+                        if c1.button("✅ Aprobar", key=f"p_ap_{i}"):
+                            p_data["equipos"].append({"area": ped['area'], "item": ped['item'], "cant": 1, "tipo": "A Confirmar", "rental": "A Definir"})
+                            p_data["pedidos_equipos"][i]["estado"] = "Aprobado"
+                            guardar_y_recargar()
+                        if c2.button("❌ Rechazar", key=f"p_re_{i}"):
+                            p_data["pedidos_equipos"][i]["estado"] = "Rechazado"
+                            guardar_y_recargar()
+                        if c3.button("🔍 Buscar en Rentals", key=f"p_bus_{i}"):
+                            st.session_state["nav_radio"] = "⟡ Comparador de Rentals"
+                            st.session_state["texto_busqueda_rental"] = ped['item']
+                            st.rerun()
+
+        # --- COMPARADOR DE RENTALS ---
+        elif seccion_elegida == "⟡ Comparador de Rentals":
             if rol_actual == "Super Admin":
                 colA, colB, colC, colD = st.columns([1.5, 1, 1, 1])
                 with colA: st.markdown("## 🛒 Comparador")
@@ -786,156 +823,6 @@ else:
                                     p_data["comparador_rentals"].pop(idx_original)
                                     guardar_y_recargar()
 
-        # --- PANEL DE APROBACIÓN DE USUARIOS (SUPER ADMIN) ---
-        elif seccion_elegida == "⟡ Gestión de Accesos":
-            st.markdown("## 👑 Panel de Aprobación y Permisos")
-            st.write("Aprobá o rechazá el acceso de los usuarios y asignales su rol.")
-            
-            mapa_niveles = {
-                "Super Admin": "jefe_supremo", "Producción": "jefe", "Dirección": "jefe", 
-                "Dirección de Fotografía": "jefe", "Dirección de Arte": "jefe", "Director de Sonido": "jefe",
-                "Asistente de Sonido": "asistente", "Guion": "jefe", "Continuidad": "jefe", "Invitado": "lectura"
-            }
-            
-            for em_usr, dt_usr in st.session_state["proyectos"]["_CONFIG_"]["usuarios"].items():
-                with st.container(border=True):
-                    c1, c2, c3, c4 = st.columns([2, 1.5, 1.5, 1])
-                    with c1:
-                        st.markdown(f"**{dt_usr['nombre']}**")
-                        st.caption(em_usr)
-                    with c2:
-                        estado_actual = dt_usr.get("estado", "Pendiente")
-                        idx_est = 0 if estado_actual == "Aprobado" else 1
-                        nuevo_estado = st.selectbox("Estado", ["Aprobado", "Pendiente"], index=idx_est, key=f"est_{em_usr}")
-                    with c3:
-                        idx_rol = list(mapa_niveles.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa_niveles else 9
-                        nuevo_rol = st.selectbox("Rol", list(mapa_niveles.keys()), index=idx_rol, key=f"rol_{em_usr}")
-                    with c4:
-                        st.text("")
-                        if st.button("💾 Guardar", key=f"btn_{em_usr}"):
-                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["estado"] = nuevo_estado
-                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["rol"] = nuevo_rol
-                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["nivel"] = mapa_niveles[nuevo_rol]
-                            guardar_y_recargar()
-
-        # --- PORTFOLIO Y LINKS ---
-        elif seccion_elegida == "⟡ Portfolio y Links":
-            colA, colB = st.columns([3, 1])
-            with colA: st.markdown("## Archivo de Enlaces")
-            with colB:
-                if nivel_actual != "lectura":
-                    if st.button("➕ Añadir Link", use_container_width=True): ventana_link(proyecto_elegido)
-            st.divider()
-            for lk in p_data["links"]:
-                with st.container(border=True):
-                    st.markdown(f"### 🔗 [{lk['titulo']}]({lk['url']})")
-                    st.write(lk['desc'])
-
-        # --- CONTROL DE PRESUPUESTO ---
-        elif seccion_elegida == "⟡ Control de Presupuesto":
-            colA, colB, colC = st.columns([2, 1, 1])
-            with colA: st.markdown("## Presupuesto de Producción")
-            with colB:
-                if st.button("➕ Cargar Gasto", use_container_width=True): ventana_presupuesto(proyecto_elegido)
-            with colC:
-                if p_data["presupuesto"]:
-                    df_presup = pd.DataFrame(p_data["presupuesto"])
-                    st.download_button("⬇️ Descargar", data=df_presup.to_csv(index=False).encode('utf-8'), file_name="presupuesto.csv", mime="text/csv", use_container_width=True)
-            st.divider()
-            total = sum(item['costo'] for item in p_data["presupuesto"])
-            st.success(f"**Gasto Total: ${total:,.2f}**")
-            for item in p_data["presupuesto"]:
-                with st.container(border=True):
-                    st.markdown(f"**{item['estado']}** | ${item['costo']:,.2f} - {item['item']} ({item['area']})")
-
-        # --- CASTING ---
-        elif seccion_elegida == "⟡ Casting y Actores":
-            colA, colB = st.columns([3, 1])
-            with colA: st.markdown("## Planilla de Casting")
-            with colB:
-                if nivel_actual in ["jefe", "jefe_supremo"]:
-                    if st.button("➕ Cargar Actor/Actriz", use_container_width=True): ventana_casting(proyecto_elegido)
-            st.divider()
-            for actor in p_data["casting"]:
-                with st.container(border=True):
-                    st.markdown(f"### {actor['actor']} 🎭 Personaje: {actor['personaje']}")
-                    st.write(f"🔗 [Ver Reel / Videobook]({actor['reel']})")
-                    if actor.get("foto"):
-                        st.image(base64.b64decode(actor["foto"]), width=200)
-
-        # --- DESGLOSE DE GUION ---
-        elif seccion_elegida == "⟡ Desglose de Guion":
-            colA, colB, colC = st.columns([2, 1, 1])
-            with colA: st.markdown("## Desglose (Script Breakdown)")
-            with colB:
-                if st.button("➕ Desglosar Escena", use_container_width=True): ventana_desglose(proyecto_elegido)
-            with colC:
-                if p_data["desglose"]:
-                    df_desg = pd.DataFrame(p_data["desglose"])
-                    st.download_button("⬇️ Descargar", data=df_desg.to_csv(index=False).encode('utf-8'), file_name="desglose.csv", mime="text/csv", use_container_width=True)
-            st.divider()
-            for d in p_data["desglose"]:
-                with st.container(border=True):
-                    st.markdown(f"**Escena {d['escena']} | {d['intext']} | {d['dianoche']}**")
-                    st.write(d['desc'])
-
-        # --- PANEL DE CONTROL ---
-        elif seccion_elegida == "⟡ Panel de Control":
-            st.markdown(f"## {proyecto_elegido.upper()}")
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Miembros", len(p_data["crew"]))
-            col2.metric("Locaciones", len(p_data["locaciones"]))
-            col3.metric("Equipos", len(p_data["equipos"]))
-            col4.metric("Pedidos Ptes.", len(p_data["pedidos_equipos"]))
-            st.divider()
-            
-            st.markdown("### ⚡ Inteligencia Artificial Central")
-            if st.button("Generar Call Sheet Automático con IA", use_container_width=True):
-                try:
-                    CLAVE_API = st.secrets["GEMINI_API_KEY"]
-                    genai.configure(api_key=CLAVE_API)
-                    modelo = genai.GenerativeModel('gemini-3.5-flash')
-                    datos = f"Avisos: {p_data['avisos']} | Equipo: {p_data['crew']} | Locaciones: {p_data['locaciones']}"
-                    prompt = f"Sos FTN AI. Proyecto: {proyecto_elegido}. Datos actuales: {datos}. Redactá un Call Sheet profesional."
-                    with st.spinner("Procesando datos del rodaje..."):
-                        respuesta = modelo.generate_content(prompt)
-                        st.success("Call Sheet generado:")
-                        st.write(respuesta.text)
-                except Exception as e:
-                    st.error("Error al conectar con la IA. Asegurate de configurar tu clave en los Secrets de Streamlit.")
-            
-        # --- SOLICITAR EQUIPOS ---
-        elif seccion_elegida == "⟡ Solicitar Equipos":
-            colA, colB = st.columns([3, 1])
-            with colA: st.markdown("## Solicitar Equipos a Producción")
-            with colB:
-                if st.button("➕ Enviar Pedido", use_container_width=True): ventana_pedido(proyecto_elegido, rol_actual)
-            st.divider()
-            mis_pedidos = [p for p in p_data["pedidos_equipos"] if p["area"] == rol_actual or rol_actual == "Super Admin"]
-            for ped in mis_pedidos:
-                with st.container(border=True):
-                    st.write(f"**Ítem:** {ped['item']} | **Notas:** {ped['notas']} | 🕒 Estado: {ped['estado']}")
-
-        # --- BANDEJA DE PEDIDOS PROD ---
-        elif seccion_elegida == "⟡ Bandeja de Pedidos (Prod)":
-            st.markdown("## Bandeja de Solicitudes")
-            for i, ped in enumerate(p_data["pedidos_equipos"]):
-                with st.container(border=True):
-                    st.write(f"**De:** {ped['area']} | **Ítem:** {ped['item']} | **Notas:** {ped['notas']}")
-                    c1, c2, c3 = st.columns(3)
-                    if c1.button("✅ Aprobar", key=f"p_ap_{i}"):
-                        p_data["equipos"].append({"area": ped['area'], "item": ped['item'], "cant": 1, "tipo": "A Confirmar", "rental": "A Definir"})
-                        p_data["pedidos_equipos"].pop(i)
-                        guardar_y_recargar()
-                    if c2.button("❌ Rechazar", key=f"p_re_{i}"):
-                        p_data["pedidos_equipos"].pop(i)
-                        guardar_y_recargar()
-                    if c3.button("🔍 Buscar en Rentals", key=f"p_bus_{i}"):
-                        # Al hacer clic, le pasamos el nombre del ítem al buscador del comparador
-                        st.session_state["nav_radio"] = "⟡ Comparador de Rentals"
-                        st.session_state["texto_busqueda_rental"] = ped['item']
-                        st.rerun()
-
         # --- PLAN DE RODAJE ---
         elif seccion_elegida == "⟡ Plan de Rodaje (AD)":
             colA, colB = st.columns([3, 1])
@@ -948,17 +835,76 @@ else:
                 with st.container(border=True):
                     st.markdown(f"**{act.get('hora', '')}** | {act['actividad']}")
 
-        # --- FOTO Y LUCES ---
+        # --- FOTO Y LUCES (REDISEÑO PROFESIONAL) ---
         elif seccion_elegida == "⟡ DF: Plantas de Luces y Lentes":
-            st.markdown("## Departamento de Fotografía")
-            tab1, tab2 = st.tabs(["💡 Planta de Luces", "🧮 Calculadora DOF"])
+            st.markdown("## 📐 Blueprint Designer: Planta de Luces")
+            st.write("Diseñá el esquema de iluminación con la simbología estándar de la industria.")
+            
+            tab1, tab2 = st.tabs(["🗺️ Mesa de Diseño (Canvas)", "🧮 Calculadora DOF"])
+            
             with tab1:
-                c1, c2 = st.columns([1, 4])
-                with c1:
-                    modo_dibujo = st.selectbox("Herramienta", ["freedraw", "line", "rect", "circle"])
-                    color = st.color_picker("Color", "#FFFFFF")
-                with c2:
-                    st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=3, stroke_color=color, background_color="#1E1E1E", width=700, height=450, drawing_mode=modo_dibujo, key="canvas_luces")
+                # --- Panel de Simbología y Herramientas ---
+                st.markdown("#### Simbología y Herramientas")
+                col_herramientas, col_canvas, col_specs = st.columns([1, 2.5, 1])
+                
+                with col_herramientas:
+                    modo_dibujo = st.selectbox("Modo de trazado", ["freedraw", "line", "rect", "circle", "transform"], help="Transform te permite mover elementos ya dibujados.")
+                    
+                    st.markdown("---")
+                    st.markdown("**Seleccioná el Color/Elemento:**")
+                    
+                    # Colores predefinidos de la industria
+                    color_mapping = {
+                        "🟡 Luz Principal (Key)": "#FFD700",
+                        "🔵 Luz de Relleno (Fill)": "#1E90FF",
+                        "🟣 Contraluz (Backlight)": "#8A2BE2",
+                        "🔴 Actor / Sujeto": "#FF4500",
+                        "🎥 Cámara": "#FFFFFF",
+                        "⬜ Ventana / Práctica": "#A9A9A9",
+                        "⚫ Bandera / Negativo": "#000000"
+                    }
+                    
+                    tipo_elemento = st.radio("Elemento", list(color_mapping.keys()))
+                    color_elegido = color_mapping[tipo_elemento]
+                    grosor = st.slider("Grosor del trazo", 1, 10, 3)
+                    
+                    st.markdown("---")
+                    st.info("💡 **Tip:** Usá 'Circle' para actores, 'Rect' para cámaras y 'Line' para direccionar la luz.")
+
+                # --- Canvas Central (Blueprint) ---
+                with col_canvas:
+                    # Fondo color azul plano técnico (Blueprint oscuro)
+                    bg_color = "#1b263b"
+                    canvas_result = st_canvas(
+                        fill_color="rgba(255, 255, 255, 0)",  # Relleno transparente por defecto
+                        stroke_width=grosor,
+                        stroke_color=color_elegido,
+                        background_color=bg_color,
+                        width=600,
+                        height=500,
+                        drawing_mode=modo_dibujo,
+                        key="canvas_luces_pro"
+                    )
+                
+                # --- Especificaciones Técnicas Laterales ---
+                with col_specs:
+                    st.markdown("#### Ficha Técnica Set")
+                    escena_luz = st.text_input("Escena N° / Set")
+                    hora_luz = st.selectbox("Hora ficticia", ["Día", "Noche", "Atardecer", "Amanecer"])
+                    amps_disp = st.number_input("Amperaje Disp. (A)", min_value=0, value=60)
+                    techo_alt = st.number_input("Altura Techo (m)", min_value=0.0, value=3.0)
+                    notas_luz = st.text_area("Lista de Equipos / Modificadores (Ej: 1x Skypanel, 2x C-Stands, Grid 4x4)")
+                    
+                    if st.button("💾 Guardar Planta", use_container_width=True):
+                        # En una versión avanzada acá se guardaría el JSON del canvas.
+                        # Por ahora guardamos la ficha técnica.
+                        if escena_luz:
+                            st.session_state["proyectos"][proyecto]["plantas_luces"].append({
+                                "set": escena_luz, "key": "Ver Canvas", "fill": hora_luz, "back": f"{amps_disp}A / {techo_alt}m", "filtros": notas_luz
+                            })
+                            guardar_y_recargar()
+                            st.success("Ficha guardada exitosamente.")
+
             with tab2:
                 c1, c2, c3 = st.columns(3)
                 focal = c1.number_input("Distancia Focal (mm)", 10, 200, 50)
@@ -1118,6 +1064,31 @@ else:
                 with st.container(border=True):
                     st.markdown(f"{t['evaluacion']} | **Escena {t['escena']} - Toma {t['toma']}**")
 
+        # --- PANEL DE CONTROL ---
+        elif seccion_elegida == "⟡ Panel de Control":
+            st.markdown(f"## {proyecto_elegido.upper()}")
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Miembros", len(p_data["crew"]))
+            col2.metric("Locaciones", len(p_data["locaciones"]))
+            col3.metric("Equipos", len(p_data["equipos"]))
+            col4.metric("Pedidos Ptes.", len(p_data["pedidos_equipos"]))
+            st.divider()
+            
+            st.markdown("### ⚡ Inteligencia Artificial Central")
+            if st.button("Generar Call Sheet Automático con IA", use_container_width=True):
+                try:
+                    CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                    genai.configure(api_key=CLAVE_API)
+                    modelo = genai.GenerativeModel('gemini-3.5-flash')
+                    datos = f"Avisos: {p_data['avisos']} | Equipo: {p_data['crew']} | Locaciones: {p_data['locaciones']}"
+                    prompt = f"Sos FTN AI. Proyecto: {proyecto_elegido}. Datos actuales: {datos}. Redactá un Call Sheet profesional."
+                    with st.spinner("Procesando datos del rodaje..."):
+                        respuesta = modelo.generate_content(prompt)
+                        st.success("Call Sheet generado:")
+                        st.write(respuesta.text)
+                except Exception as e:
+                    st.error("Error al conectar con la IA. Asegurate de configurar tu clave en los Secrets de Streamlit.")
+            
         # --- REPORTES DE SONIDO ---
         elif seccion_elegida == "⟡ Reportes de Sonido":
             colA, colB = st.columns([3, 1])
