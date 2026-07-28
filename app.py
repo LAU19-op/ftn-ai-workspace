@@ -82,7 +82,7 @@ def inicializar_bd():
                     "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
                     "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
                     "personajes", "locaciones", "crew", "catering", "links", "presupuesto", 
-                    "casting", "desglose", "comparador_rentals", "carrito_rentals"
+                    "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals"
                 ]
                 for nombre_proy, datos_proy in data_cargada.items():
                     if nombre_proy == "_CONFIG_": 
@@ -117,7 +117,7 @@ def inicializar_bd():
                     "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], 
                     "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], 
                     "personajes": [], "locaciones": [], "crew": [], "catering": [],
-                    "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": [] 
+                    "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": [], "directorio_rentals": [] 
                 }
             }
 
@@ -345,20 +345,39 @@ def ventana_desglose(proyecto):
             st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc})
             guardar_y_recargar()
 
+@st.dialog("🏬 Nuevo Rental (Directorio)")
+def ventana_nuevo_rental(proyecto):
+    st.write("Agregá los datos de contacto de la casa de alquiler.")
+    nombre = st.text_input("Nombre del Rental")
+    url = st.text_input("Link web, Instagram o WhatsApp")
+    if st.button("Guardar en Directorio", use_container_width=True):
+        if nombre:
+            st.session_state["proyectos"][proyecto]["directorio_rentals"].append({"nombre": nombre, "url": url})
+            guardar_y_recargar()
+
 @st.dialog("➕ Cargar Equipos (URL, Excel o Foto)")
 def ventana_comparador_rental(proyecto):
+    directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
+    if not directorio:
+        st.warning("⚠️ Primero agregá un Rental desde el botón '🏬 Nuevo Rental' para poder asignarle los equipos.")
+        return
+        
+    nombres_rentals = [r["nombre"] for r in directorio]
+    rental_elegido = st.selectbox("📌 ¿De qué rental son estos equipos?", nombres_rentals)
+    url_rental_elegido = next((r["url"] for r in directorio if r["nombre"] == rental_elegido), "#")
+
     st.write("Elegí cómo querés extraer los productos y precios usando IA:")
     tab_url, tab_excel, tab_img = st.tabs(["🔗 Link (URL)", "📊 Excel / CSV", "📸 Imagen / Captura"])
     
     # --- TAB 1: ESCANEO POR URL ---
     with tab_url:
-        url_rental = st.text_input("🔗 Pegá la URL del Rental")
+        url_producto = st.text_input("🔗 Pegá la URL de la página de productos")
         if st.button("Escanear URL", use_container_width=True):
-            if url_rental:
+            if url_producto:
                 with st.spinner("🤖 Navegando la web y leyendo productos..."):
                     try:
                         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-                        req = requests.get(url_rental, headers=headers, timeout=15)
+                        req = requests.get(url_producto, headers=headers, timeout=15)
                         soup = BeautifulSoup(req.text, 'html.parser')
                         texto_web = soup.get_text(separator=' ', strip=True)[:20000] 
                         
@@ -368,10 +387,10 @@ def ventana_comparador_rental(proyecto):
                         
                         prompt = f"""
                         Actúa como un extractor de datos JSON. Analiza el siguiente texto de una web de alquiler.
-                        REGLA DEL PRECIO: Extrae solo el valor numérico. Elimina TODOS los símbolos de moneda, comas, puntos o letras (ej: si dice "$ 15.000 /día", pon 15000). Si no encuentras ningún precio, pon 0.
+                        REGLA DEL PRECIO: Extrae solo el valor numérico (ej: si dice "$ 15.000 /día", pon 15000). Si no encuentras precio, pon 0.
                         Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin formato markdown):
                         [
-                          {{"nombre": "Nombre del equipo", "precio": 15000, "estado": "Disponible", "url": "{url_rental}", "foto": ""}}
+                          {{"nombre": "Nombre del equipo", "precio": 15000, "estado": "Disponible", "url": "{url_producto}", "foto": ""}}
                         ]
                         Texto web: {texto_web}
                         """
@@ -381,7 +400,10 @@ def ventana_comparador_rental(proyecto):
                         productos_extraidos = json.loads(texto_json)
                         
                         if len(productos_extraidos) > 0:
-                            st.session_state["proyectos"][proyecto]["comparador_rentals"].extend(productos_extraidos)
+                            for prod in productos_extraidos:
+                                prod["rental"] = rental_elegido
+                                prod["url_rental"] = url_rental_elegido
+                                st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
                             guardar_y_recargar()
                         else:
                             st.warning("La IA no encontró productos claros en esta URL.")
@@ -411,7 +433,7 @@ def ventana_comparador_rental(proyecto):
                         REGLA DEL PRECIO: Extrae solo el valor numérico (ej: 15000). Si no hay precio, pon 0.
                         Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin formato markdown):
                         [
-                          {{"nombre": "Equipo", "precio": 15000, "estado": "Disponible", "url": "N/A", "foto": ""}}
+                          {{"nombre": "Equipo", "precio": 15000, "estado": "Disponible", "url": "{url_rental_elegido}", "foto": ""}}
                         ]
                         Datos: {texto_datos}
                         """
@@ -420,7 +442,10 @@ def ventana_comparador_rental(proyecto):
                         productos_extraidos = json.loads(texto_json)
                         
                         if len(productos_extraidos) > 0:
-                            st.session_state["proyectos"][proyecto]["comparador_rentals"].extend(productos_extraidos)
+                            for prod in productos_extraidos:
+                                prod["rental"] = rental_elegido
+                                prod["url_rental"] = url_rental_elegido
+                                st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
                             guardar_y_recargar()
                         else:
                             st.warning("No se encontraron productos en el archivo.")
@@ -440,13 +465,13 @@ def ventana_comparador_rental(proyecto):
                         genai.configure(api_key=CLAVE_API)
                         modelo = genai.GenerativeModel('gemini-3.5-flash')
                         
-                        prompt = """
+                        prompt = f"""
                         Actúa como un extractor de datos JSON. Analiza esta imagen que contiene una lista, catálogo o presupuesto de alquiler de equipos audiovisuales.
                         Extrae los nombres de los equipos y sus precios. 
                         REGLA DEL PRECIO: Extrae solo el valor numérico (ej: 15000). Si no hay, pon 0.
                         Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin formato markdown):
                         [
-                          {"nombre": "Nombre del equipo", "precio": 15000, "estado": "Disponible", "url": "N/A", "foto": ""}
+                          {{"nombre": "Nombre del equipo", "precio": 15000, "estado": "Disponible", "url": "{url_rental_elegido}", "foto": ""}}
                         ]
                         """
                         respuesta = modelo.generate_content([prompt, img])
@@ -454,12 +479,59 @@ def ventana_comparador_rental(proyecto):
                         productos_extraidos = json.loads(texto_json)
                         
                         if len(productos_extraidos) > 0:
-                            st.session_state["proyectos"][proyecto]["comparador_rentals"].extend(productos_extraidos)
+                            for prod in productos_extraidos:
+                                prod["rental"] = rental_elegido
+                                prod["url_rental"] = url_rental_elegido
+                                st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
                             guardar_y_recargar()
                         else:
                             st.warning("No se detectaron equipos o precios en la imagen.")
                     except Exception as e:
                         st.error(f"Error al analizar la imagen: {e}")
+
+@st.dialog("🚀 ¡LISTO! Resumen y Pedidos")
+def ventana_checkout(proyecto):
+    carrito = st.session_state["proyectos"][proyecto]["carrito_rentals"]
+    directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
+    
+    if not carrito:
+        st.warning("El carrito está vacío.")
+        return
+        
+    st.write("Acá tenés el resumen de tus equipos agrupados por Rental para que puedas hacer los pedidos directamente.")
+    
+    # Agrupar carrito por rental
+    rentals_agrupados = {}
+    for item in carrito:
+        r_name = item.get("rental", "Desconocido")
+        if r_name not in rentals_agrupados:
+            rentals_agrupados[r_name] = []
+        rentals_agrupados[r_name].append(item)
+        
+    for r_name, items in rentals_agrupados.items():
+        with st.container(border=True):
+            st.markdown(f"### 🏬 {r_name}")
+            total_r = 0
+            for i in items:
+                st.write(f"- {i['nombre']} **(${i['precio']:,.2f})**")
+                total_r += i['precio']
+                
+            st.success(f"**Subtotal en {r_name}: ${total_r:,.2f} / día**")
+            
+            # Botón directo al rental
+            link_rental = next((d["url"] for d in directorio if d["nombre"] == r_name), None)
+            if link_rental:
+                st.markdown(f"<a href='{link_rental}' target='_blank' style='background-color:#6366f1; color:white; padding:10px 15px; text-decoration:none; border-radius:8px; font-weight:bold; display:inline-block; margin-top:10px;'>👉 ABRIR {r_name.upper()}</a>", unsafe_allow_html=True)
+            else:
+                st.caption("No hay link guardado para este rental.")
+
+@st.dialog("⚠️ Vaciar Comparador")
+def ventana_vaciar_comparador(proyecto):
+    st.warning("¿Estás seguro de que querés borrar TODOS los equipos escaneados y vaciar el carrito? (Tu directorio de rentals no se borrará).")
+    if st.button("🚨 Sí, borrar todo", use_container_width=True):
+        st.session_state["proyectos"][proyecto]["comparador_rentals"] = []
+        st.session_state["proyectos"][proyecto]["carrito_rentals"] = []
+        guardar_y_recargar()
 
 # --- 4. GESTIÓN DE SESIÓN Y LOGIN LOCAL ---
 
@@ -553,7 +625,7 @@ else:
                             "contexto_aprobado": "Proyecto nuevo.",
                             "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], 
                             "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], 
-                            "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": []
+                            "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": [], "directorio_rentals": []
                         }
                         guardar_y_recargar()
                         
@@ -602,11 +674,27 @@ else:
         
         # --- NUEVO MÓDULO: COMPARADOR DE RENTALS ---
         if seccion_elegida == "⟡ Comparador de Rentals":
-            colA, colB = st.columns([3, 1])
-            with colA: st.markdown("## 🛒 Comparador Inteligente de Rentals")
-            with colB:
-                if st.button("➕ Cargar Equipos (IA)", use_container_width=True):
-                    ventana_comparador_rental(proyecto_elegido)
+            if rol_actual == "Super Admin":
+                colA, colB, colC, colD = st.columns([1.5, 1, 1, 1])
+                with colA: st.markdown("## 🛒 Comparador")
+                with colB:
+                    if st.button("🏬 Nuevo Rental", use_container_width=True):
+                        ventana_nuevo_rental(proyecto_elegido)
+                with colC:
+                    if st.button("➕ Cargar Equipos", use_container_width=True):
+                        ventana_comparador_rental(proyecto_elegido)
+                with colD:
+                    if st.button("🗑️ Borrar Todo", use_container_width=True):
+                        ventana_vaciar_comparador(proyecto_elegido)
+            else:
+                colA, colB, colC = st.columns([2, 1, 1])
+                with colA: st.markdown("## 🛒 Comparador Inteligente")
+                with colB:
+                    if st.button("🏬 Nuevo Rental", use_container_width=True):
+                        ventana_nuevo_rental(proyecto_elegido)
+                with colC:
+                    if st.button("➕ Cargar Equipos (IA)", use_container_width=True):
+                        ventana_comparador_rental(proyecto_elegido)
             st.divider()
             
             # --- CARRITO DE COMPARACIÓN ---
@@ -615,8 +703,14 @@ else:
                 
             carrito = p_data["carrito_rentals"]
             if len(carrito) > 0:
-                st.markdown("### 🛒 Tu Carrito / Comparativa")
-                st.write("Acá tenés el resumen de lo que seleccionaste para comparar o alquilar juntos:")
+                col_cart_txt, col_cart_btn = st.columns([3, 1])
+                with col_cart_txt:
+                    st.markdown("### 🛒 Tu Carrito / Comparativa")
+                with col_cart_btn:
+                    if st.button("✅ LISTO! Pedir Todo", use_container_width=True):
+                        ventana_checkout(proyecto_elegido)
+                        
+                st.write("Acá tenés el resumen de lo que seleccionaste:")
                 
                 cols_cart = st.columns(4)
                 total_cart = 0
@@ -625,10 +719,9 @@ else:
                     total_cart += item["precio"]
                     with cols_cart[i % 4]:
                         with st.container(border=True):
+                            st.caption(f"🏬 {item.get('rental', 'N/A')}")
                             st.markdown(f"**{item['nombre']}**")
-                            st.markdown(f"💰 **${item['precio']:,.2f} / día**")
-                            if item.get('url') and item['url'] != "N/A":
-                                st.markdown(f"[🔗 Ir a alquilar]({item['url']})", unsafe_allow_html=True)
+                            st.markdown(f"💰 **${item['precio']:,.2f}**")
                             if st.button("❌ Quitar", key=f"quit_cart_{i}"):
                                 p_data["carrito_rentals"].pop(i)
                                 guardar_y_recargar()
@@ -641,7 +734,7 @@ else:
             rentals_lista = p_data.get("comparador_rentals", [])
             
             if not rentals_lista:
-                st.info("No hay rentals cargados. Hacé clic en 'Cargar Equipos' para extraer productos automáticamente con IA desde un Link, Excel o Foto.")
+                st.info("No hay rentals cargados. 1) Creá un 'Nuevo Rental' y luego 2) Hacé clic en 'Cargar Equipos' para extraer productos.")
             else:
                 texto_busqueda = st.text_input("Buscador de equipos (Ej: Lentes, Cámara, Luces)... 🔎", "")
                 
@@ -674,12 +767,12 @@ else:
                                 else:
                                     st.markdown("<div style='height: 120px; background: #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 15px;'>📷</div>", unsafe_allow_html=True)
                                 
+                                st.caption(f"🏬 Rental: **{r.get('rental', 'N/A')}**")
                                 st.markdown(f"### {r['nombre']}")
                                 st.markdown(f"**Precio:** ${r['precio']:,.2f} / día")
-                                st.caption(f"Estado: {r['estado']}")
                                 
                                 c_btn1, c_btn2 = st.columns(2)
-                                if c_btn1.button("🛒 Agregar al combo", key=f"add_{idx_original}"):
+                                if c_btn1.button("🛒 Agregar", key=f"add_{idx_original}"):
                                     p_data["carrito_rentals"].append(r)
                                     guardar_y_recargar()
                                 if c_btn2.button("🗑️ Eliminar", key=f"del_{idx_original}"):
