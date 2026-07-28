@@ -11,25 +11,22 @@ from streamlit_drawable_canvas import st_canvas
 # --- 1. CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="FTN AI | Workspace", page_icon="⚡", layout="wide")
 
-# --- ESTILOS CSS MODERNOS (UI Mejorada: Bordes redondeados, Glassmorphism, Tarjetas) ---
+# --- ESTILOS CSS MODERNOS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Estilos generales y variables */
     :root {
         --primary: #6366f1;
         --primary-dark: #4f46e5;
         --primary-light: #e0e7ff;
     }
 
-    /* Tarjetas y contenedores con bordes redondeados modernos */
     div.stContainer, div[data-testid="stVerticalBlock"] > div.stMarkdown {
         border-radius: 16px;
     }
     
-    /* Inputs y campos de texto estilizados */
     .stTextInput input, .stSelectbox select, .stNumberInput input {
         border-radius: 12px !important;
         border: 1px solid #e2e8f0 !important;
@@ -40,7 +37,6 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
     }
     
-    /* Botones principales modernos */
     .stButton button {
         border-radius: 12px !important;
         font-weight: 600 !important;
@@ -85,7 +81,7 @@ def inicializar_bd():
                     "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
                     "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
                     "personajes", "locaciones", "crew", "catering", "links", "presupuesto", 
-                    "casting", "desglose", "comparador_rentals"
+                    "casting", "desglose", "comparador_rentals", "carrito_rentals"
                 ]
                 for nombre_proy, datos_proy in data_cargada.items():
                     if nombre_proy == "_CONFIG_": 
@@ -120,7 +116,7 @@ def inicializar_bd():
                     "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], 
                     "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], 
                     "personajes": [], "locaciones": [], "crew": [], "catering": [],
-                    "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [] 
+                    "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": [] 
                 }
             }
 
@@ -357,33 +353,29 @@ def ventana_comparador_rental(proyecto):
         if url_rental:
             with st.spinner("🤖 Navegando la web y leyendo productos... esto puede demorar unos segundos."):
                 try:
-                    # 1. Simulamos ser un navegador para que la web no nos bloquee
                     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-                    req = requests.get(url_rental, headers=headers, timeout=10)
+                    req = requests.get(url_rental, headers=headers, timeout=15)
                     
-                    # 2. Extraemos todo el texto visible de la web
                     soup = BeautifulSoup(req.text, 'html.parser')
-                    texto_web = soup.get_text(separator=' ', strip=True)[:15000] # Limitamos a 15mil caracteres
+                    texto_web = soup.get_text(separator=' ', strip=True)[:20000] 
                     
-                    # 3. Le pedimos a la IA que estructure ese desastre de texto
                     CLAVE_API = st.secrets["GEMINI_API_KEY"]
                     genai.configure(api_key=CLAVE_API)
                     modelo = genai.GenerativeModel('gemini-3.5-flash')
                     
+                    # PROMPT MEJORADO PARA FORZAR EL PRECIO COMO NÚMERO
                     prompt = f"""
-                    Actúa como un extractor de datos JSON. A continuación te paso el texto crudo extraído de una página web de alquiler de equipos de cine.
+                    Actúa como un extractor de datos JSON. Analiza el siguiente texto de una web de alquiler de equipos audiovisuales.
                     Encuentra todos los equipos y sus precios. 
-                    Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin markdown, sin comillas invertidas, solo el texto JSON puro):
+                    REGLA OBLIGATORIA PARA EL PRECIO: Extrae solo el valor numérico. Elimina TODOS los símbolos de moneda ($), comas, puntos o letras (ej: si dice "$ 15.000 /día", debes poner el número entero 15000). Si no encuentras ningún precio, pon 0.
+                    Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin formato markdown ni comillas):
                     [
                       {{"nombre": "Nombre del equipo", "precio": 15000, "estado": "Disponible", "url": "{url_rental}", "foto": ""}}
                     ]
-                    Si no encuentras precio, pon 0. Si el texto no tiene productos, devuelve un array vacío [].
-                    Texto de la web: {texto_web}
+                    Texto web: {texto_web}
                     """
                     
                     respuesta = modelo.generate_content(prompt)
-                    
-                    # Limpiamos la respuesta por si la IA agrega "```json"
                     texto_json = respuesta.text.strip().replace("```json", "").replace("```", "")
                     productos_extraidos = json.loads(texto_json)
                     
@@ -392,7 +384,7 @@ def ventana_comparador_rental(proyecto):
                             st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
                         guardar_y_recargar()
                     else:
-                        st.warning("La IA no pudo encontrar productos claros en esta URL. (Puede que la página bloquee bots o cargue con JavaScript).")
+                        st.warning("La IA no pudo encontrar productos claros en esta URL.")
                         
                 except Exception as e:
                     st.error(f"Hubo un error técnico al escanear: {e}")
@@ -489,7 +481,7 @@ else:
                             "contexto_aprobado": "Proyecto nuevo.",
                             "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], 
                             "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], 
-                            "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": []
+                            "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": []
                         }
                         guardar_y_recargar()
                         
@@ -545,37 +537,82 @@ else:
                     ventana_comparador_rental(proyecto_elegido)
             st.divider()
             
+            # --- CARRITO DE COMPARACIÓN ---
+            if "carrito_rentals" not in p_data:
+                p_data["carrito_rentals"] = []
+                
+            carrito = p_data["carrito_rentals"]
+            if len(carrito) > 0:
+                st.markdown("### 🛒 Tu Carrito / Comparativa")
+                st.write("Acá tenés el resumen de lo que seleccionaste para comparar o alquilar juntos:")
+                
+                cols_cart = st.columns(4)
+                total_cart = 0
+                
+                for i, item in enumerate(carrito):
+                    total_cart += item["precio"]
+                    with cols_cart[i % 4]:
+                        with st.container(border=True):
+                            st.markdown(f"**{item['nombre']}**")
+                            st.markdown(f"💰 **${item['precio']:,.2f} / día**")
+                            if item.get('url'):
+                                st.markdown(f"[🔗 Ir a alquilar]({item['url']})", unsafe_allow_html=True)
+                            if st.button("❌ Quitar", key=f"quit_cart_{i}"):
+                                p_data["carrito_rentals"].pop(i)
+                                guardar_y_recargar()
+                                
+                st.success(f"**💰 TOTAL DEL COMBO SELECCIONADO: ${total_cart:,.2f} / día**")
+                st.divider()
+
+            # --- BUSCADOR Y LISTA GENERAL ---
+            st.markdown("### 🔍 Catálogo Extraído")
             rentals_lista = p_data.get("comparador_rentals", [])
+            
             if not rentals_lista:
                 st.info("No hay rentals cargados. Hacé clic en 'Escanear URL' para extraer productos automáticamente con IA.")
             else:
-                precios_validos = [r["precio"] for r in rentals_lista if r["precio"] > 0]
-                menor_precio = min(precios_validos) if precios_validos else 0
-
-                cols = st.columns(3)
+                texto_busqueda = st.text_input("Buscador de equipos (Ej: Lentes, Cámara, Luces)... 🔎", "")
+                
+                # Filtrar la lista
+                rentals_mostrar = []
                 for idx, r in enumerate(rentals_lista):
-                    with cols[idx % 3]:
-                        es_mejor = (r["precio"] == menor_precio and r["precio"] > 0)
+                    if texto_busqueda == "" or texto_busqueda.lower() in r['nombre'].lower():
+                        rentals_mostrar.append((idx, r)) # Guardamos el índice original para poder borrarlo
                         
-                        with st.container(border=True):
-                            if es_mejor:
-                                st.markdown("<span style='background:#6366f1; color:white; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold;'>¡MEJOR PRECIO!</span>", unsafe_allow_html=True)
+                if not rentals_mostrar:
+                    st.warning("No se encontraron equipos con ese nombre.")
+                else:
+                    precios_validos = [item["precio"] for _, item in rentals_mostrar if item["precio"] > 0]
+                    menor_precio = min(precios_validos) if precios_validos else 0
+
+                    cols = st.columns(3)
+                    display_idx = 0
+                    
+                    for idx_original, r in rentals_mostrar:
+                        with cols[display_idx % 3]:
+                            display_idx += 1
+                            es_mejor = (r["precio"] == menor_precio and r["precio"] > 0)
                             
-                            # Si la IA extrajo base64 de alguna forma manual la mostramos, sino icono.
-                            if r.get("foto") and len(r["foto"]) > 10:
-                                st.image(base64.b64decode(r["foto"]), use_container_width=True)
-                            else:
-                                st.markdown("<div style='height: 120px; background: #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 15px;'>📷</div>", unsafe_allow_html=True)
-                            
-                            st.markdown(f"### {r['nombre']}")
-                            st.markdown(f"**Precio:** ${r['precio']:,.2f} / día")
-                            st.caption(f"Estado: {r['estado']}")
-                            if r['url']:
-                                st.markdown(f"[🔗 Visitar Rental]({r['url']})", unsafe_allow_html=True)
-                            
-                            if st.button("🗑️ Eliminar", key=f"del_rental_{idx}"):
-                                p_data["comparador_rentals"].pop(idx)
-                                guardar_y_recargar()
+                            with st.container(border=True):
+                                if es_mejor:
+                                    st.markdown("<span style='background:#6366f1; color:white; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold;'>¡MEJOR PRECIO!</span>", unsafe_allow_html=True)
+                                
+                                if r.get("foto") and len(r["foto"]) > 10:
+                                    st.image(base64.b64decode(r["foto"]), use_container_width=True)
+                                else:
+                                    st.markdown("<div style='height: 120px; background: #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 15px;'>📷</div>", unsafe_allow_html=True)
+                                
+                                st.markdown(f"### {r['nombre']}")
+                                st.markdown(f"**Precio:** ${r['precio']:,.2f} / día")
+                                st.caption(f"Estado: {r['estado']}")
+                                
+                                c_btn1, c_btn2 = st.columns(2)
+                                if c_btn1.button("🛒 Agregar al combo", key=f"add_{idx_original}"):
+                                    p_data["carrito_rentals"].append(r)
+                                    guardar_y_recargar()
+                                if c_btn2.button("🗑️ Eliminar", key=f"del_{idx_original}"):
+                                    p_data["comparador_rentals"].pop(idx_original)
+                                    guardar_y_recargar()
 
         # --- PANEL DE APROBACIÓN DE USUARIOS (SUPER ADMIN) ---
         elif seccion_elegida == "⟡ Gestión de Accesos":
