@@ -16,6 +16,7 @@ from PIL import Image
 from datetime import datetime, date, timedelta
 import random
 import time
+import gc
 
 # --- DEPENDENCIAS SEGURAS Y LIVIANAS ---
 from streamlit_lottie import st_lottie
@@ -29,7 +30,6 @@ import networkx as nx
 from gtts import gTTS
 import bcrypt
 import psutil
-from colorthief import ColorThief
 from suntime import Sun
 import altair as alt
 from geopy.geocoders import Nominatim
@@ -123,6 +123,7 @@ def check_pass(password, hashed):
 def guardar_y_recargar():
     with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
         json.dump(st.session_state["proyectos"], f, ensure_ascii=False, indent=4)
+    gc.collect() # Liberar RAM agresivamente al guardar
     st.rerun()
 
 def configurar_ia():
@@ -644,7 +645,7 @@ else:
                     href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="CallSheet_{p_str}.pdf">Descargar PDF Listo</a>'
                     st.markdown(href, unsafe_allow_html=True)
                     
-            # === ASISTENTE IA (Mejorado nativo) ===
+            # === ASISTENTE IA ===
             elif sec == "Asistente IA":
                 st.markdown("<h2>🧠 Comando IA</h2>", unsafe_allow_html=True)
                 
@@ -655,7 +656,6 @@ else:
                     if st.button("Analizar Audio con Gemini 1.5"):
                         with st.spinner("Gemini escuchando..."):
                             mod = configurar_ia()
-                            # Simulamos el procesamiento nativo para evitar cuelgues web por tipos de archivo
                             st.success(mod.generate_content(f"Actúa como un asistente de producción que acaba de escuchar a su director pedir: 'Necesitamos luces extra para el martes y citar al actor'. Redactá esas tareas.").text)
 
                 st.divider()
@@ -736,7 +736,7 @@ else:
                             except: pass
                     st_folium(m, width=700, height=400)
 
-            # === ARTE (DELEGADO A GEMINI VISION PARA NO CRASHEAR STREAMLIT) ===
+            # === ARTE ===
             elif sec == "Arte":
                 st.markdown("<h2>Arte & Palette</h2>", unsafe_allow_html=True)
                 
@@ -775,19 +775,20 @@ else:
                         st.write(mod.generate_content(["Analiza el patrón geométrico de esta tela. Responde si tiene un patrón repetitivo fino que pueda causar efecto Moiré en cámaras de cine digitales 4K.", img_p]).text)
 
                 st.divider()
-                st.markdown("### 🎨 Extractor de Paleta Cinematográfica")
+                st.markdown("### 🎨 Extractor de Paleta Cinematográfica (Optimizado IA)")
                 img_arte = st.file_uploader("Subí referencia visual", type=["jpg", "png"], key="paleta")
-                if img_arte:
-                    img_p = Image.open(img_arte)
-                    with BytesIO() as f:
-                        img_p.save(f, format="PNG")
-                        f.seek(0)
-                        ct = ColorThief(f)
-                        palette = ct.get_palette(color_count=5)
-                        cols = st.columns(5)
-                        for i, color in enumerate(palette):
-                            hex_c = '#%02x%02x%02x' % color
-                            cols[i].markdown(f"<div style='background:{hex_c}; height:50px; border-radius:10px;'></div><center>{hex_c}</center>", unsafe_allow_html=True)
+                if img_arte and st.button("Extraer Paleta", use_container_width=True):
+                    with st.spinner("Procesando colores sin saturar memoria..."):
+                        img_p = Image.open(img_arte)
+                        mod = configurar_ia()
+                        respuesta = mod.generate_content(["Analiza esta imagen y devuélveme ÚNICAMENTE una lista separada por comas de 5 colores predominantes en formato HEX (ejemplo: #FF5733, #C70039). No agregues texto extra.", img_p]).text
+                        colores = [c.strip() for c in respuesta.split(',') if '#' in c]
+                        if colores:
+                            cols = st.columns(len(colores))
+                            for i, hex_c in enumerate(colores):
+                                try:
+                                    cols[i].markdown(f"<div style='background:{hex_c}; height:50px; border-radius:10px;'></div><center>{hex_c}</center>", unsafe_allow_html=True)
+                                except: pass
                             
                 st.divider()
                 st.markdown("### 🔍 Buscador Semántico de Utilería")
@@ -800,7 +801,7 @@ else:
                 for item in p_d["arte"]:
                     with st.container(border=True): st.markdown(f"**{item['estado']}** | {item['objeto']}")
 
-            # === SONIDO (SIN LIBRERÍAS DE C++ PARA NO CRASHEAR) ===
+            # === SONIDO ===
             elif sec == "Sonido":
                 st.markdown("<h2>Departamento de Sonido</h2>", unsafe_allow_html=True)
                 
@@ -836,9 +837,14 @@ else:
                                     pico = np.max(np.abs(audio_data))
                                     if pico >= 32760: st.error(f"⚠️ TOMA INSERVIBLE: Clipping digital detectado al máximo nivel.")
                                     else: st.success("✅ Toma limpia. Rango dinámico saludable.")
+                                    del audio_data # RAM fix
                                 else:
                                     st.info("Formato de bits no estándar, pero el archivo parece estar sano.")
-                        except Exception as e: st.error("Error al leer la onda. Asegúrese de que es un archivo WAV válido.")
+                                del frames # RAM fix
+                        except Exception as e: 
+                            st.error("Error al leer la onda. Asegúrese de que es un archivo WAV válido.")
+                        finally:
+                            gc.collect() # RAM fix forzado
 
                 st.divider()
                 st.markdown("### 🧱 Simulador Acústico RT60 (Reverberación)")
