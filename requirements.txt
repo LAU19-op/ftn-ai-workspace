@@ -1,8 +1,10 @@
 streamlit
+streamlit-option-menu
 google-generativeai
 pandas
 beautifulsoup4
 requests
 streamlit-drawable-canvas
 Pillow
-streamlit-option-menu
+plotly
+qrcode
