@@ -608,6 +608,13 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
+    # Manejo dinámico del menú para el redirect inteligente
+    if "nav_radio" not in st.session_state:
+        st.session_state["nav_radio"] = "⟡ Panel de Control"
+        
+    if "texto_busqueda_rental" not in st.session_state:
+        st.session_state["texto_busqueda_rental"] = ""
+    
     with st.sidebar:
         st.markdown("### ⚡ FTN AI")
         if nivel_actual == "jefe_supremo": st.error(f"👑 **{mis_datos['nombre']}** | {rol_actual}")
@@ -663,7 +670,7 @@ else:
             if rol_actual == "Continuidad": opciones_nav.append("⟡ Notas de Continuidad")
             
         st.markdown("❖ **MÓDULOS DE ÁREA**")
-        seccion_elegida = st.radio("Navegación:", opciones_nav, label_visibility="collapsed")
+        seccion_elegida = st.radio("Navegación:", opciones_nav, label_visibility="collapsed", key="nav_radio")
         st.divider()
         if st.button("Cerrar Sesión", use_container_width=True):
             st.session_state["usuario_logueado"] = None
@@ -736,7 +743,7 @@ else:
             if not rentals_lista:
                 st.info("No hay rentals cargados. 1) Creá un 'Nuevo Rental' y luego 2) Hacé clic en 'Cargar Equipos' para extraer productos.")
             else:
-                texto_busqueda = st.text_input("Buscador de equipos (Ej: Lentes, Cámara, Luces)... 🔎", "")
+                texto_busqueda = st.text_input("Buscador de equipos (Ej: Lentes, Cámara, Luces)... 🔎", key="texto_busqueda_rental")
                 
                 # Filtrar la lista
                 rentals_mostrar = []
@@ -915,7 +922,7 @@ else:
             for i, ped in enumerate(p_data["pedidos_equipos"]):
                 with st.container(border=True):
                     st.write(f"**De:** {ped['area']} | **Ítem:** {ped['item']} | **Notas:** {ped['notas']}")
-                    c1, c2 = st.columns(2)
+                    c1, c2, c3 = st.columns(3)
                     if c1.button("✅ Aprobar", key=f"p_ap_{i}"):
                         p_data["equipos"].append({"area": ped['area'], "item": ped['item'], "cant": 1, "tipo": "A Confirmar", "rental": "A Definir"})
                         p_data["pedidos_equipos"].pop(i)
@@ -923,6 +930,11 @@ else:
                     if c2.button("❌ Rechazar", key=f"p_re_{i}"):
                         p_data["pedidos_equipos"].pop(i)
                         guardar_y_recargar()
+                    if c3.button("🔍 Buscar en Rentals", key=f"p_bus_{i}"):
+                        # Al hacer clic, le pasamos el nombre del ítem al buscador del comparador
+                        st.session_state["nav_radio"] = "⟡ Comparador de Rentals"
+                        st.session_state["texto_busqueda_rental"] = ped['item']
+                        st.rerun()
 
         # --- PLAN DE RODAJE ---
         elif seccion_elegida == "⟡ Plan de Rodaje (AD)":
