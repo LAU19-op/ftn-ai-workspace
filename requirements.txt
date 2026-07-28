@@ -1,8 +1,8 @@
 streamlit
 google-generativeai
 pandas
-streamlit-drawable-canvas
-requests
 beautifulsoup4
+requests
+streamlit-drawable-canvas
 Pillow
-openpyxl
+streamlit-option-menu
