@@ -2,12 +2,11 @@ streamlit
 streamlit-option-menu
 google-generativeai
 pandas
-beautifulsoup4
-requests
-streamlit-drawable-canvas
-Pillow
 plotly
 qrcode
+beautifulsoup4
+streamlit-drawable-canvas
+Pillow
 streamlit-lottie
 folium
 streamlit-folium
@@ -18,9 +17,10 @@ networkx
 gTTS
 bcrypt
 psutil
-colorthief
 suntime
 altair
 geopy
 pytz
 Faker
+numpy
+requests
