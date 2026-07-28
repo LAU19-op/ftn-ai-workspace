@@ -9,13 +9,48 @@ from streamlit_drawable_canvas import st_canvas
 # --- 1. CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="FTN AI | Workspace", page_icon="⚡", layout="wide")
 
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+# --- ESTILOS CSS MODERNOS (UI Mejorada: Bordes redondeados, Glassmorphism, Tarjetas) ---
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Estilos generales y variables */
+    :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --primary-light: #e0e7ff;
+    }
+
+    /* Tarjetas y contenedores con bordes redondeados modernos */
+    div.stContainer, div[data-testid="stVerticalBlock"] > div.stMarkdown {
+        border-radius: 16px;
+    }
+    
+    /* Inputs y campos de texto estilizados */
+    .stTextInput input, .stSelectbox select, .stNumberInput input {
+        border-radius: 12px !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    
+    .stTextInput input:focus, .stSelectbox select:focus {
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+    }
+    
+    /* Botones principales modernos */
+    .stButton button {
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(99, 102, 241, 0.25);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 ARCHIVO_BD = "ftn_database.json"
 
@@ -48,7 +83,7 @@ def inicializar_bd():
                     "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
                     "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
                     "personajes", "locaciones", "crew", "catering", "links", "presupuesto", 
-                    "casting", "desglose"
+                    "casting", "desglose", "comparador_rentals"
                 ]
                 for nombre_proy, datos_proy in data_cargada.items():
                     if nombre_proy == "_CONFIG_": 
@@ -83,7 +118,7 @@ def inicializar_bd():
                     "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], 
                     "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], 
                     "personajes": [], "locaciones": [], "crew": [], "catering": [],
-                    "links": [], "presupuesto": [], "casting": [], "desglose": [] 
+                    "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [] 
                 }
             }
 
@@ -311,6 +346,21 @@ def ventana_desglose(proyecto):
             st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc})
             guardar_y_recargar()
 
+@st.dialog("🏬 Agregar Comparación de Rental")
+def ventana_comparador_rental(proyecto):
+    nombre_rental = st.text_input("Nombre del Rental / Tienda")
+    url_rental = st.text_input("URL del Producto en el Rental")
+    precio = st.number_input("Precio por día ($)", min_value=0.0)
+    estado_stock = st.selectbox("Estado", ["Disponible", "Consultar Stock", "No disponible"])
+    foto_prod = st.file_uploader("Foto del producto", type=["jpg", "png", "jpeg"])
+    if st.button("Agregar a la Comparativa", use_container_width=True):
+        if nombre_rental:
+            foto_b64 = base64.b64encode(foto_prod.read()).decode('utf-8') if foto_prod else None
+            st.session_state["proyectos"][proyecto]["comparador_rentals"].append({
+                "nombre": nombre_rental, "url": url_rental, "precio": precio, "estado": estado_stock, "foto": foto_b64
+            })
+            guardar_y_recargar()
+
 # --- 4. GESTIÓN DE SESIÓN Y LOGIN LOCAL ---
 
 if "usuario_logueado" not in st.session_state:
@@ -403,7 +453,7 @@ else:
                             "contexto_aprobado": "Proyecto nuevo.",
                             "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], 
                             "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], 
-                            "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": []
+                            "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": []
                         }
                         guardar_y_recargar()
                         
@@ -414,7 +464,7 @@ else:
             proyecto_elegido = None
         st.divider()
         
-        opciones_nav = ["⟡ Panel de Control", "⟡ Chat Central IA", "⟡ Baúl y Archivos", "⟡ Tablón de Avisos", "⟡ Portfolio y Links"]
+        opciones_nav = ["⟡ Panel de Control", "⟡ Chat Central IA", "⟡ Comparador de Rentals", "⟡ Baúl y Archivos", "⟡ Tablón de Avisos", "⟡ Portfolio y Links"]
         
         if rol_actual == "Super Admin":
             opciones_nav.extend([
@@ -450,8 +500,48 @@ else:
     if proyecto_elegido:
         p_data = st.session_state["proyectos"][proyecto_elegido]
         
+        # --- NUEVO MÓDULO: COMPARADOR DE RENTALS ---
+        if seccion_elegida == "⟡ Comparador de Rentals":
+            colA, colB = st.columns([3, 1])
+            with colA: st.markdown("## 🛒 Comparador de Precios por Rental")
+            with colB:
+                if st.button("➕ Agregar Rental", use_container_width=True):
+                    ventana_comparador_rental(proyecto_elegido)
+            st.divider()
+            
+            rentals_lista = p_data.get("comparador_rentals", [])
+            if not rentals_lista:
+                st.info("No hay rentals cargados todavía. Agregá enlaces y precios para comparar tarifas con foto incluida.")
+            else:
+                # Encontrar el menor precio para destacar
+                precios_validos = [r["precio"] for r in rentals_lista if r["precio"] > 0]
+                menor_precio = min(precios_validos) if precios_validos else 0
+
+                cols = st.columns(3)
+                for idx, r in enumerate(rentals_lista):
+                    with cols[idx % 3]:
+                        es_mejor = (r["precio"] == menor_precio and r["precio"] > 0)
+                        border_style = "border: 2px solid #6366f1; border-radius: 20px; padding: 20px; background: white;" if es_mejor else "border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; background: white;"
+                        
+                        with st.container(border=True):
+                            if es_mejor:
+                                st.markdown("<span style='background:#6366f1; color:white; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold;'>¡MEJOR PRECIO!</span>", unsafe_allow_html=True)
+                            
+                            if r.get("foto"):
+                                st.image(base64.b64decode(r["foto"]), use_container_width=True)
+                            
+                            st.markdown(f"### {r['nombre']}")
+                            st.markdown(f"**Precio:** ${r['precio']:,.2f} / día")
+                            st.caption(f"Estado: {r['estado']}")
+                            if r['url']:
+                                st.markdown(f"[🔗 Ver en sitio del rental]({r['url']})", unsafe_allow_html=True)
+                            
+                            if st.button("🗑️ Eliminar", key=f"del_rental_{idx}"):
+                                p_data["comparador_rentals"].pop(idx)
+                                guardar_y_recargar()
+
         # --- PANEL DE APROBACIÓN DE USUARIOS (SUPER ADMIN) ---
-        if seccion_elegida == "⟡ Gestión de Accesos":
+        elif seccion_elegida == "⟡ Gestión de Accesos":
             st.markdown("## 👑 Panel de Aprobación y Permisos")
             st.write("Aprobá o rechazá el acceso de los usuarios y asignales su rol.")
             
@@ -477,11 +567,9 @@ else:
                     with c4:
                         st.text("")
                         if st.button("💾 Guardar", key=f"btn_{em_usr}"):
-                            # Actualizamos los datos en la estructura
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["estado"] = nuevo_estado
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["rol"] = nuevo_rol
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr]["nivel"] = mapa_niveles[nuevo_rol]
-                            # Guardamos al archivo JSON y recargamos la app instantáneamente
                             guardar_y_recargar()
 
         # --- PORTFOLIO Y LINKS ---
@@ -816,3 +904,47 @@ else:
                     st.markdown(f"**⚡ FTN AI:** {respuesta.text}")
             except:
                 st.error("Error al conectar con la IA. Asegurate de configurar tu clave en los Secrets de Streamlit.")
+
+    # --- WIDGET FLOTANTE DE AYUDA (MINI CHAT TÉCNICO INFERIOR DERECHO) ---
+    st.markdown("""
+        <style>
+        .floating-chat-container {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 99999;
+        }
+        </style>
+        <div class="floating-chat-container">
+    """, unsafe_allow_html=True)
+
+    with st.popover("💬 Ayuda Técnica"):
+        st.markdown("### Asistente Técnico IA")
+        st.caption("Preguntame sobre especificaciones o cuál rental elegir.")
+        
+        if "chat_widget_mensajes" not in st.session_state:
+            st.session_state["chat_widget_mensajes"] = [
+                {"role": "assistant", "content": "¡Hola! ¿Dudas sobre cuál equipo elegir?"}
+            ]
+        
+        for msg in st.session_state["chat_widget_mensajes"]:
+            if msg["role"] == "assistant":
+                st.info(msg["content"])
+            else:
+                st.success(msg["content"])
+                
+        pregunta_widget = st.text_input("Consulta rápida...", key="input_widget_chat")
+        if st.button("Enviar consulta", key="btn_widget_chat"):
+            if pregunta_widget:
+                st.session_state["chat_widget_mensajes"].append({"role": "user", "content": pregunta_widget})
+                try:
+                    CLAVE_API = st.secrets["GEMINI_API_KEY"]
+                    genai.configure(api_key=CLAVE_API)
+                    mod_widget = genai.GenerativeModel('gemini-3.5-flash')
+                    resp = mod_widget.generate_content(f"Sos un asistente técnico de rentals de cine y equipamiento. Respondé de forma breve y concisa: {pregunta_widget}")
+                    st.session_state["chat_widget_mensajes"].append({"role": "assistant", "content": resp.text})
+                except:
+                    st.session_state["chat_widget_mensajes"].append({"role": "assistant", "content": "Error al conectar con la IA. Verificá tu API Key."})
+                st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
