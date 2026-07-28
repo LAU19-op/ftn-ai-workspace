@@ -28,14 +28,9 @@ geopy
 pytz
 textblob
 Faker
-diffusers
-torch
-transformers
 opencv-python-headless
 imutils
 numpy
-scikit-image
-spleeter
 librosa
 pydub
 scipy
