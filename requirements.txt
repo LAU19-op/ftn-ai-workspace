@@ -9,8 +9,7 @@ streamlit-drawable-canvas
 Pillow
 requests
 openpyxl
+numpy
+matplotlib
 librosa
 scipy
-matplotlib
-rembg
-onnxruntime
