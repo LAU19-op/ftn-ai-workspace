@@ -3,6 +3,7 @@ from streamlit_option_menu import option_menu
 import google.generativeai as genai
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import qrcode
 from io import BytesIO
 import json
@@ -12,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import random
 import time
 import numpy as np
@@ -40,10 +41,8 @@ st.markdown("""
         color: #E2E8F0 !important;
     }
 
-    /* Logo PNG estilo blend */
     .logo-blend { filter: brightness(1.2) contrast(1.2); mix-blend-mode: screen; }
 
-    /* Tarjetas Modulares Obsidiana */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: rgba(20, 20, 25, 0.6) !important;
         backdrop-filter: blur(20px) !important;
@@ -60,11 +59,9 @@ st.markdown("""
         box-shadow: 0 15px 50px rgba(251, 175, 59, 0.15) !important;
     }
     
-    /* Títulos Orgánicos Obsidiana */
     h1, h2 { background: linear-gradient(to right, #FDFCF8, #FBAF3B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800 !important; letter-spacing: -0.5px !important; }
     h3, h4 { color: #E2E8F0 !important; font-weight: 600 !important; }
     
-    /* Inputs minimalistas oscuros (Estilo la referencia limpia) */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea {
         background-color: rgba(0,0,0,0.5) !important; 
         border: 1px solid rgba(255,255,255,0.1) !important; 
@@ -78,7 +75,6 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(251, 175, 59, 0.2) !important; 
     }
     
-    /* Botones principales estilo dorado/ámbar */
     .stButton button {
         background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%) !important; 
         border: none !important; 
@@ -101,7 +97,6 @@ st.markdown("""
     [data-testid="stBaseButton-secondary"]:hover { border-color: #FBAF3B !important; background: rgba(251,175,59,0.1) !important; }
     [data-testid="stBaseButton-secondary"] p { color: #FBAF3B !important; }
 
-    /* Avatares y Credenciales */
     .avatar-circle { border-radius: 50%; object-fit: cover; border: 3px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.3); }
     
     .credencial-feten {
@@ -122,11 +117,9 @@ st.markdown("""
     .credencial-id-box { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
     .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 16px; letter-spacing: 4px; color: #FFFFFF !important;}
 
-    /* Métricas */
     [data-testid="stMetricValue"] { color: #FBAF3B !important; font-size: 2.3rem !important; font-weight: 800 !important; }
     [data-testid="stMetricLabel"] { color: #94A3B8 !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 700 !important; }
 
-    /* Adaptabilidad Celular */
     @media (max-width: 768px) {
         [data-testid="column"] { width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }
         .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; padding-top: 1.5rem !important; }
@@ -542,7 +535,7 @@ def ventana_vaciar_comparador(proyecto):
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-# --- 6. PANTALLA DE ACCESO Y REGISTRO (ESTILO OBSIDIANA OSCURA) ---
+# --- 6. PANTALLA DE ACCESO Y REGISTRO (ESTILO OBSIDIANA) ---
 if st.session_state["usuario_logueado"] is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
