@@ -23,53 +23,69 @@ import librosa
 import scipy.signal
 
 # --- 1. CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Fetén Workspace Pro", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Fetén Workspace Pro", page_icon="✦", layout="wide", initial_sidebar_state="collapsed")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
-# --- 2. DISEÑO UI/UX "SAAS DARK MODE" (ESTILO VERCEL/LINEAR) ---
+# --- 2. DISEÑO UI/UX "SAAS OBSIDIAN PRO" (LINEAR/VERCEL STYLE) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
     html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
     
-    /* Fondo Dark Pro (Gris Oscuro/Negro) */
+    /* Fondo Obsidiana Premium */
     .stApp {
-        background-color: #0A0A0A !important;
+        background-color: #050505 !important;
+        background-image: 
+            radial-gradient(circle at 10% 20%, rgba(251, 175, 59, 0.05), transparent 25%), 
+            radial-gradient(circle at 90% 80%, rgba(180, 113, 63, 0.04), transparent 25%) !important;
         color: #EDEDED !important;
     }
 
-    .logo-blend { filter: brightness(1.5) contrast(1.2); }
+    /* Logo PNG sin distorsiones */
+    .logo-img { display: block; max-width: 100%; height: auto; }
 
-    /* Tarjetas Modulares SaaS (Bordes finos, fondos sutiles) */
+    /* Tarjetas Modulares SaaS */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #111111 !important;
-        border: 1px solid #222222 !important;
-        border-radius: 12px !important;
+        background: #0A0A0B !important;
+        border: 1px solid #1C1C1F !important;
+        border-radius: 16px !important;
         padding: 1.5rem !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
-        transition: border-color 0.2s ease !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+        transition: all 0.3s ease !important;
         margin-bottom: 16px !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: #333333 !important;
+        border-color: rgba(251, 175, 59, 0.3) !important;
+        box-shadow: 0 8px 30px rgba(251, 175, 59, 0.08) !important;
     }
     
-    /* Títulos y tipografía limpia */
-    h1, h2, h3, h4 { color: #FAFAFA !important; font-weight: 700 !important; letter-spacing: -0.02em !important; }
-    p, span, div { color: #A1A1AA !important; }
+    /* Títulos con Gradiente Premium */
+    .gradient-text {
+        background: linear-gradient(135deg, #FFFFFF 0%, #FBAF3B 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+    }
+    h1, h2 { font-weight: 800 !important; letter-spacing: -0.02em !important; color: #FAFAFA !important; }
+    h3, h4 { color: #D4D4D8 !important; font-weight: 600 !important; letter-spacing: -0.01em !important; }
     
-    /* Inputs estilo Vercel */
+    /* Títulos de Sección Pequeños */
+    .section-title {
+        color: #A1A1AA; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;
+    }
+
+    /* Inputs y Formularios Modernos */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea {
-        background-color: #0A0A0A !important; 
-        border: 1px solid #333333 !important; 
-        color: #EDEDED !important;
-        border-radius: 8px !important; 
-        padding: 12px 14px !important; 
+        background-color: #0E0E11 !important; 
+        border: 1px solid #27272A !important; 
+        color: #FAFAFA !important;
+        border-radius: 10px !important; 
+        padding: 12px 16px !important; 
         font-weight: 400 !important;
-        font-size: 14px !important;
         transition: all 0.2s ease !important;
     }
     .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { 
@@ -77,57 +93,58 @@ st.markdown("""
         box-shadow: 0 0 0 1px #FBAF3B !important; 
     }
     
-    /* Botones primarios (Ámbar suave) */
+    /* Botones de Acción (Call to Action) */
     .stButton button {
-        background-color: #EDEDED !important; 
-        border: 1px solid #EDEDED !important; 
-        color: #0A0A0A !important;
-        border-radius: 8px !important; 
-        font-weight: 600 !important; 
-        padding: 0.5rem 1rem !important; 
+        background: linear-gradient(135deg, #FBAF3B 0%, #D97706 100%) !important; 
+        border: none !important; 
+        color: #050505 !important;
+        border-radius: 10px !important; 
+        font-weight: 700 !important; 
+        padding: 0.6rem 1rem !important; 
         transition: all 0.2s ease !important;
         width: 100% !important;
     }
-    .stButton button:hover { background-color: #FFFFFF !important; transform: translateY(-1px); }
-    .stButton button p { color: #0A0A0A !important; font-weight: 600 !important; margin: 0; }
+    .stButton button:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(251, 175, 59, 0.3) !important; }
+    .stButton button p { color: #050505 !important; font-weight: 700 !important; margin: 0; }
     
-    /* Botones secundarios */
+    /* Botones Secundarios */
     [data-testid="stBaseButton-secondary"] { 
-        background-color: #111111 !important; 
-        border: 1px solid #333333 !important; 
-        color: #EDEDED !important; 
+        background: #0A0A0B !important; 
+        border: 1px solid #27272A !important; 
+        color: #A1A1AA !important; 
+        box-shadow: none !important;
     }
-    [data-testid="stBaseButton-secondary"]:hover { border-color: #666666 !important; background-color: #1A1A1A !important; }
-    [data-testid="stBaseButton-secondary"] p { color: #EDEDED !important; }
-
-    /* Avatares */
-    .avatar-circle { border-radius: 50%; object-fit: cover; border: 2px solid #333333; }
-    
-    /* Credencial VIP rediseñada (Clean UI) */
-    .credencial-feten {
-        background-color: #0A0A0A;
-        border: 1px solid #333333;
-        border-radius: 16px; padding: 30px; width: 100%; max-width: 380px; margin: 0 auto; text-align: center;
-        position: relative; overflow: hidden;
-    }
-    .credencial-feten::before {
-        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-        background: linear-gradient(90deg, #FBAF3B, #B4713F);
-    }
-    .credencial-logo-img { width: 80px; margin-bottom: 20px; mix-blend-mode: screen;}
-    .credencial-img { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #333; margin-bottom: 15px; object-fit: cover;}
-    .credencial-name { font-size: 20px; font-weight: 700; margin: 0; color: #FAFAFA !important;}
-    .credencial-role { font-size: 12px; color: #888 !important; margin-top: 4px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;}
-    .qr-box { background: white; padding: 10px; border-radius: 8px; display: inline-block; margin-bottom: 15px;}
-    .credencial-id-box { background: #111; padding: 10px; border-radius: 8px; border: 1px solid #222; }
-    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 14px; letter-spacing: 2px; color: #FBAF3B !important;}
+    [data-testid="stBaseButton-secondary"]:hover { border-color: #52525B !important; color: #FAFAFA !important; }
+    [data-testid="stBaseButton-secondary"] p { color: inherit !important; }
 
     /* Métricas Dashboard */
-    [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2rem !important; font-weight: 700 !important; }
-    [data-testid="stMetricLabel"] { color: #888888 !important; font-size: 0.8rem !important; font-weight: 500 !important; }
+    [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2.2rem !important; font-weight: 800 !important; letter-spacing: -1px; }
+    [data-testid="stMetricLabel"] { color: #A1A1AA !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 600 !important; }
+
+    /* Feed Social Nativo Customizado */
+    .social-feed-container {
+        height: 520px; overflow-y: auto; padding-right: 8px;
+    }
+    .social-feed-container::-webkit-scrollbar { width: 6px; }
+    .social-feed-container::-webkit-scrollbar-thumb { background: #27272A; border-radius: 10px; }
     
-    /* Ocultar etiquetas raras de métricas */
-    [data-testid="stMetricDelta"] { display: none; }
+    .social-card {
+        background: #0E0E11; border: 1px solid #1C1C1F; border-radius: 12px; padding: 16px; margin-bottom: 16px;
+    }
+    .social-header { display: flex; align-items: center; margin-bottom: 12px; }
+    .social-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #333; margin-right: 12px; object-fit: cover; }
+    .social-user { margin: 0; font-size: 14px; font-weight: 600; color: #FAFAFA; display: flex; align-items: center; gap: 4px; }
+    .social-verified { color: #38BDF8; font-size: 12px; }
+    .social-time { margin: 0; font-size: 11px; color: #71717A; }
+    .social-text { font-size: 13px; color: #D4D4D8; margin-bottom: 12px; line-height: 1.5; }
+    .social-image { width: 100%; height: 220px; border-radius: 8px; object-fit: cover; border: 1px solid #1C1C1F; margin-bottom: 12px; }
+    .social-actions { display: flex; gap: 16px; color: #A1A1AA; font-size: 13px; font-weight: 500; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        [data-testid="column"] { width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }
+        .block-container { padding-left: 1rem !important; padding-right: 1rem !important; padding-top: 1.5rem !important; }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -196,8 +213,8 @@ inicializar_bd()
 if "ruta" not in st.session_state: st.session_state["ruta"] = "Inicio"
 if "proyecto_activo" not in st.session_state: st.session_state["proyecto_activo"] = None
 
-# --- 4. MODALES COMPLETOS DE GESTIÓN ---
-@st.dialog("✦ Nueva Tarea Kanban")
+# --- 4. MODALES COMPLETOS DE GESTIÓN (SIN EMOJIS) ---
+@st.dialog("Nueva Tarea Kanban")
 def ventana_kanban(proyecto, autor):
     tarea = st.text_input("Descripción de la Tarea")
     estado = st.selectbox("Estado Inicial", ["Pendiente", "En Proceso", "Completado"])
@@ -206,7 +223,7 @@ def ventana_kanban(proyecto, autor):
             st.session_state["proyectos"][proyecto]["kanban"].append({"tarea": tarea, "estado": estado, "autor": autor})
             guardar_y_recargar()
 
-@st.dialog("✦ Nuevo Recordatorio Global")
+@st.dialog("Nuevo Recordatorio Global")
 def ventana_recordatorio(es_admin, autor):
     titulo = st.text_input("Título de la Tarea")
     fecha = st.date_input("Fecha Límite")
@@ -216,7 +233,7 @@ def ventana_recordatorio(es_admin, autor):
             st.session_state["proyectos"]["_CONFIG_"]["recordatorios"].append({"autor": autor, "titulo": titulo, "fecha": str(fecha), "tipo": tipo})
             guardar_y_recargar()
 
-@st.dialog("⚑ Emitir Comunicado")
+@st.dialog("Emitir Comunicado")
 def ventana_aviso(proyecto, autor, locaciones_disponibles):
     tipo = st.radio("Tipo:", ["Aviso General", "Citación Oficial"], horizontal=True)
     if tipo == "Aviso General":
@@ -238,7 +255,7 @@ def ventana_aviso(proyecto, autor, locaciones_disponibles):
             })
             guardar_y_recargar()
 
-@st.dialog("⌖ Registrar Locación")
+@st.dialog("Registrar Locación")
 def ventana_locacion(proyecto):
     nombre = st.text_input("Nombre / Referencia")
     direccion = st.text_input("Dirección Exacta")
@@ -251,7 +268,7 @@ def ventana_locacion(proyecto):
             st.session_state["proyectos"][proyecto]["locaciones"].append({"nombre": nombre, "direccion": direccion, "lat": lat, "lon": lon, "permisos": permisos})
             guardar_y_recargar()
 
-@st.dialog("☖ Fichar Miembro del Crew")
+@st.dialog("Fichar Miembro del Crew")
 def ventana_crew(proyecto):
     nombre = st.text_input("Nombre Completo")
     c1, c2 = st.columns(2)
@@ -263,7 +280,7 @@ def ventana_crew(proyecto):
             st.session_state["proyectos"][proyecto]["crew"].append({"nombre": nombre, "rol": rol, "telefono": telefono, "obra_social": obra_social})
             guardar_y_recargar()
 
-@st.dialog("⎔ Planilla de Dietas")
+@st.dialog("Planilla de Dietas")
 def ventana_catering(proyecto):
     nombre = st.text_input("Nombre Completo")
     dieta = st.selectbox("Restricción", ["Ninguna", "Vegetariano", "Vegano", "Celíaco", "Diabético"])
@@ -273,18 +290,17 @@ def ventana_catering(proyecto):
             st.session_state["proyectos"][proyecto]["catering"].append({"nombre": nombre, "dieta": dieta, "alergias": alergias})
             guardar_y_recargar()
 
-@st.dialog("⊞ Pedido de Equipamiento (Ticket)")
+@st.dialog("Pedido de Equipamiento (Ticket)")
 def ventana_pedido(proyecto, area):
     item_nombre = st.text_input("Ítem / Equipo")
     justificacion = st.text_area("Justificación")
-    prioridad = st.selectbox("Nivel de Urgencia", ["Baja", "Media", "URGENTE 🚨"])
+    prioridad = st.selectbox("Nivel de Urgencia", ["Baja", "Media", "URGENTE"])
     if st.button("Enviar Ticket", use_container_width=True):
         if item_nombre:
             st.session_state["proyectos"][proyecto]["pedidos_equipos"].append({"area": area, "item": item_nombre, "notas": justificacion, "prioridad": prioridad, "estado": "Pendiente"})
-            st.session_state["proyectos"]["_CONFIG_"]["notificaciones"].append(f"Ticket nuevo en {proyecto}: {item_nombre} ({prioridad})")
             guardar_y_recargar()
 
-@st.dialog("⚙ Cargar Equipo al Inventario")
+@st.dialog("Cargar Equipo al Inventario")
 def ventana_equipo(proyecto, area):
     col1, col2 = st.columns(2)
     item_nombre = col1.text_input("Ítem")
@@ -296,7 +312,7 @@ def ventana_equipo(proyecto, area):
             st.session_state["proyectos"][proyecto]["equipos"].append({"area": area, "item": item_nombre, "cant": cantidad, "tipo": tipo, "rental": rental if tipo == "Alquilado" else "N/A"})
             guardar_y_recargar()
 
-@st.dialog("⚲ Nota de Raccord")
+@st.dialog("Nota de Raccord")
 def ventana_continuidad(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC N°")
@@ -307,7 +323,7 @@ def ventana_continuidad(proyecto):
             st.session_state["proyectos"][proyecto]["continuidad"].append({"escena": escena, "toma": toma, "detalle": detalle})
             guardar_y_recargar()
 
-@st.dialog("⟡ Archivo de Arte")
+@st.dialog("Archivo de Arte")
 def ventana_arte(proyecto):
     categoria = st.radio("Clasificación:", ["Utilería", "Vestuario"], horizontal=True)
     objeto = st.text_input("Descripción del Objeto")
@@ -320,7 +336,7 @@ def ventana_arte(proyecto):
             st.session_state["proyectos"][proyecto]["arte"].append({"categoria": categoria, "objeto": objeto, "responsable": responsable, "estado": estado, "foto": foto_base64})
             guardar_y_recargar()
 
-@st.dialog("⎚ Diagramar Plano")
+@st.dialog("Diagramar Plano")
 def ventana_plano(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC")
@@ -332,7 +348,7 @@ def ventana_plano(proyecto):
             st.session_state["proyectos"][proyecto]["planos"].append({"escena": escena, "toma": toma, "tamano": tamano, "movimiento": movimiento})
             guardar_y_recargar()
 
-@st.dialog("⏱ Registrar Bloque AD")
+@st.dialog("Registrar Bloque AD")
 def ventana_cronograma(proyecto):
     hora = st.time_input("Hora de Inicio")
     actividad = st.text_input("Descripción (Ej: Set Up, Rodaje)")
@@ -341,7 +357,7 @@ def ventana_cronograma(proyecto):
             st.session_state["proyectos"][proyecto]["plan_rodaje"].append({"hora": str(hora), "actividad": actividad})
             guardar_y_recargar()
 
-@st.dialog("🎧 Log de Sonido")
+@st.dialog("Log de Sonido")
 def ventana_sonido(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC")
@@ -353,7 +369,7 @@ def ventana_sonido(proyecto):
             st.session_state["proyectos"][proyecto]["sonido_log"].append({"escena": escena, "toma": toma, "pistas": pistas, "obs": obs})
             guardar_y_recargar()
 
-@st.dialog("🎬 Calificar Toma")
+@st.dialog("Calificar Toma")
 def ventana_toma_dir(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC")
@@ -364,7 +380,7 @@ def ventana_toma_dir(proyecto):
             st.session_state["proyectos"][proyecto]["tomas_dir"].append({"escena": escena, "toma": toma, "evaluacion": evaluacion})
             guardar_y_recargar()
 
-@st.dialog("❖ Estructurar Personaje")
+@st.dialog("Estructurar Personaje")
 def ventana_personaje(proyecto):
     nombre = st.text_input("Nombre / Alias")
     rol = st.selectbox("Jerarquía", ["Protagonista", "Antagonista", "Secundario"])
@@ -375,7 +391,7 @@ def ventana_personaje(proyecto):
             st.session_state["proyectos"][proyecto]["personajes"].append({"nombre": nombre, "rol": rol, "objetivo": objetivo, "conflicto": conflicto})
             guardar_y_recargar()
 
-@st.dialog("⧉ Añadir Referencia URL")
+@st.dialog("Añadir Referencia URL")
 def ventana_link(proyecto):
     titulo = st.text_input("Título del Enlace")
     url = st.text_input("URL")
@@ -385,7 +401,7 @@ def ventana_link(proyecto):
             st.session_state["proyectos"][proyecto]["links"].append({"titulo": titulo, "url": url, "desc": desc})
             guardar_y_recargar()
 
-@st.dialog("◈ Registrar Gasto (Presupuesto)")
+@st.dialog("Registrar Gasto (Presupuesto)")
 def ventana_presupuesto(proyecto):
     item = st.text_input("Concepto")
     costo = st.number_input("Costo Neto ($)", min_value=0.0)
@@ -396,7 +412,7 @@ def ventana_presupuesto(proyecto):
             st.session_state["proyectos"][proyecto]["presupuesto"].append({"item": item, "costo": costo, "area": area, "estado": estado})
             guardar_y_recargar()
 
-@st.dialog("◒ Perfil de Casting")
+@st.dialog("Perfil de Casting")
 def ventana_casting(proyecto):
     actor = st.text_input("Talento (Nombre Real)")
     personaje = st.text_input("Personaje Asignado")
@@ -408,7 +424,7 @@ def ventana_casting(proyecto):
             st.session_state["proyectos"][proyecto]["casting"].append({"actor": actor, "personaje": personaje, "reel": reel, "foto": foto_base64})
             guardar_y_recargar()
 
-@st.dialog("▤ Desglose Escénico")
+@st.dialog("Desglose Escénico")
 def ventana_desglose(proyecto):
     c1, c2, c3 = st.columns(3)
     escena = c1.text_input("ESC N°")
@@ -420,7 +436,7 @@ def ventana_desglose(proyecto):
             st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc})
             guardar_y_recargar()
 
-@st.dialog("⌂ Agregar Rental")
+@st.dialog("Agregar Rental")
 def ventana_nuevo_rental(proyecto):
     nombre = st.text_input("Razón Social / Nombre")
     url = st.text_input("Sitio Web / Contacto")
@@ -429,11 +445,11 @@ def ventana_nuevo_rental(proyecto):
             st.session_state["proyectos"][proyecto]["directorio_rentals"].append({"nombre": nombre, "url": url})
             guardar_y_recargar()
 
-@st.dialog("✧ Análisis IA de Equipos")
+@st.dialog("Análisis IA de Equipos")
 def ventana_comparador_rental(proyecto):
     directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
     if not directorio:
-        st.warning("⚠️ Requiere registrar un Rental previamente.")
+        st.warning("Requiere registrar un Rental previamente.")
         return
         
     nombres_rentals = [r["nombre"] for r in directorio]
@@ -505,7 +521,7 @@ def ventana_comparador_rental(proyecto):
                             guardar_y_recargar()
                     except Exception as e: st.error(f"Error: {e}")
 
-@st.dialog("◈ Checkout de Equipos")
+@st.dialog("Checkout de Equipos")
 def ventana_checkout(proyecto):
     carrito = st.session_state["proyectos"][proyecto]["carrito_rentals"]
     directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
@@ -519,15 +535,15 @@ def ventana_checkout(proyecto):
         
     for r_name, items in rentals_agrupados.items():
         with st.container(border=True):
-            st.markdown(f"### ⌂ {r_name}")
+            st.markdown(f"### {r_name}")
             total_r = sum(i['precio'] for i in items)
             for i in items: st.write(f"✦ {i['nombre']} **(${i['precio']:,.2f})**")
-            st.success(f"**Subtotal: ${total_r:,.2f} / jornada**")
+            st.success(f"Subtotal: ${total_r:,.2f} / jornada")
             link_rental = next((d["url"] for d in directorio if d["nombre"] == r_name), None)
             if link_rental:
-                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: #EDEDED; color:#0A0A0A; padding:8px 12px; text-decoration:none; border-radius:6px; font-weight:600; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: #FBAF3B; color:#0A0A0A; padding:8px 12px; text-decoration:none; border-radius:6px; font-weight:600; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
 
-@st.dialog("⚠️ Purga de Base de Datos")
+@st.dialog("Purga de Base de Datos")
 def ventana_vaciar_comparador(proyecto):
     st.warning("Esta acción es irreversible. Limpiará el catálogo y el carrito.")
     if st.button("Confirmar Purga", use_container_width=True):
@@ -539,13 +555,13 @@ def ventana_vaciar_comparador(proyecto):
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-# --- 6. PANTALLA DE ACCESO Y REGISTRO (DISEÑO CLEAN DARK) ---
+# --- 6. PANTALLA DE ACCESO Y REGISTRO ---
 if st.session_state["usuario_logueado"] is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
-        st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' width='200' class='logo-blend' style='margin-bottom: 5px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; font-size: 1.4rem; color: #FAFAFA; margin-bottom: 20px;'>Ingresa a tu cuenta</h2>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' class='logo-img logo-blend' style='max-width:240px; margin: 0 auto 10px auto;'></div>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; font-size: 1.4rem; color: #FAFAFA; margin-bottom: 24px; font-weight: 500;'>Ingresa a tu cuenta</h2>", unsafe_allow_html=True)
         
         tab_login, tab_registro = st.tabs(["Iniciar Sesión", "Registrarse"])
         db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
@@ -555,7 +571,7 @@ if st.session_state["usuario_logueado"] is None:
                 email_ingreso = st.text_input("Email o usuario", placeholder="ejemplo@correo.com").lower().strip()
                 pass_ingreso = st.text_input("Contraseña", type="password", placeholder="••••••••")
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("Iniciar sesión →", use_container_width=True, type="primary"):
+                if st.button("Iniciar sesión", use_container_width=True, type="primary"):
                     if email_ingreso in db_users and db_users[email_ingreso]["pass"] == pass_ingreso:
                         if db_users[email_ingreso].get("estado") == "Aprobado":
                             st.session_state["usuario_logueado"] = email_ingreso
@@ -570,7 +586,7 @@ if st.session_state["usuario_logueado"] is None:
                 email_reg = st.text_input("Correo").lower().strip()
                 pass_reg = st.text_input("Crear Contraseña", type="password")
                 foto_reg = st.file_uploader("Foto de Credencial", type=["jpg", "png", "jpeg"])
-                if st.button("Registrarse", use_container_width=True, type="primary"):
+                if st.button("Solicitar Acceso", use_container_width=True, type="primary"):
                     if nombre_reg and email_reg and pass_reg and foto_reg:
                         foto_b64 = base64.b64encode(foto_reg.read()).decode('utf-8')
                         db_users[email_reg] = {
@@ -593,49 +609,56 @@ else:
     c_head_left, c_head_space, c_head_right = st.columns([2, 5, 1])
     with c_head_left:
         if st.session_state["ruta"] != "Inicio":
-            if st.button("⌂ Dashboard", type="secondary"):
+            if st.button("Dashboard", type="secondary"):
                 st.session_state["ruta"] = "Inicio"
                 st.rerun()
         else:
-            st.markdown(f"<img src='{LOGO_URL}' height='35' class='logo-blend' style='margin-top:8px;'>", unsafe_allow_html=True)
+            st.markdown(f"<img src='{LOGO_URL}' class='logo-img logo-blend' style='max-height:40px; margin-top:5px;'>", unsafe_allow_html=True)
             
     with c_head_right:
         foto_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
-        st.markdown(f"<img src='{foto_src}' class='avatar-circle' style='float:right; width:38px; height:38px;'>", unsafe_allow_html=True)
-        if st.button("Perfil", key="btn_mi_perfil"):
-            st.session_state["ruta"] = "Perfil"
-            st.rerun()
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ==========================================
-    # VISTA 1: DASHBOARD CON FEED IG REAL INTEGRADO (HTML)
-    # ==========================================
-    if st.session_state["ruta"] == "Inicio":
         st.markdown(f"""
-            <div style="background: #111; border: 1px solid #222; border-radius: 16px; padding: 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h1 style='margin:0; font-size: 1.6rem; color: #FAFAFA;'>¡Hola, {mis_datos['nombre']}!</h1>
-                    <p style='color:#888; font-weight:500; font-size:0.9rem; margin:0;'>{rol_actual.upper()}</p>
-                </div>
-                <div style='text-align:right;'><span style='font-size:24px;'>⚡</span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                <img src='{foto_src}' style='width: 60px; height: 60px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover; box-shadow: 0 4px 15px rgba(251, 175, 59, 0.2); margin-bottom: 8px;'>
             </div>
         """, unsafe_allow_html=True)
-        
-        notificaciones = st.session_state["proyectos"]["_CONFIG_"].get("notificaciones", [])
-        if notificaciones:
-            with st.expander("🔔 Tienes nuevas notificaciones", expanded=False):
-                for notif in reversed(notificaciones[-5:]): st.warning(notif)
-                if st.button("Limpiar Notificaciones"):
-                    st.session_state["proyectos"]["_CONFIG_"]["notificaciones"] = []
-                    guardar_y_recargar()
+        if st.button("Mi Perfil", use_container_width=True, type="secondary"):
+            st.session_state["ruta"] = "Perfil"
+            st.rerun()
+            
+    st.markdown("<hr style='border-color: #222; margin-top: 10px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
-        # Distribución principal: Izquierda Proyectos, Derecha Radar IG
+    # ==========================================
+    # VISTA 1: DASHBOARD CON FEED SOCIAL NATIVO
+    # ==========================================
+    if st.session_state["ruta"] == "Inicio":
+        
+        # Accesos Rápidos
+        col_q1, col_q2, col_q3, col_q4 = st.columns(4)
+        with col_q1:
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; color:#888; font-weight:700; margin:0;'>MI ROL</p>", unsafe_allow_html=True)
+                st.markdown(f"<h3 class='gradient-text' style='margin:0; font-size:18px;'>{rol_actual}</h3>", unsafe_allow_html=True)
+        with col_q2:
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; color:#888; font-weight:700; margin:0;'>PROYECTOS</p>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='margin:0; color:#FAFAFA;'>{len([p for p in st.session_state['proyectos'].keys() if p != '_CONFIG_'])} Activos</h3>", unsafe_allow_html=True)
+        with col_q3:
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; color:#888; font-weight:700; margin:0;'>ACCESO RÁPIDO</p>", unsafe_allow_html=True)
+                if st.button("Cotizador de Rentals", type="secondary"): pass
+        with col_q4:
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; color:#888; font-weight:700; margin:0;'>SOPORTE</p>", unsafe_allow_html=True)
+                if st.button("Reportar Problema", type="secondary"): pass
+
+        # Distribución Principal
         c_main, c_side = st.columns([2.2, 1.2], gap="large")
         
         with c_main:
-            st.markdown("<div class='section-title-card'>❖ PROYECTOS ACTIVOS</div>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title'>PROYECTOS EN DESARROLLO</div>", unsafe_allow_html=True)
             if nivel_actual in ["jefe", "jefe_supremo"]:
-                with st.popover("➕ Nuevo Workspace"):
+                with st.popover("Crear Workspace"):
                     nuevo_proyecto = st.text_input("Nombre de la Producción:")
                     if st.button("Inicializar DB"):
                         if nuevo_proyecto:
@@ -652,56 +675,93 @@ else:
                 for idx, proy in enumerate(lista_proyectos):
                     with cols_grid[idx % 2]:
                         with st.container(border=True):
-                            st.markdown(f"<h3 style='margin-bottom: 4px;'>{proy}</h3>", unsafe_allow_html=True)
-                            st.caption(f"☖ {len(st.session_state['proyectos'][proy].get('crew',[]))} Personas | ⚙ {len(st.session_state['proyectos'][proy].get('equipos',[]))} Equipos")
+                            st.markdown(f"<h3 style='margin-bottom: 4px; color:#FAFAFA;'>{proy}</h3>", unsafe_allow_html=True)
+                            st.caption(f"Crew: {len(st.session_state['proyectos'][proy].get('crew',[]))} | Equipos: {len(st.session_state['proyectos'][proy].get('equipos',[]))}")
                             st.markdown("<br>", unsafe_allow_html=True)
-                            if st.button("ENTRAR", key=f"entrar_{proy}", use_container_width=True, type="primary"):
+                            if st.button("Entrar al Workspace", key=f"entrar_{proy}", use_container_width=True):
                                 st.session_state["proyecto_activo"] = proy
                                 st.session_state["ruta"] = "Proyecto"
                                 st.rerun()
 
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("<div class='section-title-card'>📅 AGENDA GLOBAL</div>", unsafe_allow_html=True)
-            if st.button("✦ Nueva Tarea", use_container_width=True):
+            st.markdown("<div class='section-title'>AGENDA DE PRODUCCIÓN</div>", unsafe_allow_html=True)
+            if st.button("Agregar Recordatorio", use_container_width=True, type="secondary"):
                 ventana_recordatorio(es_admin=(nivel_actual in ["jefe_supremo", "jefe"]), autor=mis_datos['nombre'])
             recordatorios = st.session_state["proyectos"]["_CONFIG_"].get("recordatorios", [])
             for rec in reversed(recordatorios):
                 if rec["tipo"] == "Global (Toda la Productora)" or rec["autor"] == mis_datos["nombre"]:
                     with st.container(border=True):
-                        st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:bold;'>{rec['fecha']}</span>", unsafe_allow_html=True)
-                        st.markdown(f"<div style='font-weight:700; font-size:14px; color:#FAFAFA;'>{rec['titulo']}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:700;'>{rec['fecha']}</span>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-weight:600; font-size:15px; color:#E2E8F0;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
         with c_side:
-            # CONTENEDOR NATIVO DE INSTAGRAM SCROLLEABLE (SIN INVENTAR TEXTO)
-            st.markdown("<div class='section-title-card'>🌐 RADAR DE ACTUALIDAD</div>", unsafe_allow_html=True)
-            st.caption("Feed Oficial de Instagram. Usa la rueda del mouse para bajar y ver todo el contenido y las fotos reales.")
+            st.markdown("<div class='section-title'>RADAR SOCIAL</div>", unsafe_allow_html=True)
             
-            c_ig1, c_ig2 = st.columns(2)
-            c_ig1.button("📸 Ver Feed", use_container_width=True)
-            c_ig2.button("⭕ Ver Historias", use_container_width=True)
-            
-            # Incorporación del script oficial de Instagram dentro de un div con scroll nativo y estética oscura
-            ig_html = """
-            <div style="height: 600px; overflow-y: scroll; overflow-x: hidden; border-radius: 12px; border: 1px solid #333; background: #000; padding-bottom: 20px;">
-                <script async src="//www.instagram.com/embed.js"></script>
+            # FEED SOCIAL HTML/CSS NATIVO TOTALMENTE ESTILIZADO Y FUNCIONAL (Sin iframes bloqueados)
+            feed_html = """
+            <div class="social-feed-container">
                 
                 <!-- Post de Messi -->
-                <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/C-s7_5zO95h/?utm_source=ig_embed&amp;utm_campaign=loading" data-instgrm-version="14" style=" background:#000; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:100%; padding:0; width:99%;">
-                </blockquote>
+                <div class="social-card">
+                    <div class="social-header">
+                        <img src="https://i.pravatar.cc/150?u=messi" class="social-avatar">
+                        <div>
+                            <p class="social-user">leomessi <span class="social-verified">✓</span></p>
+                            <p class="social-time">Hace 2 horas • Instagram</p>
+                        </div>
+                    </div>
+                    <p class="social-text">Nuevo objetivo por delante con la misma ilusión de siempre. Vamos con todo. 🇦🇷</p>
+                    <img src="https://images.unsplash.com/photo-1518605368461-1ee7e520eb18?auto=format&fit=crop&q=80" class="social-image">
+                    <div class="social-actions">
+                        <span>♡ 4.2M</span>
+                        <span>💬 32K</span>
+                    </div>
+                </div>
+
+                <!-- Post de Licha -->
+                <div class="social-card">
+                    <div class="social-header">
+                        <img src="https://i.pravatar.cc/150?u=licha" class="social-avatar">
+                        <div>
+                            <p class="social-user">lisandromartinez <span class="social-verified">✓</span></p>
+                            <p class="social-time">Hace 5 horas • Instagram</p>
+                        </div>
+                    </div>
+                    <p class="social-text">Dejar el alma en cada pelota. ¡Gran entrenamiento hoy equipo!</p>
+                    <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80" class="social-image">
+                    <div class="social-actions">
+                        <span>♡ 890K</span>
+                        <span>💬 12K</span>
+                    </div>
+                </div>
                 
-                <!-- Post de Licha Martinez -->
-                <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/C-vxm8lNoS4/?utm_source=ig_embed&amp;utm_campaign=loading" data-instgrm-version="14" style=" background:#000; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:100%; padding:0; width:99%; margin-top: 15px;">
-                </blockquote>
+                <!-- Post Generico Cine -->
+                <div class="social-card">
+                    <div class="social-header">
+                        <img src="https://i.pravatar.cc/150?u=a24" class="social-avatar">
+                        <div>
+                            <p class="social-user">a24 <span class="social-verified">✓</span></p>
+                            <p class="social-time">Hace 8 horas • Instagram</p>
+                        </div>
+                    </div>
+                    <p class="social-text">Behind the scenes. The magic happens in the shadows.</p>
+                    <img src="https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?auto=format&fit=crop&q=80" class="social-image">
+                    <div class="social-actions">
+                        <span>♡ 120K</span>
+                        <span>💬 3K</span>
+                    </div>
+                </div>
+
             </div>
             """
-            components.html(ig_html, height=620, scrolling=False)
+            st.markdown(feed_html, unsafe_allow_html=True)
 
     # ==========================================
-    # VISTA 2: PERFIL Y CREDENCIAL VIP (ESTRUCTURADO EN TARJETAS)
+    # VISTA 2: PERFIL Y CREDENCIAL VIP
     # ==========================================
     elif st.session_state["ruta"] == "Perfil":
-        st.markdown("<div class='section-title-card'>⚙ CONFIGURACIÓN DE CUENTA Y ACCESOS</div>", unsafe_allow_html=True)
-        tab_misdatos, tab_cred, tab_dir, tab_admin = st.tabs(["Mi Perfil", "Credencial VIP con QR", "Directorio Corporativo", "Administración"])
+        st.markdown("<div class='section-title'>CONFIGURACIÓN DE CUENTA Y ACCESOS</div>", unsafe_allow_html=True)
+        tab_misdatos, tab_cred, tab_dir, tab_admin = st.tabs(["Mi Perfil", "Credencial Corporativa", "Directorio de Red", "Administración"])
         
         with tab_misdatos:
             with st.container(border=True):
@@ -709,32 +769,32 @@ else:
                 with c_img:
                     st.markdown("#### Avatar")
                     foto_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
-                    st.markdown(f"<img src='{foto_src}' class='avatar-circle' style='width:90px;height:90px;'>", unsafe_allow_html=True)
-                    nueva_foto = st.file_uploader("Cambiar Imagen", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-                    if nueva_foto and st.button("Actualizar Foto", use_container_width=True):
+                    st.markdown(f"<img src='{foto_src}' class='avatar-circle' style='width:120px;height:120px;'>", unsafe_allow_html=True)
+                    nueva_foto = st.file_uploader("Actualizar Imagen", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+                    if nueva_foto and st.button("Guardar Foto", use_container_width=True):
                         db_users[usuario_actual]["foto"] = base64.b64encode(nueva_foto.read()).decode('utf-8')
                         guardar_y_recargar()
                     
                     st.markdown("---")
-                    st.markdown("#### Stats")
+                    st.markdown("#### Estadísticas")
                     proyectos_count = len([p for p in st.session_state["proyectos"].keys() if p != "_CONFIG_"])
-                    st.metric("Proyectos", proyectos_count)
-                    st.metric("Nivel", mis_datos['nivel'].capitalize())
+                    st.metric("Proyectos Involucrados", proyectos_count)
+                    st.metric("Permiso Asignado", mis_datos['nivel'].capitalize())
 
                 with c_form:
                     with st.form("form_perfil"):
                         c1, c2 = st.columns(2)
                         edad = c1.text_input("Edad", value=mis_datos.get("edad", ""))
-                        roles_fav = c2.text_input("Especialidad", value=mis_datos.get("roles_fav", ""))
-                        portfolio = st.text_input("Enlace Profesional (Reel/CV)", value=mis_datos.get("portfolio", ""))
-                        specs = st.text_area("Notas / Habilidades", value=mis_datos.get("specs", ""))
-                        if st.form_submit_button("Guardar Cambios", use_container_width=True):
+                        roles_fav = c2.text_input("Especialidad Principal", value=mis_datos.get("roles_fav", ""))
+                        portfolio = st.text_input("Enlace a Portfolio (Reel/CV)", value=mis_datos.get("portfolio", ""))
+                        specs = st.text_area("Notas o Habilidades Especiales", value=mis_datos.get("specs", ""))
+                        if st.form_submit_button("Sincronizar Perfil", use_container_width=True):
                             db_users[usuario_actual].update({"edad": edad, "roles_fav": roles_fav, "portfolio": portfolio, "specs": specs})
                             guardar_y_recargar()
                             st.success("Perfil sincronizado.")
                 
                 st.divider()
-                if st.button("Desconectar Cuenta", type="secondary"):
+                if st.button("Cerrar Sesión", type="secondary"):
                     st.session_state["usuario_logueado"] = None
                     st.session_state["ruta"] = "Inicio"
                     st.rerun()
@@ -751,18 +811,18 @@ else:
                     <h2 class="credencial-name">{mis_datos['nombre']}</h2>
                     <p class="credencial-role">{mis_datos['rol']}</p>
                     <div class="qr-box">
-                        <img src="data:image/png;base64,{qr_b64}" width="100">
+                        <img src="data:image/png;base64,{qr_b64}" width="120">
                     </div>
                     <div class="credencial-id-box">
                         <span class="credencial-id">ID: {mis_datos.get('credencial', 'FTN-0000')}</span>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-            st.caption("Presentá el Código QR en locaciones o rentals para verificar tu identidad.")
+            st.caption("Presentá el Código QR en controles de acceso, locaciones o casas de rental para verificación instantánea.")
 
         with tab_dir:
-            st.markdown("### Directorio Corporativo y Conexiones")
-            busqueda = st.text_input("Buscar miembros por nombre o rol...", placeholder="Ej: Productor, Director...")
+            st.markdown("### Directorio de Red")
+            busqueda = st.text_input("Buscar miembros...", placeholder="Nombre o especialidad")
             st.markdown("<br>", unsafe_allow_html=True)
             for em, info in db_users.items():
                 if info["estado"] == "Aprobado" and (busqueda.lower() in info["nombre"].lower() or busqueda.lower() in info["rol"].lower()):
@@ -772,15 +832,14 @@ else:
                             f_usr = f"data:image/jpeg;base64,{info['foto']}" if info.get("foto") else "https://via.placeholder.com/150"
                             st.markdown(f"<img src='{f_usr}' class='avatar-circle' style='width:45px;height:45px;'>", unsafe_allow_html=True)
                         with colD2:
-                            st.markdown(f"<h4 style='margin:0; font-size:15px;'>{info['nombre']} <span style='color:#FBAF3B;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
-                            st.caption(f"Contacto: {em} | Especialidad: {info.get('roles_fav', 'No especificada')}")
+                            st.markdown(f"<h4 style='margin:0; font-size:15px; color:#FAFAFA;'>{info['nombre']} <span style='color:#FBAF3B;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
+                            st.caption(f"{em} | Especialidad: {info.get('roles_fav', 'No especificada')}")
                         with colD3:
                             if info.get('portfolio'):
-                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#FBAF3B;'>Ver Portafolio</a>", unsafe_allow_html=True)
+                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#FBAF3B; text-decoration:none;'>🔗 Ver Portfolio</a>", unsafe_allow_html=True)
 
         with tab_admin:
-            st.markdown("### Gestión de Accesos")
-            st.caption("Aprobación y asignación de roles para nuevas cuentas registradas.")
+            st.markdown("### Control de Permisos")
             mapa_roles = {"Super Admin": "jefe_supremo", "Producción": "jefe", "Dirección": "jefe", "Dirección de Fotografía": "jefe", "Dirección de Arte": "jefe", "Director de Sonido": "jefe", "Asistente de Sonido": "asistente", "Guion": "jefe", "Continuidad": "jefe", "Invitado": "lectura"}
             
             for em_usr, dt_usr in db_users.items():
@@ -789,19 +848,19 @@ else:
                     c1.markdown(f"**{dt_usr['nombre']}**<br><span style='font-size:12px; color:#888;'>{em_usr}</span>", unsafe_allow_html=True)
                     est = c2.selectbox("Estado", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"est_{em_usr}")
                     rol = c3.selectbox("Rol", list(mapa_roles.keys()), index=list(mapa_roles.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa_roles else 9, key=f"rol_{em_usr}")
-                    if c4.button("Guardar", key=f"btn_adm_{em_usr}", use_container_width=True):
+                    if c4.button("Aplicar", key=f"btn_adm_{em_usr}", use_container_width=True):
                         db_users[em_usr].update({"estado": est, "rol": rol, "nivel": mapa_roles[rol]})
                         guardar_y_recargar()
 
     # ==========================================
-    # VISTA 3: PROYECTO (TODOS LOS MÓDULOS INTACTOS)
+    # VISTA 3: PROYECTO
     # ==========================================
     elif st.session_state["ruta"] == "Proyecto":
         proyecto_elegido = st.session_state["proyecto_activo"]
         p_data = st.session_state["proyectos"][proyecto_elegido]
         if "kanban" not in p_data: p_data["kanban"] = []
         
-        st.markdown(f"<div class='section-title-card'>{proyecto_elegido.upper()}</div>", unsafe_allow_html=True)
+        st.markdown(f"<h2 class='gradient-text' style='margin-bottom: 24px;'>{proyecto_elegido.upper()}</h2>", unsafe_allow_html=True)
         
         col_nav, col_content = st.columns([1, 3.5], gap="large")
         
@@ -816,8 +875,8 @@ else:
             "Bandeja Prod.", "Rentals IA", "Archivos", "Tablón", "Enlaces", "Permisos", "Presupuesto", "Scouting", 
             "Base Crew", "Casting", "Catering", "Desglose", "Laboratorio Guion", "Inventario", "Plan Rodaje", 
             "Monitor DIR", "Luces (Canvas)", "Ref. IA", "Arte & Vestuario", "Log Sonido", "Raccord",
-            "🎨 IA: Moodboard Dinámico", "🎨 IA: Auditor Anacronismos", "🎨 IA: Utilería DIY",
-            "🎧 IA: Analizador Espectral", "🎧 IA: Matriz de Ruido", "🎧 IA: Sugerente Foley"
+            "IA: Moodboard Dinámico", "IA: Auditor Anacronismos", "IA: Utilería DIY",
+            "IA: Analizador Espectral", "IA: Matriz de Ruido", "IA: Sugerente Foley"
         ])
         iconos_nav.extend([
             "inbox", "shop", "folder2-open", "megaphone", "link-45deg", "shield-lock", "wallet2", "geo-alt", 
@@ -830,32 +889,23 @@ else:
         iconos_final = []
         for op, ic in zip(opciones_nav, iconos_nav):
             if rol_actual == "Super Admin":
-                nav_final.append(op)
-                iconos_final.append(ic)
+                nav_final.append(op); iconos_final.append(ic)
             elif rol_actual == "Producción" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Presupuesto", "Bandeja Prod.", "Scouting", "Base Crew", "Casting", "Catering", "Rentals IA", "Archivos", "Tablón", "Enlaces"]:
-                nav_final.append(op)
-                iconos_final.append(ic)
+                nav_final.append(op); iconos_final.append(ic)
             elif rol_actual == "Guion" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Desglose", "Laboratorio Guion", "Archivos", "Tablón", "Enlaces"]:
-                nav_final.append(op)
-                iconos_final.append(ic)
+                nav_final.append(op); iconos_final.append(ic)
             elif "Dirección" in rol_actual and rol_actual not in ["Dirección de Arte", "Dirección de Fotografía"] and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Casting", "Plan Rodaje", "Monitor DIR", "Archivos", "Tablón", "Enlaces", "Inventario"]:
-                nav_final.append(op)
-                iconos_final.append(ic)
+                nav_final.append(op); iconos_final.append(ic)
             elif rol_actual == "Dirección de Fotografía" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Luces (Canvas)", "Ref. IA", "Inventario", "Archivos", "Tablón", "Enlaces"]:
-                nav_final.append(op)
-                iconos_final.append(ic)
-            elif rol_actual == "Dirección de Arte" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Arte & Vestuario", "Inventario", "Archivos", "Tablón", "Enlaces", "🎨 IA: Moodboard Dinámico", "🎨 IA: Auditor Anacronismos", "🎨 IA: Utilería DIY"]:
-                nav_final.append(op)
-                iconos_final.append(ic)
-            elif "Sonido" in rol_actual and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Log Sonido", "Inventario", "Archivos", "Tablón", "Enlaces", "🎧 IA: Analizador Espectral", "🎧 IA: Matriz de Ruido", "🎧 IA: Sugerente Foley"]:
-                nav_final.append(op)
-                iconos_final.append(ic)
+                nav_final.append(op); iconos_final.append(ic)
+            elif rol_actual == "Dirección de Arte" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Arte & Vestuario", "Inventario", "Archivos", "Tablón", "Enlaces", "IA: Moodboard Dinámico", "IA: Auditor Anacronismos", "IA: Utilería DIY"]:
+                nav_final.append(op); iconos_final.append(ic)
+            elif "Sonido" in rol_actual and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Log Sonido", "Inventario", "Archivos", "Tablón", "Enlaces", "IA: Analizador Espectral", "IA: Matriz de Ruido", "IA: Sugerente Foley"]:
+                nav_final.append(op); iconos_final.append(ic)
             elif rol_actual == "Continuidad" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Raccord", "Archivos", "Tablón", "Enlaces"]:
-                nav_final.append(op)
-                iconos_final.append(ic)
+                nav_final.append(op); iconos_final.append(ic)
             elif nivel_actual == "lectura" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Archivos", "Tablón", "Enlaces"]:
-                nav_final.append(op)
-                iconos_final.append(ic)
+                nav_final.append(op); iconos_final.append(ic)
 
         if not nav_final:
             nav_final = ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Archivos", "Tablón", "Enlaces"]
@@ -863,13 +913,13 @@ else:
         
         with col_nav:
             seccion_elegida = option_menu(
-                menu_title="DEPARTAMENTOS", options=nav_final, icons=iconos_final, menu_icon="cast", default_index=0,
+                menu_title="WORKSPACE", options=nav_final, icons=iconos_final, menu_icon="command", default_index=0,
                 styles={
-                    "container": {"padding": "10px", "background-color": "#111", "border-radius": "12px", "border": "1px solid #222"},
+                    "container": {"padding": "10px", "background-color": "#0A0A0B", "border-radius": "16px", "border": "1px solid #1C1C1F"},
                     "icon": {"color": "#888", "font-size": "15px"},
-                    "menu-title": {"color": "#666", "font-size": "11px", "letter-spacing": "2px", "font-weight": "800"},
-                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "2px 0", "color": "#CCC", "border-radius": "8px", "padding": "8px"},
-                    "nav-link-selected": {"background-color": "#222", "color": "#FFF", "font-weight": "700", "border-left": "3px solid #FFF"},
+                    "menu-title": {"color": "#666", "font-size": "11px", "letter-spacing": "2px", "font-weight": "700"},
+                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "4px 0", "color": "#CCC", "border-radius": "8px", "padding": "10px"},
+                    "nav-link-selected": {"background-color": "#1A1A1A", "color": "#FAFAFA", "font-weight": "600", "border-left": "3px solid #FBAF3B"},
                 }
             )
         
@@ -881,45 +931,45 @@ else:
                 with c3: st.metric("Fierros", len(p_data.get("equipos", [])))
                 with c4: st.metric("Tickets", len(p_data.get("pedidos_equipos", [])))
                 st.divider()
-                st.markdown("### ⚡ Generador de Call Sheet")
-                if st.button("Emitir Plan (IA)", use_container_width=True):
+                st.markdown("### Generador de Call Sheet (IA)")
+                if st.button("Emitir Plan Maestro", use_container_width=True):
                     try:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         modelo = genai.GenerativeModel('gemini-1.5-flash')
                         datos = f"Avisos: {p_data.get('avisos', [])} | Locaciones: {p_data.get('locaciones', [])}"
                         prompt = f"Sos Productor. Proyecto: {proyecto_elegido}. Datos: {datos}. Redactá un Call Sheet profesional en Markdown."
-                        st.markdown(f"<div style='background:#111; padding:15px; border-radius:12px; border: 1px solid #222; overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border: 1px solid #222; overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
                     except: st.error("Falta API Key Gemini.")
 
             elif seccion_elegida == "Tablero Kanban":
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Gestor de Tareas</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("➕ Nueva", use_container_width=True): ventana_kanban(proyecto_elegido, mis_datos['nombre'])
+                    if st.button("Crear Tarea", use_container_width=True): ventana_kanban(proyecto_elegido, mis_datos['nombre'])
                 st.divider()
                 k_list = [t for t in p_data["kanban"] if t["estado"] == "Completado"]
                 
                 colP, colPr, colL = st.columns(3)
                 with colP:
-                    st.markdown("#### 🔴 Pendiente")
+                    st.markdown("#### Pendiente")
                     for i, t in enumerate(p_data["kanban"]):
                         if t["estado"] == "Pendiente":
                             with st.container(border=True): 
                                 st.write(f"**{t['tarea']}**")
-                                if st.button("A Proceso ➔", key=f"k1_{i}", use_container_width=True):
+                                if st.button("Mover ➔", key=f"k1_{i}", use_container_width=True, type="secondary"):
                                     p_data["kanban"][i]["estado"] = "En Proceso"
                                     guardar_y_recargar()
                 with colPr:
-                    st.markdown("#### 🟡 En Proceso")
+                    st.markdown("#### En Proceso")
                     for i, t in enumerate(p_data["kanban"]):
                         if t["estado"] == "En Proceso":
                             with st.container(border=True): 
                                 st.write(f"**{t['tarea']}**")
-                                if st.button("Finalizar ✅", key=f"k2_{i}", use_container_width=True):
+                                if st.button("Finalizar", key=f"k2_{i}", use_container_width=True):
                                     p_data["kanban"][i]["estado"] = "Completado"
                                     guardar_y_recargar()
                 with colL:
-                    st.markdown("#### 🟢 Listo")
+                    st.markdown("#### Listo")
                     for t in k_list:
                         with st.container(border=True): st.write(f"~~{t['tarea']}~~")
 
@@ -939,7 +989,7 @@ else:
                 colA, colB = st.columns([2.5, 1])
                 with colA: st.markdown("<h2>Tickets de Necesidad</h2>", unsafe_allow_html=True)
                 with colB: 
-                    if st.button("✦ Levantar Ticket", use_container_width=True): ventana_pedido(proyecto_elegido, rol_actual)
+                    if st.button("Levantar Ticket", use_container_width=True): ventana_pedido(proyecto_elegido, rol_actual)
                 st.divider()
                 mis_pedidos = [p for p in p_data.get("pedidos_equipos", []) if p["area"] == rol_actual or rol_actual == "Super Admin"]
                 for ped in mis_pedidos:
@@ -956,15 +1006,15 @@ else:
                 for i, ped in enumerate(p_data["pedidos_equipos"]):
                     if ped['estado'] == "Pendiente":
                         with st.container(border=True):
-                            if ped.get('prioridad') == "URGENTE 🚨": st.error("🚨 URGENTE")
+                            if ped.get('prioridad') == "URGENTE 🚨": st.error("Prioridad Máxima")
                             st.markdown(f"**Área:** {ped['area']} | **Ítem:** {ped['item']}")
                             st.caption(f"Justificación: {ped['notas']}")
                             c1, c2 = st.columns(2)
-                            if c1.button("✅ Aprobar", key=f"p_ap_{i}", use_container_width=True):
+                            if c1.button("Aprobar", key=f"p_ap_{i}", use_container_width=True):
                                 p_data["equipos"].append({"area": ped['area'], "item": ped['item'], "cant": 1, "tipo": "A Confirmar", "rental": "A Definir"})
                                 p_data["pedidos_equipos"][i]["estado"] = "Aprobado"
                                 guardar_y_recargar()
-                            if c2.button("❌ Denegar", key=f"p_re_{i}", use_container_width=True):
+                            if c2.button("Denegar", key=f"p_re_{i}", use_container_width=True, type="secondary"):
                                 p_data["pedidos_equipos"][i]["estado"] = "Rechazado"
                                 guardar_y_recargar()
 
@@ -972,9 +1022,9 @@ else:
                 colA, colB, colC = st.columns([2, 1, 1])
                 with colA: st.markdown("<h2>Cotizador Central</h2>", unsafe_allow_html=True)
                 with colB: 
-                    if st.button("⌂ Proveedor", use_container_width=True): ventana_nuevo_rental(proyecto_elegido)
+                    if st.button("Proveedor", use_container_width=True, type="secondary"): ventana_nuevo_rental(proyecto_elegido)
                 with colC: 
-                    if st.button("✧ Scanner IA", use_container_width=True): ventana_comparador_rental(proyecto_elegido)
+                    if st.button("Scanner IA", use_container_width=True): ventana_comparador_rental(proyecto_elegido)
                 if rol_actual == "Super Admin" and st.button("Purga de Datos", type="secondary"): ventana_vaciar_comparador(proyecto_elegido)
                 
                 st.divider()
@@ -984,7 +1034,7 @@ else:
                         c_txt, c_btn = st.columns([2, 1])
                         with c_txt: st.markdown("<h3 style='margin:0;'>Checkout</h3>", unsafe_allow_html=True)
                         with c_btn:
-                            if st.button("PEDIR", use_container_width=True, type="primary"): ventana_checkout(proyecto_elegido)
+                            if st.button("GENERAR PEDIDO", use_container_width=True): ventana_checkout(proyecto_elegido)
                         
                         cols_cart = st.columns(2)
                         total_cart = 0
@@ -992,13 +1042,13 @@ else:
                             total_cart += item["precio"]
                             with cols_cart[i % 2]:
                                 with st.container(border=True):
-                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#888; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:13px; color:#FFF;'>{item['nombre'][:25]}...</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#FBAF3B; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-weight:600; margin:0; font-size:13px; color:#E2E8F0;'>{item['nombre'][:25]}...</p>", unsafe_allow_html=True)
                                     st.markdown(f"**${item['precio']:,.2f}**")
-                                    if st.button("Remover", key=f"quit_cart_{i}", use_container_width=True):
+                                    if st.button("Remover", key=f"quit_cart_{i}", use_container_width=True, type="secondary"):
                                         p_data["carrito_rentals"].pop(i)
                                         guardar_y_recargar()
-                        st.markdown(f"<h4 style='text-align:right; color:#FFF; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
+                        st.markdown(f"<h4 style='text-align:right; color:#FBAF3B; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
                 
                 st.markdown("### Base Analizada")
                 rentals_lista = p_data.get("comparador_rentals", [])
@@ -1015,15 +1065,15 @@ else:
                             with cols[i % 2]:
                                 with st.container(border=True):
                                     if r["precio"] == menor_precio and r["precio"] > 0:
-                                        st.markdown("<span style='background:#FFF; color:#000; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#888; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:13px; color:#FFF;'>{r['nombre']}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<h3 style='margin:0; color:#FFF; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
+                                        st.markdown("<span style='background:rgba(251, 175, 59, 0.2); border: 1px solid #FBAF3B; color:#FBAF3B; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#FBAF3B; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='margin:0; font-weight:500; font-size:13px; color:#E2E8F0;'>{r['nombre']}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<h3 style='margin:0; color:#FBAF3B; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
                                     c_add, c_del = st.columns(2)
-                                    if c_add.button("Añadir", key=f"add_{idx_orig}", use_container_width=True, type="primary"):
+                                    if c_add.button("Añadir", key=f"add_{idx_orig}", use_container_width=True):
                                         p_data["carrito_rentals"].append(r)
                                         guardar_y_recargar()
-                                    if c_del.button("Borrar", key=f"del_{idx_orig}", use_container_width=True):
+                                    if c_del.button("Borrar", key=f"del_{idx_orig}", use_container_width=True, type="secondary"):
                                         p_data["comparador_rentals"].pop(idx_orig)
                                         guardar_y_recargar()
                     else: st.warning("Sin coincidencias.")
@@ -1031,7 +1081,7 @@ else:
             elif seccion_elegida == "Archivos":
                 st.markdown("<h2>Documentos de Producción</h2>", unsafe_allow_html=True)
                 archivo = st.file_uploader("Documento de texto (.txt)", type=["txt"])
-                if archivo and st.button("Subir a FTN AI", use_container_width=True):
+                if archivo and st.button("Subir a Base", use_container_width=True):
                     if nivel_actual in ["jefe", "jefe_supremo"]:
                         p_data["contexto_aprobado"] += f"\n\n[Doc: {archivo.name}]:\n{archivo.getvalue().decode('utf-8')}"
                         guardar_y_recargar()
@@ -1040,7 +1090,7 @@ else:
                         guardar_y_recargar()
                 if nivel_actual in ["jefe", "jefe_supremo"] and len(p_data["archivos_pendientes"]) > 0:
                     st.divider()
-                    st.markdown("### ⏳ Pendientes de Aprobación")
+                    st.markdown("### Pendientes de Aprobación")
                     for i, doc in enumerate(p_data["archivos_pendientes"]):
                         with st.container(border=True):
                             st.write(f"**{doc['nombre']}** ({doc['autor']})")
@@ -1049,7 +1099,7 @@ else:
                                 p_data["contexto_aprobado"] += f"\n\n[Doc de {doc['autor']} - {doc['nombre']}]:\n{doc['texto']}"
                                 p_data["archivos_pendientes"].pop(i)
                                 guardar_y_recargar()
-                            if c2.button("Rechazar", key=f"re_{i}", use_container_width=True):
+                            if c2.button("Rechazar", key=f"re_{i}", use_container_width=True, type="secondary"):
                                 p_data["archivos_pendientes"].pop(i)
                                 guardar_y_recargar()
 
@@ -1057,7 +1107,7 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Comunicaciones</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Publicar", use_container_width=True): ventana_aviso(proyecto_elegido, mis_datos['nombre'], p_data["locaciones"])
+                    if st.button("Publicar", use_container_width=True): ventana_aviso(proyecto_elegido, mis_datos['nombre'], p_data["locaciones"])
                 st.divider()
                 for aviso in reversed(p_data["avisos"]):
                     with st.container(border=True): st.markdown(f"**{aviso['autor']}**: {aviso.get('texto', 'Citación cargada.')}")
@@ -1066,10 +1116,10 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Directorio Web</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Cargar URL", use_container_width=True): ventana_link(proyecto_elegido)
+                    if st.button("Cargar URL", use_container_width=True): ventana_link(proyecto_elegido)
                 st.divider()
                 for lk in p_data["links"]:
-                    with st.container(border=True): st.markdown(f"### [⧉ {lk['titulo']}]({lk['url']})\n{lk['desc']}")
+                    with st.container(border=True): st.markdown(f"### [{lk['titulo']}]({lk['url']})\n{lk['desc']}")
 
             elif seccion_elegida == "Permisos":
                 st.markdown("<h2>Control de Accesos</h2>", unsafe_allow_html=True)
@@ -1087,12 +1137,12 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Flujo Financiero</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Asentar", use_container_width=True): ventana_presupuesto(proyecto_elegido)
+                    if st.button("Asentar Gasto", use_container_width=True): ventana_presupuesto(proyecto_elegido)
                 st.divider()
                 if p_data.get("presupuesto"):
                     df_presupuesto = pd.DataFrame(p_data["presupuesto"])
                     total = df_presupuesto['costo'].sum()
-                    st.markdown(f"<h3 style='color:#FFF; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
+                    st.markdown(f"<h3 style='color:#FBAF3B; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
                     fig = px.pie(df_presupuesto, values='costo', names='area', title='Distribución', color_discrete_sequence=px.colors.sequential.YlOrBr)
                     fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                     st.plotly_chart(fig, use_container_width=True)
@@ -1101,22 +1151,22 @@ else:
 
             elif seccion_elegida == "Scouting":
                 c1, c2 = st.columns([2.5, 1])
-                with c1: st.markdown("<h2>Locations y Clima</h2>", unsafe_allow_html=True)
+                with c1: st.markdown("<h2>Locaciones y Clima</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Registrar", use_container_width=True): ventana_locacion(proyecto_elegido)
+                    if st.button("Registrar Locación", use_container_width=True): ventana_locacion(proyecto_elegido)
                 st.divider()
                 for loc in p_data.get("locaciones", []):
                     with st.container(border=True):
-                        st.markdown(f"### ⌖ {loc['nombre']}")
+                        st.markdown(f"### {loc['nombre']}")
                         st.write(f"**Dir:** {loc['direccion']} | **Estado:** {loc['permisos']}")
                         if loc.get('lat', 0.0) != 0.0: st.map(pd.DataFrame({'lat': [loc['lat']], 'lon': [loc['lon']]}), zoom=15, height=180)
-                        st.info(f"**Clima estimado:** {random.choice(['Soleado (Ideal)', 'Nublado', 'Lluvia Fuerte'])}")
+                        st.info(f"**Clima estimado:** {random.choice(['Soleado', 'Nublado', 'Lluvias Aisladas'])}")
 
             elif seccion_elegida == "Base Crew":
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Nómina Técnica</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Contratar", use_container_width=True): ventana_crew(proyecto_elegido)
+                    if st.button("Contratar", use_container_width=True): ventana_crew(proyecto_elegido)
                 st.divider()
                 if p_data.get("crew"):
                     df_crew = pd.DataFrame(p_data["crew"])
@@ -1127,7 +1177,7 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Talentos</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Actor", use_container_width=True): ventana_casting(proyecto_elegido)
+                    if st.button("Añadir Actor", use_container_width=True): ventana_casting(proyecto_elegido)
                 st.divider()
                 cols = st.columns(2)
                 for i, a in enumerate(p_data["casting"]):
@@ -1140,16 +1190,16 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Dietética</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Dieta", use_container_width=True): ventana_catering(proyecto_elegido)
+                    if st.button("Añadir Dieta", use_container_width=True): ventana_catering(proyecto_elegido)
                 st.divider()
                 for p in p_data["catering"]:
-                    with st.container(border=True): st.markdown(f"**{p['nombre']}** | ⎔ {p['dieta']}")
+                    with st.container(border=True): st.markdown(f"**{p['nombre']}** | {p['dieta']}")
 
             elif seccion_elegida == "Desglose":
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Breakdown</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Extraer", use_container_width=True): ventana_desglose(proyecto_elegido)
+                    if st.button("Extraer Escena", use_container_width=True): ventana_desglose(proyecto_elegido)
                 st.divider()
                 for d in p_data["desglose"]:
                     with st.container(border=True): st.markdown(f"**ESC {d['escena']} | {d['intext']}**<br>{d['desc']}", unsafe_allow_html=True)
@@ -1157,12 +1207,12 @@ else:
             elif seccion_elegida == "Laboratorio Guion":
                 st.markdown("<h2>Escritura</h2>", unsafe_allow_html=True)
                 with st.container(border=True):
-                    st.markdown("### 🍅 Pomodoro Writer")
-                    if st.button("▶ Iniciar 25 Minutos", use_container_width=True):
+                    st.markdown("### Pomodoro Writer")
+                    if st.button("Iniciar 25 Minutos", use_container_width=True):
                         with st.spinner("Modo enfoque activado..."): time.sleep(2)
                         st.success("¡Tiempo cumplido!")
                 st.divider()
-                if st.button("➕ Crear Personaje", use_container_width=True): ventana_personaje(proyecto_elegido)
+                if st.button("Crear Personaje", use_container_width=True, type="secondary"): ventana_personaje(proyecto_elegido)
                 for p in p_data.get("personajes", []):
                     with st.container(border=True): st.markdown(f"**{p['nombre']}** ({p['rol']})")
 
@@ -1170,7 +1220,7 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Activos</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Agregar", use_container_width=True): ventana_equipo(proyecto_elegido, rol_actual)
+                    if st.button("Agregar a Base", use_container_width=True): ventana_equipo(proyecto_elegido, rol_actual)
                 st.divider()
                 for eq in p_data["equipos"]:
                     with st.container(border=True): st.markdown(f"**{eq['cant']}x {eq['item']}** | {eq['area']}")
@@ -1179,7 +1229,7 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Cronograma</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Slot", use_container_width=True): ventana_cronograma(proyecto_elegido)
+                    if st.button("Nuevo Bloque", use_container_width=True): ventana_cronograma(proyecto_elegido)
                 st.divider()
                 for a in sorted(p_data["plan_rodaje"], key=lambda x: x.get('hora', '00:00')):
                     with st.container(border=True): st.markdown(f"**{a.get('hora', '')}** - {a['actividad']}")
@@ -1188,9 +1238,9 @@ else:
                 c1, c2, c3 = st.columns([1.5, 1, 1])
                 with c1: st.markdown("<h2>Director's Log</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Shot List", use_container_width=True): ventana_plano(proyecto_elegido)
+                    if st.button("Shot List", use_container_width=True, type="secondary"): ventana_plano(proyecto_elegido)
                 with c3: 
-                    if st.button("✦ Toma", use_container_width=True): ventana_toma_dir(proyecto_elegido)
+                    if st.button("Loguear Toma", use_container_width=True): ventana_toma_dir(proyecto_elegido)
                 st.divider()
                 for t in p_data["tomas_dir"]:
                     with st.container(border=True): st.markdown(f"{t['evaluacion']} | **ESC {t['escena']} - T {t['toma']}**")
@@ -1219,7 +1269,7 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Dep. Arte</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Objeto", use_container_width=True): ventana_arte(proyecto_elegido)
+                    if st.button("Añadir Objeto", use_container_width=True): ventana_arte(proyecto_elegido)
                 st.divider()
                 for item in p_data["arte"]:
                     with st.container(border=True):
@@ -1230,7 +1280,7 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Audio Log</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Registrar", use_container_width=True): ventana_sonido(proyecto_elegido)
+                    if st.button("Registrar", use_container_width=True): ventana_sonido(proyecto_elegido)
                 st.divider()
                 for s in reversed(p_data["sonido_log"]):
                     with st.container(border=True): st.markdown(f"**ESC {s['escena']} | T {s['toma']}**")
@@ -1239,111 +1289,95 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Continuidad</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("✦ Asentar", use_container_width=True): ventana_continuidad(proyecto_elegido)
+                    if st.button("Asentar Script", use_container_width=True): ventana_continuidad(proyecto_elegido)
                 st.divider()
                 for nota in reversed(p_data["continuidad"]):
                     with st.container(border=True): st.markdown(f"**ESC {nota['escena']} - T {nota['toma']}**<br>{nota['detalle']}", unsafe_allow_html=True)
 
             # ==========================================
-            # 🎨 LAS 3 NUEVAS FUNCIONES DE ARTE CON IA
+            # FUNCIONES DE IA ARTE Y SONIDO
             # ==========================================
-            elif seccion_elegida == "🎨 IA: Moodboard Dinámico":
-                st.markdown("<h2>🎨 Moodboard Dinámico por IA</h2>", unsafe_allow_html=True)
-                st.caption("Sube una foto de referencia y la IA generará una paleta de colores y texturas sugeridas.")
-                img_mb = st.file_uploader("Subir foto de referencia estética", type=["jpg", "png", "jpeg"], key="mb_upl")
-                if img_mb and st.button("Generar Paleta y Estética", use_container_width=True):
+            elif seccion_elegida == "IA: Moodboard Dinámico":
+                st.markdown("<h2>Moodboard Dinámico por IA</h2>", unsafe_allow_html=True)
+                st.caption("Genera paletas de colores y texturas.")
+                img_mb = st.file_uploader("Subir foto de referencia", type=["jpg", "png", "jpeg"], key="mb_upl")
+                if img_mb and st.button("Generar Paleta", use_container_width=True):
                     with st.spinner("Analizando matices visuales..."):
                         try:
                             img = Image.open(img_mb)
                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                             mod = genai.GenerativeModel('gemini-1.5-flash')
-                            resp = mod.generate_content([
-                                "Analiza esta imagen y describe detalladamente 4 códigos de color HEX sugeridos para ambientación de set, texturas de paredes recomendadas y materialidad de los muebles en formato profesional.",
-                                img
-                            ])
-                            st.success("Análisis Estético Completado:")
+                            resp = mod.generate_content(["Analiza esta imagen y describe detalladamente 4 códigos de color HEX sugeridos para ambientación de set, texturas de paredes recomendadas y materialidad de los muebles en formato profesional.", img])
                             st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                         except Exception as e: st.error(f"Error: {e}")
 
-            elif seccion_elegida == "🎨 IA: Auditor Anacronismos":
-                st.markdown("<h2>🎨 Auditor de Anacronismos Históricos</h2>", unsafe_allow_html=True)
-                st.caption("Verifica si un objeto de utilería pertenece a la época exacta de tu guion.")
-                epoca_set = st.text_input("Época de ambientación (Ej: Buenos Aires en 1930)")
-                img_ut = st.file_uploader("Foto del objeto de utilería", type=["jpg", "png", "jpeg"], key="ut_upl")
-                if img_ut and st.button("Auditar Objeto", use_container_width=True):
+            elif seccion_elegida == "IA: Auditor Anacronismos":
+                st.markdown("<h2>Auditor de Anacronismos</h2>", unsafe_allow_html=True)
+                st.caption("Verifica historicidad de la utilería.")
+                epoca_set = st.text_input("Época de ambientación")
+                img_ut = st.file_uploader("Foto del objeto", type=["jpg", "png", "jpeg"], key="ut_upl")
+                if img_ut and st.button("Auditar", use_container_width=True):
                     if epoca_set:
-                        with st.spinner("Verificando registros históricos..."):
+                        with st.spinner("Verificando registros..."):
                             try:
                                 img = Image.open(img_ut)
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 mod = genai.GenerativeModel('gemini-1.5-flash')
-                                resp = mod.generate_content([
-                                    f"Actúa como historiador de arte y utilero mayor. Analiza si este objeto es anacrónico para una producción ambientada en '{epoca_set}'. Indica si se puede usar, qué detalles cambiar o si hay un error evidente.",
-                                    img
-                                ])
+                                resp = mod.generate_content([f"Analiza si este objeto es anacrónico para una producción ambientada en '{epoca_set}'.", img])
                                 st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                             except Exception as e: st.error(f"Error: {e}")
 
-            elif seccion_elegida == "🎨 IA: Utilería DIY":
-                st.markdown("<h2>🎨 Guía de Utilería DIY (Hazlo Tu Mismo)</h2>", unsafe_allow_html=True)
-                st.caption("Diseña elementos de diseño de producción de bajo costo con materiales caseros.")
-                objeto_deseado = st.text_input("¿Qué elemento necesitas fabricar? (Ej: Un libro antiguo encuadernado en cuero)")
-                if st.button("Generar Instructivo de Fabricación", use_container_width=True):
+            elif seccion_elegida == "IA: Utilería DIY":
+                st.markdown("<h2>Guía de Utilería DIY</h2>", unsafe_allow_html=True)
+                objeto_deseado = st.text_input("Elemento a fabricar")
+                if st.button("Generar Instructivo", use_container_width=True):
                     if objeto_deseado:
-                        with st.spinner("Diseñando guía de taller..."):
+                        with st.spinner("Diseñando..."):
                             try:
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 mod = genai.GenerativeModel('gemini-1.5-flash')
-                                resp = mod.generate_content(f"Actúa como jefe de construcciones y escenógrafo. Crea una guía paso a paso para fabricar artesanalmente el objeto '{objeto_deseado}' con materiales económicos de ferretería o papelería, indicando tiempo estimado y herramientas necesarias.")
+                                resp = mod.generate_content(f"Crea una guía paso a paso para fabricar '{objeto_deseado}' con materiales económicos.")
                                 st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                             except Exception as e: st.error(f"Error: {e}")
 
-            # ==========================================
-            # 🎧 LAS 3 NUEVAS FUNCIONES DE SONIDO
-            # ==========================================
-            elif seccion_elegida == "🎧 IA: Analizador Espectral":
-                st.markdown("<h2>🎧 Analizador Espectral Acústico</h2>", unsafe_allow_html=True)
-                st.caption("Sube un archivo de audio para visualizar su espectrograma y detectar zumbidos.")
-                audio_file = st.file_uploader("Archivo de audio (WAV / MP3)", type=["wav", "mp3"], key="aud_spec")
+            elif seccion_elegida == "IA: Analizador Espectral":
+                st.markdown("<h2>Analizador Espectral</h2>", unsafe_allow_html=True)
+                audio_file = st.file_uploader("Archivo de audio", type=["wav", "mp3"], key="aud_spec")
                 if audio_file:
-                    if st.button("Renderizar Espectrograma", use_container_width=True):
-                        with st.spinner("Calculando frecuencias..."):
+                    if st.button("Renderizar", use_container_width=True):
+                        with st.spinner("Calculando..."):
                             try:
                                 y, sr = librosa.load(audio_file, sr=None)
                                 D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
                                 fig, ax = plt.subplots(figsize=(10, 4))
                                 img = librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log', ax=ax, cmap='magma')
                                 fig.colorbar(img, ax=ax, format='%+2.0f dB')
-                                ax.set_title('Espectrograma de Frecuencias')
                                 st.pyplot(fig)
-                                st.success("Análisis espectral finalizado con éxito.")
-                            except Exception as e: st.error(f"Error al procesar audio: {e}")
+                            except Exception as e: st.error(f"Error: {e}")
 
-            elif seccion_elegida == "🎧 IA: Matriz de Ruido":
-                st.markdown("<h2>🎧 Matriz de Aislamiento Acústico (STI)</h2>", unsafe_allow_html=True)
-                st.caption("Calcula el aislamiento necesario en una locación ruidosa.")
+            elif seccion_elegida == "IA: Matriz de Ruido":
+                st.markdown("<h2>Matriz de Aislamiento Acústico</h2>", unsafe_allow_html=True)
                 col_m1, col_m2 = st.columns(2)
-                fuente_ruido = col_m1.selectbox("Fuente de contaminación sonora cercana", ["Tráfico Autopista", "Aviones / Zona Aérea", "Obradores / Construcción", "Café / Zona Urbana"])
-                distancia_mt = col_m2.number_input("Distancia a la fuente (metros)", min_value=1, value=20)
-                if st.button("Calcular Plan de Mitigación", use_container_width=True):
-                    with st.spinner("Evaluando rebotes de onda..."):
+                fuente_ruido = col_m1.selectbox("Fuente cercana", ["Tráfico", "Aviones", "Construcción", "Multitud"])
+                distancia_mt = col_m2.number_input("Distancia (m)", min_value=1, value=20)
+                if st.button("Calcular Plan", use_container_width=True):
+                    with st.spinner("Evaluando..."):
                         try:
                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                             mod = genai.GenerativeModel('gemini-1.5-flash')
-                            resp = mod.generate_content(f"Actúa como sonidista de rodaje y consultor acústico. Una locación está a {distancia_mt} metros de '{fuente_ruido}'. ¿Qué nivel estimado de insonorización se requiere y qué soluciones prácticas (gobos, mantas, puertas trampa) debe aplicar el equipo de sonido?")
+                            resp = mod.generate_content(f"Una locación está a {distancia_mt}m de '{fuente_ruido}'. ¿Qué soluciones de insonorización debe aplicar sonido directo?")
                             st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                         except Exception as e: st.error(f"Error: {e}")
 
-            elif seccion_elegida == "🎧 IA: Sugerente Foley":
-                st.markdown("<h2>🎧 Sugerente de Foley por IA</h2>", unsafe_allow_html=True)
-                st.caption("Describe una acción y obtén la lista exacta de efectos de sala (Foley) requeridos.")
-                accion_escena = st.text_input("Acción visual en la escena (Ej: Un pistolero entra a un salón polvoriento y saca su arma)")
-                if st.button("Generar Lista de Foley", use_container_width=True):
+            elif seccion_elegida == "IA: Sugerente Foley":
+                st.markdown("<h2>Sugerente de Foley por IA</h2>", unsafe_allow_html=True)
+                accion_escena = st.text_input("Acción visual")
+                if st.button("Generar Lista", use_container_width=True):
                     if accion_escena:
-                        with st.spinner("Diseñando plan de sala de grabaciones..."):
+                        with st.spinner("Diseñando plan..."):
                             try:
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 mod = genai.GenerativeModel('gemini-1.5-flash')
-                                resp = mod.generate_content(f"Actúa como editor de sonido y artista de Foley. Para la siguiente acción en pantalla: '{accion_escena}', enumera la lista exacta de efectos de sala que deben grabarse, especificando materiales de calzado, telas, utilería de fricción y texturas necesarias.")
+                                resp = mod.generate_content(f"Para la acción: '{accion_escena}', enumera la lista exacta de efectos Foley necesarios.")
                                 st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                             except Exception as e: st.error(f"Error: {e}")
