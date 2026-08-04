@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from streamlit_option_menu import option_menu
 import google.generativeai as genai
 import pandas as pd
@@ -21,13 +20,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa
 import scipy.signal
+import streamlit.components.v1 as components
 
 # --- 1. CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="Fetén Workspace Pro", page_icon="✦", layout="wide", initial_sidebar_state="collapsed")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
-# --- 2. DISEÑO UI/UX "SAAS OBSIDIAN PRO" (LINEAR/VERCEL STYLE) ---
+# --- 2. DISEÑO UI/UX "OBSIDIAN SAAS" Y "SOCIAL MODE" ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -44,10 +44,9 @@ st.markdown("""
         color: #EDEDED !important;
     }
 
-    /* Logo PNG sin distorsiones */
-    .logo-img { display: block; max-width: 100%; height: auto; }
+    .logo-blend { filter: brightness(1.5) contrast(1.2); }
 
-    /* Tarjetas Modulares SaaS */
+    /* Tarjetas del Dashboard */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: #0A0A0B !important;
         border: 1px solid #1C1C1F !important;
@@ -62,96 +61,58 @@ st.markdown("""
         box-shadow: 0 8px 30px rgba(251, 175, 59, 0.08) !important;
     }
     
-    /* Títulos con Gradiente Premium */
+    /* Títulos */
     .gradient-text {
         background: linear-gradient(135deg, #FFFFFF 0%, #FBAF3B 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 800;
-        letter-spacing: -0.03em;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        font-weight: 800; letter-spacing: -0.03em;
     }
     h1, h2 { font-weight: 800 !important; letter-spacing: -0.02em !important; color: #FAFAFA !important; }
     h3, h4 { color: #D4D4D8 !important; font-weight: 600 !important; letter-spacing: -0.01em !important; }
     
-    /* Títulos de Sección Pequeños */
-    .section-title {
-        color: #A1A1AA; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;
-    }
+    .section-title { color: #A1A1AA; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; }
 
-    /* Inputs y Formularios Modernos */
+    /* Formularios */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea, .stChatInput input {
-        background-color: #0E0E11 !important; 
-        border: 1px solid #27272A !important; 
-        color: #FAFAFA !important;
-        border-radius: 10px !important; 
-        padding: 12px 16px !important; 
-        font-weight: 400 !important;
-        transition: all 0.2s ease !important;
+        background-color: #0E0E11 !important; border: 1px solid #27272A !important; color: #FAFAFA !important;
+        border-radius: 10px !important; padding: 12px 16px !important; transition: all 0.2s ease !important;
     }
-    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { 
-        border-color: #FBAF3B !important; 
-        box-shadow: 0 0 0 1px #FBAF3B !important; 
-    }
+    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { border-color: #FBAF3B !important; box-shadow: 0 0 0 1px #FBAF3B !important; }
     
-    /* Botones de Acción (Call to Action) */
+    /* Botones primarios */
     .stButton button {
-        background: linear-gradient(135deg, #FBAF3B 0%, #D97706 100%) !important; 
-        border: none !important; 
-        color: #050505 !important;
-        border-radius: 10px !important; 
-        font-weight: 700 !important; 
-        padding: 0.6rem 1rem !important; 
-        transition: all 0.2s ease !important;
-        width: 100% !important;
+        background: linear-gradient(135deg, #FBAF3B 0%, #D97706 100%) !important; border: none !important; color: #050505 !important;
+        border-radius: 10px !important; font-weight: 700 !important; padding: 0.6rem 1rem !important; transition: all 0.2s ease !important; width: 100% !important;
     }
     .stButton button:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(251, 175, 59, 0.3) !important; }
     .stButton button p { color: #050505 !important; font-weight: 700 !important; margin: 0; }
     
     /* Botones Secundarios */
-    [data-testid="stBaseButton-secondary"] { 
-        background: #0A0A0B !important; 
-        border: 1px solid #27272A !important; 
-        color: #A1A1AA !important; 
-        box-shadow: none !important;
-    }
+    [data-testid="stBaseButton-secondary"] { background: #0A0A0B !important; border: 1px solid #27272A !important; color: #A1A1AA !important; box-shadow: none !important; }
     [data-testid="stBaseButton-secondary"]:hover { border-color: #52525B !important; color: #FAFAFA !important; }
-    [data-testid="stBaseButton-secondary"] p { color: inherit !important; }
-
-    /* Avatares */
-    .avatar-circle { border-radius: 50%; object-fit: cover; border: 2px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.3); }
-
-    /* Historias de Red Social */
-    .story-circle {
-        border-radius: 50%; object-fit: cover; border: 3px solid #FBAF3B; padding: 2px;
-        width: 64px; height: 64px; box-shadow: 0 4px 12px rgba(251, 175, 59, 0.2);
-    }
     
-    /* Credencial VIP rediseñada (Clean UI) */
-    .credencial-feten {
-        background-color: #0A0A0B;
-        border: 1px solid #1C1C1F;
-        border-radius: 16px; padding: 30px; width: 100%; max-width: 380px; margin: 0 auto; text-align: center;
-        position: relative; overflow: hidden;
-    }
-    .credencial-feten::before {
-        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-        background: linear-gradient(90deg, #FBAF3B, #B4713F);
-    }
-    .credencial-img { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #FBAF3B; margin-bottom: 15px; object-fit: cover;}
-    .credencial-name { font-size: 20px; font-weight: 700; margin: 0; color: #FAFAFA !important;}
-    .credencial-role { font-size: 12px; color: #FBAF3B !important; margin-top: 4px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;}
-    .qr-box { background: white; padding: 10px; border-radius: 8px; display: inline-block; margin-bottom: 15px;}
-    .credencial-id-box { background: #111; padding: 10px; border-radius: 8px; border: 1px solid #222; }
-    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 14px; letter-spacing: 2px; color: #FBAF3B !important;}
+    /* Estructura Red Social */
+    .social-story-bar { display: flex; gap: 15px; overflow-x: auto; padding: 10px 5px; margin-bottom: 20px; }
+    .social-story-bar::-webkit-scrollbar { height: 4px; }
+    .social-story-bar::-webkit-scrollbar-thumb { background: #27272A; border-radius: 10px; }
+    .story-item { display: flex; flex-direction: column; align-items: center; min-width: 70px; cursor: pointer; }
+    .story-ring { width: 64px; height: 64px; border-radius: 50%; padding: 2px; background: linear-gradient(45deg, #FBAF3B, #D97706); display: flex; align-items: center; justify-content: center; margin-bottom: 5px; }
+    .story-img { width: 100%; height: 100%; border-radius: 50%; border: 2px solid #050505; object-fit: cover; }
+    .story-name { font-size: 11px; color: #A1A1AA; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65px; }
 
-    /* Métricas Dashboard */
-    [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2.2rem !important; font-weight: 800 !important; letter-spacing: -1px; }
-    [data-testid="stMetricLabel"] { color: #A1A1AA !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 600 !important; }
+    .post-card { background: #0A0A0B; border: 1px solid #1C1C1F; border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    .post-header { display: flex; align-items: center; margin-bottom: 15px; justify-content: space-between; }
+    .post-user-info { display: flex; align-items: center; gap: 12px; }
+    .post-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+    .post-name { font-size: 15px; font-weight: 700; color: #FAFAFA; margin: 0; }
+    .post-role { font-size: 12px; color: #71717A; margin: 0; }
+    .post-time { font-size: 12px; color: #52525B; }
+    .post-content { font-size: 14px; color: #D4D4D8; line-height: 1.6; margin-bottom: 15px; }
+    .post-media { width: 100%; border-radius: 12px; border: 1px solid #1C1C1F; margin-bottom: 15px; object-fit: cover; max-height: 500px; }
+    .post-actions { display: flex; gap: 20px; border-top: 1px solid #1C1C1F; padding-top: 12px; color: #A1A1AA; font-size: 13px; font-weight: 600; }
+    .post-action-btn { cursor: pointer; transition: color 0.2s; }
+    .post-action-btn:hover { color: #FBAF3B; }
 
-    /* Ocultar etiquetas de métricas */
-    [data-testid="stMetricDelta"] { display: none; }
-
-    /* Responsive */
     @media (max-width: 768px) {
         [data-testid="column"] { width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }
         .block-container { padding-left: 1rem !important; padding-right: 1rem !important; padding-top: 1.5rem !important; }
@@ -161,7 +122,7 @@ st.markdown("""
 
 ARCHIVO_BD = "ftn_database.json"
 
-# --- 3. FUNCIONES AUXILIARES Y BASE DE DATOS ---
+# --- 3. INICIALIZACIÓN PROFUNDA DE BASE DE DATOS ---
 def generar_qr_base64(datos):
     qr = qrcode.QRCode(version=1, box_size=5, border=1)
     qr.add_data(datos)
@@ -181,51 +142,45 @@ def inicializar_bd():
         if os.path.exists(ARCHIVO_BD):
             with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
                 data_cargada = json.load(f)
-                if "_CONFIG_" not in data_cargada:
-                    data_cargada["_CONFIG_"] = {
-                        "usuarios": {
-                            "lau@admin.com": {
-                                "nombre": "Lau (Admin)", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
-                                "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Directora / Productora", "dieta": "Ninguna", "specs": "", "cv": "", "portfolio": "", "acceso_rapido": "Panel General", "spotify": ""
-                            }
-                        }, "recordatorios": [], "notificaciones": [], "mensajes": [], "tickets_soporte": [], "social_posts": [], "social_stories": []
-                    }
-                # Asegurar que existan las nuevas bases
-                if "mensajes" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["mensajes"] = []
-                if "tickets_soporte" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["tickets_soporte"] = []
-                if "social_posts" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["social_posts"] = []
-                if "social_stories" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["social_stories"] = []
-                if "notificaciones" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["notificaciones"] = []
-                
-                claves_necesarias = [
-                    "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
-                    "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
-                    "personajes", "locaciones", "crew", "catering", "links", "presupuesto", 
-                    "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals", "kanban"
-                ]
-                for nombre_proy, datos_proy in data_cargada.items():
-                    if nombre_proy == "_CONFIG_": 
-                        for email_u, info_u in datos_proy.get("usuarios", {}).items():
-                            if "estado" not in info_u: info_u["estado"] = "Aprobado"
-                            if "credencial" not in info_u: info_u["credencial"] = f"FTN-{random.randint(1000, 9999)}"
-                            if "acceso_rapido" not in info_u: info_u["acceso_rapido"] = "Panel General"
-                            if "spotify" not in info_u: info_u["spotify"] = ""
-                        continue
-                    if "contexto_aprobado" not in datos_proy: datos_proy["contexto_aprobado"] = "Proyecto actualizado."
-                    for clave in claves_necesarias:
-                        if clave not in datos_proy: datos_proy[clave] = []
-                st.session_state["proyectos"] = data_cargada
         else:
-            st.session_state["proyectos"] = {
-                "_CONFIG_": {
-                    "usuarios": {
-                        "lau@admin.com": {
-                            "nombre": "Lau (Admin)", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
-                            "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Super Admin", "dieta": "", "specs": "", "cv": "", "portfolio": "", "acceso_rapido": "Panel General", "spotify": ""
-                        }
-                    }, "recordatorios": [], "notificaciones": [], "mensajes": [], "tickets_soporte": [], "social_posts": [], "social_stories": []
-                }
+            data_cargada = {}
+
+        # --- CORRECCIÓN CRÍTICA DE ESTRUCTURAS ---
+        conf = data_cargada.setdefault("_CONFIG_", {})
+        conf.setdefault("usuarios", {
+            "lau@admin.com": {
+                "nombre": "Lau (Admin)", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
+                "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Directora / Productora", "dieta": "Ninguna", "specs": "", "cv": "", "portfolio": "", "spotify": "", "amigos": []
             }
+        })
+        conf.setdefault("recordatorios", [])
+        conf.setdefault("notificaciones", [])
+        conf.setdefault("mensajes", [])
+        conf.setdefault("tickets_soporte", [])
+        conf.setdefault("social_posts", [])
+        conf.setdefault("social_stories", [])
+        
+        # Validar cada usuario existente
+        for em, info in conf["usuarios"].items():
+            info.setdefault("estado", "Aprobado")
+            info.setdefault("credencial", f"FTN-{random.randint(1000, 9999)}")
+            info.setdefault("spotify", "")
+            info.setdefault("amigos", [])
+
+        # Validar módulos de proyectos
+        claves_necesarias = [
+            "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
+            "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
+            "personajes", "locaciones", "crew", "catering", "links", "presupuesto", 
+            "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals", "kanban"
+        ]
+        for nombre_proy, datos_proy in data_cargada.items():
+            if nombre_proy != "_CONFIG_":
+                datos_proy.setdefault("contexto_aprobado", "Proyecto actualizado.")
+                for clave in claves_necesarias:
+                    datos_proy.setdefault(clave, [])
+                    
+        st.session_state["proyectos"] = data_cargada
 
 inicializar_bd()
 
@@ -233,17 +188,19 @@ if "ruta" not in st.session_state: st.session_state["ruta"] = "Inicio"
 if "proyecto_activo" not in st.session_state: st.session_state["proyecto_activo"] = None
 if "menu_option" not in st.session_state: st.session_state["menu_option"] = "Panel General"
 
-# --- 4. MODALES DE GESTIÓN GLOBALES ---
+# --- 4. MODALES GLOBALES DE ACCIÓN ---
 @st.dialog("◈ Reportar un Problema (Soporte Técnico)")
 def ventana_soporte(usuario):
     asunto = st.text_input("Asunto del reporte")
     desc = st.text_area("Descripción detallada del problema o bug")
     if st.button("Enviar Ticket a Soporte", use_container_width=True):
         if asunto and desc:
-            # Solución del error de fecha
+            # Fix del datetime error
+            fecha_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({
-                "usuario": usuario, "fecha": datetime.now().strftime("%Y-%m-%d %H:%M"), "asunto": asunto, "desc": desc, "estado": "Pendiente"
+                "usuario": usuario, "fecha": fecha_str, "asunto": asunto, "desc": desc, "estado": "Pendiente"
             })
+            st.success("Ticket enviado al Administrador.")
             guardar_y_recargar()
 
 @st.dialog("◈ Subir Historia (24h)")
@@ -257,7 +214,7 @@ def ventana_historia(usuario):
             })
             guardar_y_recargar()
 
-# --- MODALES DEL PROYECTO ---
+# Resto de modales (Kanban, Locaciones, Arte, Sonido, etc...)
 @st.dialog("◈ Nueva Tarea Kanban")
 def ventana_kanban(proyecto, autor):
     tarea = st.text_input("Descripción de la Tarea")
@@ -342,7 +299,6 @@ def ventana_pedido(proyecto, area):
     if st.button("Enviar Ticket", use_container_width=True):
         if item_nombre:
             st.session_state["proyectos"][proyecto]["pedidos_equipos"].append({"area": area, "item": item_nombre, "notas": justificacion, "prioridad": prioridad, "estado": "Pendiente"})
-            st.session_state["proyectos"]["_CONFIG_"]["notificaciones"].append(f"Ticket nuevo en {proyecto}: {item_nombre} ({prioridad})")
             guardar_y_recargar()
 
 @st.dialog("⚙ Cargar Equipo al Inventario")
@@ -414,7 +370,7 @@ def ventana_sonido(proyecto):
             st.session_state["proyectos"][proyecto]["sonido_log"].append({"escena": escena, "toma": toma, "pistas": pistas, "obs": obs})
             guardar_y_recargar()
 
-@st.dialog("◈ Calificar Toma")
+@st.dialog("🎬 Calificar Toma")
 def ventana_toma_dir(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC")
@@ -446,7 +402,7 @@ def ventana_link(proyecto):
             st.session_state["proyectos"][proyecto]["links"].append({"titulo": titulo, "url": url, "desc": desc})
             guardar_y_recargar()
 
-@st.dialog("◈ Registrar Gasto")
+@st.dialog("◈ Registrar Gasto (Presupuesto)")
 def ventana_presupuesto(proyecto):
     item = st.text_input("Concepto")
     costo = st.number_input("Costo Neto ($)", min_value=0.0)
@@ -469,7 +425,7 @@ def ventana_casting(proyecto):
             st.session_state["proyectos"][proyecto]["casting"].append({"actor": actor, "personaje": personaje, "reel": reel, "foto": foto_base64})
             guardar_y_recargar()
 
-@st.dialog("◈ Desglose Escénico")
+@st.dialog("▤ Desglose Escénico")
 def ventana_desglose(proyecto):
     c1, c2, c3 = st.columns(3)
     escena = c1.text_input("ESC N°")
@@ -586,7 +542,7 @@ def ventana_checkout(proyecto):
             st.success(f"Subtotal: ${total_r:,.2f} / jornada")
             link_rental = next((d["url"] for d in directorio if d["nombre"] == r_name), None)
             if link_rental:
-                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: #FBAF3B; color:#0A0A0A; padding:8px 12px; text-decoration:none; border-radius:6px; font-weight:600; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: #FBAF3B; color:#0A0A0B; padding:8px 12px; text-decoration:none; border-radius:6px; font-weight:600; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
 
 @st.dialog("Purga de Base de Datos")
 def ventana_vaciar_comparador(proyecto):
@@ -600,7 +556,7 @@ def ventana_vaciar_comparador(proyecto):
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-# --- 6. PANTALLA DE ACCESO Y REGISTRO ---
+# --- 6. PANTALLA DE ACCESO Y REGISTRO (ESTILO OBSIDIANA) ---
 if st.session_state["usuario_logueado"] is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
@@ -636,7 +592,7 @@ if st.session_state["usuario_logueado"] is None:
                         foto_b64 = base64.b64encode(foto_reg.read()).decode('utf-8')
                         db_users[email_reg] = {
                             "nombre": nombre_reg, "pass": pass_reg, "rol": "Invitado", "nivel": "lectura", "estado": "Pendiente",
-                            "foto": foto_b64, "credencial": f"FTN-{random.randint(1000, 9999)}", "edad": "", "roles_fav": "", "dieta": "", "specs": "", "cv": "", "portfolio": "", "acceso_rapido": "Panel General", "spotify": ""
+                            "foto": foto_b64, "credencial": f"FTN-{random.randint(1000, 9999)}", "edad": "", "roles_fav": "", "dieta": "", "specs": "", "cv": "", "portfolio": "", "spotify": "", "amigos": []
                         }
                         guardar_y_recargar()
                         st.success("Solicitud enviada con éxito.")
@@ -650,33 +606,37 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
-    # --- NAVBAR PROFESIONAL ALINEADA ---
-    # Uso un contenedor y columnas ajustadas para que la foto de perfil y los botones queden en la misma línea
-    col_logo, col_dash, col_soc, col_space, col_msg, col_prof_img, col_prof_btn = st.columns([0.6, 1.2, 1.2, 3.8, 1.2, 0.5, 1.2], vertical_alignment="bottom")
+    # --- NAVBAR ALINEADA (FOTO Y BOTÓN DEL MISMO TAMAÑO) ---
+    c_head_left, c_head_dash, c_head_soc, c_head_space, c_head_msg, c_head_prof_btn, c_head_prof_img = st.columns([1.2, 1.2, 1.2, 3, 1.2, 1, 0.8], vertical_alignment="center")
     
-    with col_logo:
-        st.markdown(f"<img src='{LOGO_URL}' class='logo-img logo-blend' style='max-height:45px; margin-bottom:5px;'>", unsafe_allow_html=True)
-    with col_dash:
+    with c_head_left:
+        st.markdown(f"<img src='{LOGO_URL}' class='logo-img logo-blend' style='max-height:42px;'>", unsafe_allow_html=True)
+    with c_head_dash:
         if st.button("⌂ Dashboard", use_container_width=True, type="secondary"):
             st.session_state["ruta"] = "Inicio"
             st.rerun()
-    with col_soc:
+    with c_head_soc:
         if st.button("◈ Social", use_container_width=True, type="secondary"):
             st.session_state["ruta"] = "Social"
             st.rerun()
-    with col_space:
+    with c_head_space:
         pass # Espacio central
-    with col_msg:
+    with c_head_msg:
         if st.button("✉ Mensajes", use_container_width=True, type="secondary"):
             st.session_state["ruta"] = "Mensajes"
             st.rerun()
-    with col_prof_img:
-        foto_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
-        st.markdown(f"<img src='{foto_src}' class='avatar-circle' style='width:45px; height:45px; margin-bottom:4px; margin-left:10px;'>", unsafe_allow_html=True)
-    with col_prof_btn:
-        if st.button("⚙ Perfil", use_container_width=True, type="secondary"):
+    with c_head_prof_btn:
+        if st.button("Perfil", use_container_width=True, type="secondary"):
             st.session_state["ruta"] = "Perfil"
             st.rerun()
+    with c_head_prof_img:
+        # Foto del mismo alto que el botón de Streamlit (aprox 40px)
+        foto_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
+        st.markdown(f"""
+            <div style="height: 40px; display: flex; align-items: center; justify-content: flex-start;">
+                <img src='{foto_src}' style='width: 40px; height: 40px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover;'>
+            </div>
+        """, unsafe_allow_html=True)
             
     st.markdown("<hr style='border-color: #1C1C1F; margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
@@ -685,35 +645,6 @@ else:
     # ==========================================
     if st.session_state["ruta"] == "Inicio":
         
-        # Accesos Rápidos Configurables
-        col_q1, col_q2, col_q3, col_q4 = st.columns(4)
-        with col_q1:
-            with st.container(border=True):
-                st.markdown("<p style='font-size:12px; color:#A1A1AA; font-weight:700; margin:0;'>MI ROL</p>", unsafe_allow_html=True)
-                st.markdown(f"<h3 class='gradient-text' style='margin:0; font-size:18px;'>{rol_actual}</h3>", unsafe_allow_html=True)
-        with col_q2:
-            with st.container(border=True):
-                st.markdown("<p style='font-size:12px; color:#A1A1AA; font-weight:700; margin:0;'>PROYECTOS</p>", unsafe_allow_html=True)
-                st.markdown(f"<h3 style='margin:0; color:#FAFAFA;'>{len([p for p in st.session_state['proyectos'].keys() if p != '_CONFIG_'])} Activos</h3>", unsafe_allow_html=True)
-        with col_q3:
-            with st.container(border=True):
-                st.markdown("<p style='font-size:12px; color:#A1A1AA; font-weight:700; margin:0; margin-bottom: 5px;'>ACCESO RÁPIDO</p>", unsafe_allow_html=True)
-                herramientas_list = ["Panel General", "Tablero Kanban", "Rentals IA", "Presupuesto", "Base Crew", "Laboratorio Guion", "Luces (Canvas)", "Arte & Vestuario"]
-                acc_rapido = st.selectbox("Herramienta", herramientas_list, index=herramientas_list.index(mis_datos.get("acceso_rapido", "Panel General")), label_visibility="collapsed")
-                if acc_rapido != mis_datos.get("acceso_rapido"):
-                    db_users[usuario_actual]["acceso_rapido"] = acc_rapido
-                    guardar_y_recargar()
-                if st.button(f"Ir a {acc_rapido}", type="secondary"):
-                    if st.session_state.get("proyecto_activo"):
-                        st.session_state["menu_option"] = acc_rapido
-                        st.session_state["ruta"] = "Proyecto"
-                        st.rerun()
-                    else: st.warning("Selecciona un proyecto abajo primero.")
-        with col_q4:
-            with st.container(border=True):
-                st.markdown("<p style='font-size:12px; color:#A1A1AA; font-weight:700; margin:0; margin-bottom: 5px;'>SOPORTE</p>", unsafe_allow_html=True)
-                if st.button("Reportar Problema", type="secondary"): ventana_soporte(usuario_actual)
-
         c_main, c_side = st.columns([2.5, 1], gap="large")
         
         with c_main:
@@ -741,7 +672,6 @@ else:
                             st.markdown("<br>", unsafe_allow_html=True)
                             if st.button("Entrar al Workspace", key=f"entrar_{proy}", use_container_width=True):
                                 st.session_state["proyecto_activo"] = proy
-                                st.session_state["menu_option"] = "Panel General"
                                 st.session_state["ruta"] = "Proyecto"
                                 st.rerun()
 
@@ -757,41 +687,48 @@ else:
                         st.markdown(f"<div style='font-weight:600; font-size:15px; color:#E2E8F0;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
     # ==========================================
-    # VISTA: RED SOCIAL (NUEVA)
+    # VISTA: RED SOCIAL (NATIVA, CERO EMJOSIS)
     # ==========================================
     elif st.session_state["ruta"] == "Social":
-        st.markdown("<h2 class='gradient-text' style='margin-bottom: 20px;'>Red Social del Estudio</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 class='gradient-text' style='margin-bottom: 20px;'>Social Workspace</h2>", unsafe_allow_html=True)
         
-        # --- HISTORIAS ---
-        st.markdown("<div class='section-title'>Historias 24h</div>", unsafe_allow_html=True)
+        # --- HISTORIAS (CAROUSEL NATIVO HTML/CSS) ---
+        st.markdown("<div class='section-title'>Historias (24h)</div>", unsafe_allow_html=True)
         if st.button("✦ Subir Historia", type="secondary"): ventana_historia(usuario_actual)
-        st.markdown("<br>", unsafe_allow_html=True)
         
         historias = st.session_state["proyectos"]["_CONFIG_"].get("social_stories", [])
         ahora = datetime.now()
         historias_activas = [h for h in historias if (ahora - datetime.strptime(h["timestamp"], "%Y-%m-%d %H:%M:%S")).total_seconds() < 86400]
         
         if historias_activas:
-            cols_hist = st.columns(min(len(historias_activas), 8))
-            for idx, hist in enumerate(historias_activas[:8]):
-                with cols_hist[idx]:
-                    st.markdown(f"<img src='data:image/jpeg;base64,{hist['foto']}' class='story-circle'>", unsafe_allow_html=True)
-                    st.caption(db_users[hist['usuario']]['nombre'].split()[0])
+            hist_html = "<div class='social-story-bar'>"
+            for hist in reversed(historias_activas):
+                nombre_corto = db_users[hist['usuario']]['nombre'].split()[0]
+                hist_html += f"""
+                <div class='story-item'>
+                    <div class='story-ring'>
+                        <img src='data:image/jpeg;base64,{hist['foto']}' class='story-img'>
+                    </div>
+                    <span class='story-name'>{nombre_corto}</span>
+                </div>
+                """
+            hist_html += "</div>"
+            st.markdown(hist_html, unsafe_allow_html=True)
         else:
-            st.info("No hay historias nuevas.")
+            st.info("No hay historias nuevas en las últimas 24 horas.")
             
         st.divider()
         
-        # --- FEED Y SPOTIFY ---
-        c_feed, c_spot = st.columns([2.5, 1], gap="large")
+        # --- FEED Y SUGERENCIAS/SPOTIFY ---
+        c_feed, c_side = st.columns([2.5, 1], gap="large")
         
         with c_feed:
-            st.markdown("<div class='section-title'>Muro de Publicaciones</div>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title'>Muro</div>", unsafe_allow_html=True)
             
             with st.container(border=True):
-                texto_post = st.text_area("¿Qué está pasando en el set?", placeholder="Comparte una actualización con el equipo...")
+                texto_post = st.text_area("¿Qué está pasando en el set?", placeholder="Escribe tu actualización...")
                 img_post = st.file_uploader("Adjuntar imagen", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-                if st.button("Publicar en el Muro", type="primary"):
+                if st.button("Publicar en Muro", type="primary"):
                     if texto_post or img_post:
                         img_b64 = base64.b64encode(img_post.read()).decode('utf-8') if img_post else None
                         st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
@@ -799,27 +736,48 @@ else:
                         })
                         guardar_y_recargar()
 
+            # Renderizado de Posts Nativos
             posts = st.session_state["proyectos"]["_CONFIG_"].get("social_posts", [])
-            for p in posts:
+            for i, p in enumerate(posts):
                 usr_info = db_users[p["usuario"]]
+                f_src = f"data:image/jpeg;base64,{usr_info['foto']}" if usr_info.get("foto") else "https://via.placeholder.com/150"
+                
                 with st.container(border=True):
-                    colA, colB = st.columns([1, 10])
-                    with colA:
-                        f_src = f"data:image/jpeg;base64,{usr_info['foto']}" if usr_info.get("foto") else "https://via.placeholder.com/150"
-                        st.markdown(f"<img src='{f_src}' style='width:45px; height:45px; border-radius:50%; border: 2px solid #333; object-fit:cover;'>", unsafe_allow_html=True)
-                    with colB:
-                        st.markdown(f"**{usr_info['nombre']}** <span style='font-size:12px; color:#71717A;'>• {p['timestamp']}</span>", unsafe_allow_html=True)
-                        
-                    if p.get("texto"):
-                        st.write(p["texto"])
-                    if p.get("imagen"):
-                        st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' style='width:100%; border-radius:12px; margin-top:10px; border: 1px solid #1C1C1F;'>", unsafe_allow_html=True)
+                    # Header del post
+                    st.markdown(f"""
+                        <div class='post-header'>
+                            <div class='post-user-info'>
+                                <img src='{f_src}' class='post-avatar'>
+                                <div>
+                                    <p class='post-name'>{usr_info['nombre']}</p>
+                                    <p class='post-role'>{usr_info['rol']} • {p['timestamp']}</p>
+                                </div>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
                     
-                    st.markdown(f"<span style='color:#FBAF3B; font-weight:600; font-size:12px; margin-top:10px; display:block;'>✦ {p.get('likes',0)} Me gusta</span>", unsafe_allow_html=True)
+                    if p.get("texto"): st.markdown(f"<p class='post-content'>{p['texto']}</p>", unsafe_allow_html=True)
+                    if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' class='post-media'>", unsafe_allow_html=True)
+                    
+                    # Interacciones
+                    st.markdown(f"""
+                        <div class='post-actions'>
+                            <span class='post-action-btn'>✦ {p.get('likes',0)} Me gusta</span>
+                            <span class='post-action-btn'>✉ Comentar</span>
+                        </div>
+                    """, unsafe_allow_html=True)
 
-        with c_spot:
-            st.markdown("<div class='section-title'>EN SINTONÍA (SPOTIFY)</div>", unsafe_allow_html=True)
-            st.caption("Lo que el equipo está escuchando.")
+        with c_side:
+            st.markdown("<div class='section-title'>CONEXIONES</div>", unsafe_allow_html=True)
+            for em, info in db_users.items():
+                if em != usuario_actual and info["estado"] == "Aprobado" and em not in mis_datos.get("amigos", []):
+                    with st.container(border=True):
+                        st.markdown(f"<p style='margin:0; font-weight:700; color:#FAFAFA; font-size:14px;'>{info['nombre']}</p><p style='margin:0; font-size:11px; color:#A1A1AA;'>{info['rol']}</p>", unsafe_allow_html=True)
+                        if st.button("Seguir", key=f"add_{em}", use_container_width=True, type="secondary"):
+                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][usuario_actual]["amigos"].append(em)
+                            guardar_y_recargar()
+
+            st.markdown("<br><div class='section-title'>SINTONÍA (SPOTIFY)</div>", unsafe_allow_html=True)
             for em, info in db_users.items():
                 if info.get("spotify") and "track/" in info["spotify"]:
                     with st.container(border=True):
@@ -828,21 +786,21 @@ else:
                         components.iframe(f"https://open.spotify.com/embed/track/{tid}?utm_source=generator&theme=0", height=80)
 
     # ==========================================
-    # VISTA: MENSAJES (SISTEMA DE CHAT PRIVADO)
+    # VISTA: MENSAJERÍA DIRECTA
     # ==========================================
     elif st.session_state["ruta"] == "Mensajes":
-        st.markdown("<div class='section-title'>MENSAJERÍA DIRECTA</div>", unsafe_allow_html=True)
+        st.markdown("<h2 class='gradient-text' style='margin-bottom: 20px;'>Mensajería Directa</h2>", unsafe_allow_html=True)
         col_list, col_chat = st.columns([1, 2.5], gap="large")
         
         if "chat_con" not in st.session_state: st.session_state["chat_con"] = None
         
         with col_list:
-            st.markdown("#### Directorio")
+            st.markdown("<div class='section-title'>Bandeja de Entrada</div>", unsafe_allow_html=True)
             for em, info in db_users.items():
                 if em != usuario_actual and info.get("estado") == "Aprobado":
                     with st.container(border=True):
-                        st.markdown(f"**{info['nombre']}**<br><span style='font-size:12px;color:#A1A1AA;'>{info['rol']}</span>", unsafe_allow_html=True)
-                        if st.button("Chatear", key=f"chat_{em}", use_container_width=True, type="secondary"):
+                        st.markdown(f"**{info['nombre']}**<br><span style='font-size:11px;color:#A1A1AA;'>{info['rol']}</span>", unsafe_allow_html=True)
+                        if st.button("Abrir Chat", key=f"chat_{em}", use_container_width=True, type="secondary"):
                             st.session_state["chat_con"] = em
                             st.rerun()
 
@@ -872,11 +830,11 @@ else:
                 st.info("Selecciona un usuario de la lista para chatear.")
 
     # ==========================================
-    # VISTA: PERFIL Y CREDENCIAL VIP
+    # VISTA 2: PERFIL Y CREDENCIAL VIP
     # ==========================================
     elif st.session_state["ruta"] == "Perfil":
         st.markdown("<div class='section-title'>CONFIGURACIÓN DE CUENTA Y ACCESOS</div>", unsafe_allow_html=True)
-        tab_misdatos, tab_cred, tab_dir, tab_admin = st.tabs(["Mi Perfil", "Credencial Corporativa", "Directorio de Red", "Administración"])
+        tab_misdatos, tab_cred, tab_dir, tab_admin = st.tabs(["Mi Perfil", "Credencial Corporativa", "Soporte Técnico", "Administración"])
         
         with tab_misdatos:
             with st.container(border=True):
@@ -937,22 +895,9 @@ else:
             st.caption("Presentá el Código QR en controles de acceso, locaciones o casas de rental para verificación instantánea.")
 
         with tab_dir:
-            st.markdown("### Directorio de Red")
-            busqueda = st.text_input("Buscar miembros...", placeholder="Nombre o especialidad")
-            st.markdown("<br>", unsafe_allow_html=True)
-            for em, info in db_users.items():
-                if info["estado"] == "Aprobado" and (busqueda.lower() in info["nombre"].lower() or busqueda.lower() in info["rol"].lower()):
-                    with st.container(border=True):
-                        colD1, colD2, colD3 = st.columns([1, 6, 2])
-                        with colD1:
-                            f_usr = f"data:image/jpeg;base64,{info['foto']}" if info.get("foto") else "https://via.placeholder.com/150"
-                            st.markdown(f"<img src='{f_usr}' class='avatar-circle' style='width:45px;height:45px;'>", unsafe_allow_html=True)
-                        with colD2:
-                            st.markdown(f"<h4 style='margin:0; font-size:15px; color:#FAFAFA;'>{info['nombre']} <span style='color:#FBAF3B;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
-                            st.caption(f"{em} | Especialidad: {info.get('roles_fav', 'No especificada')}")
-                        with colD3:
-                            if info.get('portfolio'):
-                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#FBAF3B; text-decoration:none;'>⧉ Ver Portfolio</a>", unsafe_allow_html=True)
+            st.markdown("### Centro de Soporte")
+            st.caption("Reportá un problema o bug de la plataforma al administrador.")
+            if st.button("Crear Ticket de Soporte", use_container_width=True): ventana_soporte(usuario_actual)
 
         with tab_admin:
             if rol_actual == "Super Admin":
@@ -984,10 +929,10 @@ else:
                                 guardar_y_recargar()
                         else: st.success("Resuelto")
             else:
-                st.warning("Solo los Super Admins pueden ver la configuración de red.")
+                st.warning("Solo los Super Admins pueden ver la configuración de red y soporte.")
 
     # ==========================================
-    # VISTA 3: PROYECTO (TODOS LOS MÓDULOS INTACTOS)
+    # VISTA 3: PROYECTO
     # ==========================================
     elif st.session_state["ruta"] == "Proyecto":
         proyecto_elegido = st.session_state["proyecto_activo"]
@@ -1296,7 +1241,7 @@ else:
                 st.divider()
                 for loc in p_data.get("locaciones", []):
                     with st.container(border=True):
-                        st.markdown(f"### ⌖ {loc['nombre']}")
+                        st.markdown(f"### {loc['nombre']}")
                         st.write(f"**Dir:** {loc['direccion']} | **Estado:** {loc['permisos']}")
                         if loc.get('lat', 0.0) != 0.0: st.map(pd.DataFrame({'lat': [loc['lat']], 'lon': [loc['lon']]}), zoom=15, height=180)
                         st.info(f"**Clima estimado:** {random.choice(['Soleado', 'Nublado', 'Lluvias Aisladas'])}")
@@ -1332,7 +1277,7 @@ else:
                     if st.button("Añadir Dieta", use_container_width=True): ventana_catering(proyecto_elegido)
                 st.divider()
                 for p in p_data["catering"]:
-                    with st.container(border=True): st.markdown(f"**{p['nombre']}** | ⎔ {p['dieta']}")
+                    with st.container(border=True): st.markdown(f"**{p['nombre']}** | {p['dieta']}")
 
             elif seccion_elegida == "Desglose":
                 c1, c2 = st.columns([2.5, 1])
