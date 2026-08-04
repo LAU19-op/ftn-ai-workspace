@@ -26,7 +26,7 @@ st.set_page_config(page_title="Fetén Workspace Pro", page_icon="⚡", layout="w
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
-# --- 2. DISEÑO UI/UX "CINEMATIC OBSIDIAN" CON FEED SOCIAL FLOTANTE ---
+# --- 2. DISEÑO UI/UX "CINEMATIC OBSIDIAN" LIMPIO Y PROFESIONAL ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
@@ -43,6 +43,7 @@ st.markdown("""
 
     .logo-blend { filter: brightness(1.2) contrast(1.2); mix-blend-mode: screen; }
 
+    /* Contenedores modulares oscuros nativos (sin casillas blancas horribles) */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: rgba(20, 20, 25, 0.6) !important;
         backdrop-filter: blur(20px) !important;
