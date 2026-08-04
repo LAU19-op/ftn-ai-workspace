@@ -1,39 +1,3 @@
-Para llevar **Fetén** al nivel visual y funcional de las aplicaciones corporativas y de diseño de clase mundial (como *Linear*, *Stripe*, *Vercel* o *Notion*), he rediseñado por completo el motor de estilos CSS y la arquitectura visual.
-He solucionado el problema crítico del contraste en los formularios y casilleros (texto oscuro sobre fondo claro puro, tarjetas con *Glassmorphism* avanzado, sombras de profundidad real, bordes sutiles y transiciones suaves) para que la interfaz se vea impecable tanto en PC como en modo móvil.
-Además, he incorporado **6 funciones totalmente revolucionarias y exclusivas** (3 para **Arte** y 3 para **Sonido**) impulsadas por la Inteligencia Artificial más avanzada de Gemini y librerías profesionales de procesamiento audiovisual.
-### 🚀 Las 6 Nuevas Funciones Ultra Innovadoras Integradas
-#### 🎨 Departamento de Arte (IA + Visión Computacional)
- 1. **Generador de Moodboard Dinámico por IA y Consistencia Cromática (rembg + Pillow):** Sube cualquier foto de referencia del director. La IA aislará el sujeto/objeto, extraerá la paleta de colores oficial del set y generará automáticamente un mapa de texturas y materiales sugeridos para los escenógrafos.
- 2. **Auditor de Anacronismos Históricos en Set:** Sube una foto de un elemento de utilería (por ejemplo, un reloj o un teléfono en una escena ambientada en 1920). Gemini Vision analizará la imagen píxel a píxel y te dirá si es históricamente correcta o si representa un error de raccord de época.
- 3. **Optimizador de Presupuesto de Utilería DIY (Hazlo tu mismo):** Escribe el objeto que necesitas conseguir (ej: *"Un bastón de mando de marfil del siglo XVIII"*). La IA te devolverá una guía de construcción paso a paso utilizando materiales económicos y de fácil acceso que se consiguen en cualquier ferretería para reducir costos de producción.
-#### 🎧 Departamento de Sonido (Acústica + Análisis Espectral con librosa y scipy)
- 4. **Analizador Espectral Automático de Frecuencias (Anti-Zumbido):** Sube el audio de una toma (WAV/MP3). La herramienta genera un gráfico interactivo con curvas de nivel para detectar frecuencias parásitas (zumbidos de heladeras, aires acondicionados o tráfico de baja frecuencia) antes de mandar el material a postproducción.
- 5. **Calculador Inteligente de Aislamiento de Set (Matriz de Ruido Ambiental):** Ingresa las coordenadas o el entorno de la locación (ej: *"A 50 metros de una autopista"*). La herramienta calcula el índice de transmisión de sonido (STI) y te sugiere exactamente qué cantidad de mantas acústicas, paneles sándwich o trampas de graves necesitas colocar en puertas y ventanas.
- 6. **Sugerente de Foley Contextual por IA:** Ingresa una breve descripción de la acción visual en la escena (ej: *"Un personaje camina sigilosamente sobre un piso de madera crujiente mientras llueve afuera"*). La IA te genera un desglose preciso de los 5 elementos de foley obligatorios que debe grabar el sonidista en sala para que la escena sea ultra realista.
-### 📦 Archivo de Dependencias Actualizado (requirements.txt)
-Para que todas estas herramientas de arte, gráficos espectrales y visión artificial funcionen a la perfección en la nube, asegúrate de actualizar tu archivo requirements.txt con estas librerías profesionales:
-```text
-streamlit
-streamlit-option-menu
-google-generativeai
-pandas
-plotly
-qrcode
-beautifulsoup4
-streamlit-drawable-canvas
-Pillow
-requests
-openpyxl
-librosa
-scipy
-matplotlib
-rembg
-onnxruntime
-
-```
-### 💻 Código Completo, Sin Cortes y Absolutamente Integrado (app.py)
-Copia y reemplaza por completo el contenido de tu archivo principal con este código:
-```python
 import streamlit as st
 from streamlit_option_menu import option_menu
 import google.generativeai as genai
@@ -61,135 +25,111 @@ st.set_page_config(page_title="Fetén Workspace Pro", page_icon="⚡", layout="w
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
-# --- 2. DISEÑO UI/UX ESTILO CLASE MUNDIAL (LINEAR / STRIPE / NOTION) ---
+# --- 2. DISEÑO UI/UX "CINEMATIC OBSIDIAN" ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
     
-    html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif !important; }
+    html, body, [class*="css"] { font-family: 'Outfit', sans-serif !important; }
     #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
     
-    /* Fondo con gradiente moderno de alta gama y contraste optimizado */
+    /* Fondo Obsidiana Oscura sofisticado */
     .stApp {
-        background-color: #F8F9FA !important;
-        background-image: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.03) 0%, transparent 30%) !important;
-        color: #0F172A !important;
+        background-color: #050505 !important;
+        background-image: radial-gradient(circle at 15% 50%, rgba(251, 175, 59, 0.08), transparent 25%), radial-gradient(circle at 85% 30%, rgba(180, 113, 63, 0.08), transparent 25%) !important;
+        color: #E2E8F0 !important;
     }
 
-    /* Logo PNG transparente */
-    .logo-blend { mix-blend-mode: multiply; filter: contrast(1.15); }
+    /* Logo PNG estilo blend */
+    .logo-blend { filter: brightness(1.2) contrast(1.2); mix-blend-mode: screen; }
 
-    /* Tarjetas Modulares Glass/Clean estilo actual */
+    /* Tarjetas Modulares Obsidiana */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 20px !important;
-        padding: 1.8rem !important;
-        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        margin-bottom: 14px !important;
+        background: rgba(20, 20, 25, 0.6) !important;
+        backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        border-radius: 24px !important;
+        padding: 1.5rem !important;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+        transition: all 0.4s ease !important;
+        margin-bottom: 12px !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: #6366F1 !important;
-        box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.15) !important;
-        transform: translateY(-2px);
+        border-color: rgba(251, 175, 59, 0.3) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 15px 50px rgba(251, 175, 59, 0.15) !important;
     }
     
-    /* Welcome Banner sofisticado */
-    .welcome-card {
-        background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
-        border: 1px solid #E2E8F0;
-        border-radius: 24px; padding: 32px; margin-bottom: 24px;
-        box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.06);
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .section-title-card {
-        background: #F1F5F9; border: 1px solid #E2E8F0;
-        border-radius: 12px; padding: 10px 18px; margin-bottom: 16px;
-        font-weight: 700; color: #4F46E5; display: inline-block;
-        font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
-    }
-
-    /* Tipografía refinada */
-    h1, h2, h3, h4 { color: #0F172A !important; font-weight: 800 !important; letter-spacing: -0.8px !important; }
+    /* Títulos Orgánicos Obsidiana */
+    h1, h2 { background: linear-gradient(to right, #FDFCF8, #FBAF3B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800 !important; letter-spacing: -0.5px !important; }
+    h3, h4 { color: #E2E8F0 !important; font-weight: 600 !important; }
     
-    /* Inputs de diseño actual con contraste garantizado (Texto oscuro sobre fondo claro) */
+    /* Inputs minimalistas oscuros (Estilo la referencia limpia) */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea {
-        background-color: #F8FAFC !important; 
-        border: 1px solid #CBD5E1 !important; 
-        color: #0F172A !important;
-        border-radius: 12px !important; 
-        padding: 12px 16px !important; 
-        font-weight: 500 !important;
-        transition: all 0.2s ease !important;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+        background-color: rgba(0,0,0,0.5) !important; 
+        border: 1px solid rgba(255,255,255,0.1) !important; 
+        color: white !important;
+        border-radius: 14px !important; 
+        padding: 14px !important; 
+        transition: all 0.3s ease !important;
     }
     .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { 
-        border-color: #6366F1 !important; 
-        background-color: #FFFFFF !important; 
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
-        color: #0F172A !important;
+        border-color: #FBAF3B !important; 
+        box-shadow: 0 0 15px rgba(251, 175, 59, 0.2) !important; 
     }
     
-    /* Botones de alta conversión */
+    /* Botones principales estilo dorado/ámbar */
     .stButton button {
-        background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%) !important; border: none !important; color: white !important;
-        border-radius: 12px !important; font-weight: 700 !important; padding: 0.7rem 1.4rem !important; transition: all 0.2s ease !important;
-        width: 100% !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%) !important; 
+        border: none !important; 
+        color: #000 !important;
+        border-radius: 14px !important; 
+        font-weight: 800 !important; 
+        padding: 0.7rem 1.5rem !important; 
+        transition: all 0.3s ease !important;
+        width: 100% !important;
     }
-    .stButton button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35) !important; }
-    .stButton button p { color: white !important; font-weight: 700 !important; }
+    .stButton button:hover { transform: scale(1.01) translateY(-2px) !important; box-shadow: 0 10px 25px rgba(251, 175, 59, 0.4) !important; }
+    .stButton button p { color: #050505 !important; font-weight: 800 !important; }
     
     [data-testid="stBaseButton-secondary"] { 
-        background: #FFFFFF !important; border: 1px solid #CBD5E1 !important; color: #4F46E5 !important; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; width: 100% !important; 
+        background: rgba(255,255,255,0.05) !important; 
+        border: 1px solid rgba(255,255,255,0.1) !important; 
+        color: #FBAF3B !important; 
+        width: 100% !important; 
     }
-    [data-testid="stBaseButton-secondary"]:hover { border-color: #4F46E5 !important; background: #F8FAFC !important; }
-    [data-testid="stBaseButton-secondary"] p { color: #4F46E5 !important; }
+    [data-testid="stBaseButton-secondary"]:hover { border-color: #FBAF3B !important; background: rgba(251,175,59,0.1) !important; }
+    [data-testid="stBaseButton-secondary"] p { color: #FBAF3B !important; }
 
-    /* Avatares */
-    .avatar-circle { border-radius: 50%; object-fit: cover; border: 3px solid #6366F1; box-shadow: 0 6px 15px rgba(79, 70, 229, 0.2); }
+    /* Avatares y Credenciales */
+    .avatar-circle { border-radius: 50%; object-fit: cover; border: 3px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.3); }
     
-    /* Credencial VIP Moderna con QR */
     .credencial-feten {
-        background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 1px solid rgba(99, 102, 241, 0.3);
-        border-radius: 28px; padding: 35px 25px; width: 100%; max-width: 360px; margin: 20px auto; text-align: center;
-        box-shadow: 0 25px 50px -15px rgba(15, 23, 42, 0.4); position: relative; overflow: hidden;
+        background: linear-gradient(135deg, #111 0%, #1A1A1A 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08); border-top: 1px solid rgba(255,255,255,0.2);
+        border-radius: 30px; padding: 30px; width: 100%; max-width: 380px; margin: 20px auto; text-align: center;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative; overflow: hidden;
     }
-    .credencial-feten::before {
-        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px;
-        background: linear-gradient(90deg, #4F46E5, #06B6D4);
+    .credencial-feten::after {
+        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+        background: linear-gradient(transparent, rgba(251, 175, 59, 0.05), transparent); transform: rotate(45deg); pointer-events: none;
     }
-    .credencial-logo-img { width: 90px; margin-bottom: 20px; filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.6)); mix-blend-mode: screen;}
-    .credencial-img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #6366F1; margin-bottom: 16px; object-fit: cover; box-shadow: 0 8px 20px rgba(0,0,0,0.3);}
-    .credencial-name { font-size: 22px; font-weight: 800; margin: 0; color: #FFFFFF !important;}
-    .credencial-role { font-size: 11px; color: #818CF8 !important; margin-top: 6px; margin-bottom: 22px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700;}
-    .qr-box { background: white; padding: 10px; border-radius: 14px; display: inline-block; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);}
-    .credencial-id-box { background: rgba(255,255,255,0.06); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
-    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 15px; letter-spacing: 4px; color: #38BDF8 !important;}
-    
-    /* Métricas diseño corporativo */
-    [data-testid="stMetricValue"] { color: #4F46E5 !important; font-size: 2.2rem !important; font-weight: 800 !important; }
-    [data-testid="stMetricLabel"] { color: #64748B !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 700 !important; }
+    .credencial-logo-img { width: 90px; margin-bottom: 15px; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5)); mix-blend-mode: screen;}
+    .credencial-img { width: 110px; height: 110px; border-radius: 50%; border: 3px solid #FBAF3B; margin-bottom: 15px; object-fit: cover;}
+    .credencial-name { font-size: 24px; font-weight: 800; margin: 0; color: #FDFCF8 !important;}
+    .credencial-role { font-size: 11px; color: #FBAF3B !important; margin-top: 5px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 3px;}
+    .qr-box { background: white; padding: 10px; border-radius: 12px; display: inline-block; margin-bottom: 15px;}
+    .credencial-id-box { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 16px; letter-spacing: 4px; color: #FFFFFF !important;}
 
-    /* Adaptabilidad total celulares */
+    /* Métricas */
+    [data-testid="stMetricValue"] { color: #FBAF3B !important; font-size: 2.3rem !important; font-weight: 800 !important; }
+    [data-testid="stMetricLabel"] { color: #94A3B8 !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 700 !important; }
+
+    /* Adaptabilidad Celular */
     @media (max-width: 768px) {
-        [data-testid="column"] {
-            width: 100% !important;
-            flex: 100% !important;
-            min-width: 100% !important;
-            margin-bottom: 10px !important;
-        }
-        .welcome-card {
-            flex-direction: column;
-            text-align: center;
-            gap: 15px;
-            padding: 20px;
-        }
-        .block-container {
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
-            padding-top: 1.5rem !important;
-        }
+        [data-testid="column"] { width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }
+        .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; padding-top: 1.5rem !important; }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -588,7 +528,7 @@ def ventana_checkout(proyecto):
             st.success(f"**Subtotal: ${total_r:,.2f} / jornada**")
             link_rental = next((d["url"] for d in directorio if d["nombre"] == r_name), None)
             if link_rental:
-                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%); color:white; padding:10px 15px; text-decoration:none; border-radius:8px; font-weight:bold; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%); color:white; padding:10px 15px; text-decoration:none; border-radius:8px; font-weight:bold; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
 
 @st.dialog("⚠️ Purga de Base de Datos")
 def ventana_vaciar_comparador(proyecto):
@@ -602,24 +542,24 @@ def ventana_vaciar_comparador(proyecto):
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-# --- 6. PANTALLA DE ACCESO Y REGISTRO ---
+# --- 6. PANTALLA DE ACCESO Y REGISTRO (ESTILO OBSIDIANA OSCURA) ---
 if st.session_state["usuario_logueado"] is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
-        st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' width='220' class='logo-blend' style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h4 style='text-align: center; color: #64748B !important; letter-spacing: 4px; font-weight: 500; margin-top: -15px;'>WORKSPACE PRO</h4>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' width='220' class='logo-blend' style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; font-size: 1.5rem; margin-bottom: 5px;'>Ingresá a tu cuenta</h2>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        tab_login, tab_registro = st.tabs(["Autenticación", "Solicitar Acceso"])
+        tab_login, tab_registro = st.tabs(["Iniciar Sesión", "Registrarse"])
         db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
         
         with tab_login:
             with st.container(border=True):
-                email_ingreso = st.text_input("Correo corporativo", placeholder="nombre@productora.com").lower().strip()
+                email_ingreso = st.text_input("Email o usuario", placeholder="ejemplo@correo.com").lower().strip()
                 pass_ingreso = st.text_input("Contraseña", type="password", placeholder="••••••••")
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("INICIAR SESIÓN", use_container_width=True, type="primary"):
+                if st.button("Iniciar sesión →", use_container_width=True, type="primary"):
                     if email_ingreso in db_users and db_users[email_ingreso]["pass"] == pass_ingreso:
                         if db_users[email_ingreso].get("estado") == "Aprobado":
                             st.session_state["usuario_logueado"] = email_ingreso
@@ -634,7 +574,7 @@ if st.session_state["usuario_logueado"] is None:
                 email_reg = st.text_input("Correo").lower().strip()
                 pass_reg = st.text_input("Crear Contraseña", type="password")
                 foto_reg = st.file_uploader("Foto de Credencial", type=["jpg", "png", "jpeg"])
-                if st.button("ENVIAR SOLICITUD", use_container_width=True, type="primary"):
+                if st.button("Registrarse", use_container_width=True, type="primary"):
                     if nombre_reg and email_reg and pass_reg and foto_reg:
                         foto_b64 = base64.b64encode(foto_reg.read()).decode('utf-8')
                         db_users[email_reg] = {
@@ -678,8 +618,8 @@ else:
         st.markdown(f"""
             <div class="welcome-card">
                 <div>
-                    <h1 style='margin:0; font-size: 1.8rem;'>¡Hola, {mis_datos['nombre']}!</h1>
-                    <p style='color:#4F46E5 !important; font-weight:600; font-size:1rem; margin:0;'>{rol_actual.upper()}</p>
+                    <h1 style='margin:0; font-size: 1.8rem; background: linear-gradient(to right, #FDFCF8, #FBAF3B); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>¡Hola, {mis_datos['nombre']}!</h1>
+                    <p style='color:#FBAF3B !important; font-weight:600; font-size:1rem; margin:0;'>{rol_actual.upper()}</p>
                 </div>
                 <div style='text-align:right;'>
                     <span style='font-size:24px;'>🎬</span>
@@ -733,11 +673,11 @@ else:
             for rec in reversed(recordatorios):
                 if rec["tipo"] == "Global (Toda la Productora)" or rec["autor"] == mis_datos["nombre"]:
                     with st.container(border=True):
-                        st.markdown(f"<span style='color:#6366F1; font-size:11px; font-weight:bold;'>{rec['fecha']}</span>", unsafe_allow_html=True)
-                        st.markdown(f"<div style='font-weight:700; font-size:14px; color:#0F172A;'>{rec['titulo']}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:bold;'>{rec['fecha']}</span>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-weight:700; font-size:14px; color:#E2E8F0;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
     # ==========================================
-    # VISTA 2: PERFIL Y CREDENCIAL VIP (TODO INCLUIDO)
+    # VISTA 2: PERFIL Y CREDENCIAL VIP
     # ==========================================
     elif st.session_state["ruta"] == "Perfil":
         st.markdown("<div class='section-title-card'>⚙ CONFIGURACIÓN DE CUENTA Y ACCESOS</div>", unsafe_allow_html=True)
@@ -812,11 +752,11 @@ else:
                             f_usr = f"data:image/jpeg;base64,{info['foto']}" if info.get("foto") else "https://via.placeholder.com/150"
                             st.markdown(f"<img src='{f_usr}' class='avatar-circle' style='width:45px;height:45px;'>", unsafe_allow_html=True)
                         with colD2:
-                            st.markdown(f"<h4 style='margin:0; font-size:15px;'>{info['nombre']} <span style='color:#4F46E5;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
+                            st.markdown(f"<h4 style='margin:0; font-size:15px;'>{info['nombre']} <span style='color:#FBAF3B;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
                             st.caption(f"Contacto: {em} | Especialidad: {info.get('roles_fav', 'No especificada')}")
                         with colD3:
                             if info.get('portfolio'):
-                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#4F46E5;'>Ver Portafolio</a>", unsafe_allow_html=True)
+                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#FBAF3B;'>Ver Portafolio</a>", unsafe_allow_html=True)
 
         with tab_admin:
             st.markdown("### Gestión de Accesos y Solicitudes de Usuarios")
@@ -834,7 +774,7 @@ else:
                         guardar_y_recargar()
 
     # ==========================================
-    # VISTA 3: PROYECTO (CON LAS 6 NUEVAS FUNCIONES EXCLUSIVAS)
+    # VISTA 3: PROYECTO
     # ==========================================
     elif st.session_state["ruta"] == "Proyecto":
         proyecto_elegido = st.session_state["proyecto_activo"]
@@ -905,11 +845,11 @@ else:
             seccion_elegida = option_menu(
                 menu_title="DEPARTAMENTOS", options=nav_final, icons=iconos_final, menu_icon="cast", default_index=0,
                 styles={
-                    "container": {"padding": "10px", "background-color": "#FFFFFF", "border-radius": "16px", "border": "1px solid #E2E8F0"},
-                    "icon": {"color": "#6366F1", "font-size": "15px"},
-                    "menu-title": {"color": "#64748B", "font-size": "11px", "letter-spacing": "2px", "font-weight": "800"},
-                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "2px 0", "color": "#1E293B", "border-radius": "8px", "padding": "8px"},
-                    "nav-link-selected": {"background-color": "rgba(99, 102, 241, 0.12)", "color": "#4F46E5", "font-weight": "700", "border-left": "4px solid #6366F1"},
+                    "container": {"padding": "10px", "background-color": "rgba(20, 20, 25, 0.6)", "border-radius": "16px", "border": "1px solid rgba(255, 255, 255, 0.05)"},
+                    "icon": {"color": "#FBAF3B", "font-size": "15px"},
+                    "menu-title": {"color": "#94A3B8", "font-size": "11px", "letter-spacing": "2px", "font-weight": "800"},
+                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "2px 0", "color": "#E2E8F0", "border-radius": "8px", "padding": "8px"},
+                    "nav-link-selected": {"background-color": "rgba(251, 175, 59, 0.2)", "color": "#FBAF3B", "font-weight": "700", "border-left": "4px solid #FBAF3B"},
                 }
             )
         
@@ -928,7 +868,7 @@ else:
                         modelo = genai.GenerativeModel('gemini-1.5-flash')
                         datos = f"Avisos: {p_data.get('avisos', [])} | Locaciones: {p_data.get('locaciones', [])}"
                         prompt = f"Sos Productor. Proyecto: {proyecto_elegido}. Datos: {datos}. Redactá un Call Sheet profesional en Markdown."
-                        st.markdown(f"<div style='background:#F8FAFC; padding:15px; border-radius:12px; border: 1px solid #E2E8F0; overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:15px; border-radius:12px; border: 1px solid rgba(255,255,255,0.08); overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
                     except: st.error("Falta API Key Gemini.")
 
             elif seccion_elegida == "Tablero Kanban":
@@ -1032,13 +972,13 @@ else:
                             total_cart += item["precio"]
                             with cols_cart[i % 2]:
                                 with st.container(border=True):
-                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#4F46E5; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:13px; color:#0F172A;'>{item['nombre'][:25]}...</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#FBAF3B; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:13px; color:#E2E8F0;'>{item['nombre'][:25]}...</p>", unsafe_allow_html=True)
                                     st.markdown(f"**${item['precio']:,.2f}**")
                                     if st.button("Remover", key=f"quit_cart_{i}", use_container_width=True):
                                         p_data["carrito_rentals"].pop(i)
                                         guardar_y_recargar()
-                        st.markdown(f"<h4 style='text-align:right; color:#4F46E5; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
+                        st.markdown(f"<h4 style='text-align:right; color:#FBAF3B; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
                 
                 st.markdown("### Base Analizada")
                 rentals_lista = p_data.get("comparador_rentals", [])
@@ -1055,10 +995,10 @@ else:
                             with cols[i % 2]:
                                 with st.container(border=True):
                                     if r["precio"] == menor_precio and r["precio"] > 0:
-                                        st.markdown("<span style='background:rgba(99, 102, 241, 0.12); border: 1px solid #6366F1; color:#4F46E5; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#4F46E5; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:13px; color:#0F172A;'>{r['nombre']}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<h3 style='margin:0; color:#4F46E5; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
+                                        st.markdown("<span style='background:rgba(251, 175, 59, 0.2); border: 1px solid #FBAF3B; color:#FBAF3B; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#FBAF3B; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:13px; color:#E2E8F0;'>{r['nombre']}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<h3 style='margin:0; color:#FBAF3B; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
                                     c_add, c_del = st.columns(2)
                                     if c_add.button("Añadir", key=f"add_{idx_orig}", use_container_width=True, type="primary"):
                                         p_data["carrito_rentals"].append(r)
@@ -1114,13 +1054,13 @@ else:
             elif seccion_elegida == "Permisos":
                 st.markdown("<h2>Control de Accesos</h2>", unsafe_allow_html=True)
                 mapa = {"Super Admin": "jefe_supremo", "Producción": "jefe", "Dirección": "jefe", "Dirección de Fotografía": "jefe", "Dirección de Arte": "jefe", "Director de Sonido": "jefe", "Asistente de Sonido": "asistente", "Guion": "jefe", "Continuidad": "jefe", "Invitado": "lectura"}
-                for em_usr, dt_usr in st.session_state["proyectos"]["_CONFIG_"]["usuarios"].items():
+                for em_usr, dt_usr in db_users.items():
                     with st.container(border=True):
                         st.markdown(f"**{dt_usr['nombre']}**<br><span style='font-size:12px; color:gray;'>{em_usr}</span>", unsafe_allow_html=True)
                         est = st.selectbox("Estado", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"e_{em_usr}")
                         rol = st.selectbox("Rol", list(mapa.keys()), index=list(mapa.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa else 9, key=f"r_{em_usr}")
                         if st.button("Aplicar cambios", key=f"b_{em_usr}", use_container_width=True):
-                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usr].update({"estado": est, "rol": rol, "nivel": mapa[rol]})
+                            db_users[em_usr].update({"estado": est, "rol": rol, "nivel": mapa[rol]})
                             guardar_y_recargar()
 
             elif seccion_elegida == "Presupuesto":
@@ -1132,8 +1072,9 @@ else:
                 if p_data.get("presupuesto"):
                     df_presupuesto = pd.DataFrame(p_data["presupuesto"])
                     total = df_presupuesto['costo'].sum()
-                    st.markdown(f"<h3 style='color:#4F46E5; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
+                    st.markdown(f"<h3 style='color:#FBAF3B; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
                     fig = px.pie(df_presupuesto, values='costo', names='area', title='Distribución', color_discrete_sequence=px.colors.sequential.YlOrBr)
+                    fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                     st.plotly_chart(fig, use_container_width=True)
                     st.download_button("Exportar CSV", data=df_presupuesto.to_csv(index=False).encode('utf-8'), file_name="budget.csv", mime="text/csv", use_container_width=True)
                 else: st.info("No hay gastos registrados.")
@@ -1240,7 +1181,7 @@ else:
                 color_mapping = {"Principal": "#FFD700", "Relleno": "#1E90FF", "Contraluz": "#8A2BE2", "Actor": "#FF4500", "Cámara": "#2D2926"}
                 tipo = st.selectbox("Elemento", list(color_mapping.keys()))
                 grosor = st.slider("Grosor", 1, 10, 3)
-                st_canvas(fill_color="rgba(255,255,255,0)", stroke_width=grosor, stroke_color=color_mapping[tipo], background_color="#FFFFFF", width=330, height=350, drawing_mode=modo, key="canvas_luces_pro")
+                st_canvas(fill_color="rgba(255,255,255,0)", stroke_width=grosor, stroke_color=color_mapping[tipo], background_color="#1A1A1A", width=330, height=350, drawing_mode=modo, key="canvas_luces_pro")
 
             elif seccion_elegida == "Ref. IA":
                 st.markdown("<h2>Lab Visual</h2>", unsafe_allow_html=True)
@@ -1301,7 +1242,7 @@ else:
                                 img
                             ])
                             st.success("Análisis Estético Completado:")
-                            st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
                         except Exception as e: st.error(f"Error: {e}")
 
             elif seccion_elegida == "🎨 IA: Auditor de Anacronismos":
@@ -1320,7 +1261,7 @@ else:
                                     f"Actúa como historiador de arte y utilero mayor. Analiza si este objeto es anacrónico para una producción ambientada en '{epoca_set}'. Indica si se puede usar, qué detalles cambiar o si hay un error evidente.",
                                     img
                                 ])
-                                st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
                             except Exception as e: st.error(f"Error: {e}")
 
             elif seccion_elegida == "🎨 IA: Guía de Utilería DIY":
@@ -1334,7 +1275,7 @@ else:
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 mod = genai.GenerativeModel('gemini-1.5-flash')
                                 resp = mod.generate_content(f"Actúa como jefe de construcciones y escenógrafo. Crea una guía paso a paso para fabricar artesanalmente el objeto '{objeto_deseado}' con materiales económicos de ferretería o papelería, indicando tiempo estimado y herramientas necesarias.")
-                                st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
                             except Exception as e: st.error(f"Error: {e}")
 
             # ==========================================
@@ -1370,7 +1311,7 @@ else:
                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                             mod = genai.GenerativeModel('gemini-1.5-flash')
                             resp = mod.generate_content(f"Actúa como sonidista de rodaje y consultor acústico. Una locación está a {distancia_mt} metros de '{fuente_ruido}'. ¿Qué nivel estimado de insonorización se requiere y qué soluciones prácticas (gobos, mantas, puertas trampa) debe aplicar el equipo de sonido?")
-                            st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
                         except Exception as e: st.error(f"Error: {e}")
 
             elif seccion_elegida == "🎧 IA: Sugerente Foley":
@@ -1384,7 +1325,5 @@ else:
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 mod = genai.GenerativeModel('gemini-1.5-flash')
                                 resp = mod.generate_content(f"Actúa como editor de sonido y artista de Foley. Para la siguiente acción en pantalla: '{accion_escena}', enumera la lista exacta de efectos de sala que deben grabarse, especificando materiales de calzado, telas, utilería de fricción y texturas necesarias.")
-                                st.markdown(f"<div style='background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid #E2E8F0;'>{resp.text}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
                             except Exception as e: st.error(f"Error: {e}")
-
-```
