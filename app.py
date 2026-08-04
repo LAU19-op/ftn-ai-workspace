@@ -13,8 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
-from datetime import datetime, timedelta
-import pytz
+from datetime import datetime, date, timedelta, timezone
 import random
 import time
 import numpy as np
@@ -27,7 +26,9 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Fetén Workspace Pro", page_icon="✦", layout="wide", initial_sidebar_state="collapsed")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
-TZ_AR = pytz.timezone('America/Argentina/Buenos_Aires')
+
+# HORA DE ARGENTINA (Nativo, sin librerías externas para evitar errores)
+TZ_AR = timezone(timedelta(hours=-3))
 
 def obtener_hora_actual():
     return datetime.now(TZ_AR).strftime("%Y-%m-%d %H:%M:%S")
@@ -112,6 +113,9 @@ st.markdown("""
     .credencial-img { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #FBAF3B; margin-bottom: 15px; object-fit: cover;}
     .credencial-name { font-size: 20px; font-weight: 700; margin: 0; color: #FAFAFA !important;}
     .credencial-role { font-size: 12px; color: #FBAF3B !important; margin-top: 4px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;}
+    .qr-box { background: white; padding: 10px; border-radius: 8px; display: inline-block; margin-bottom: 15px;}
+    .credencial-id-box { background: #111; padding: 10px; border-radius: 8px; border: 1px solid #222; }
+    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 14px; letter-spacing: 2px; color: #FBAF3B !important;}
 
     [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2.2rem !important; font-weight: 800 !important; letter-spacing: -1px; }
     [data-testid="stMetricLabel"] { color: #A1A1AA !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 600 !important; }
@@ -125,7 +129,7 @@ st.markdown("""
 
 ARCHIVO_BD = "ftn_database.json"
 
-# --- 3. INICIALIZACIÓN PROFUNDA (CREACIÓN DE USUARIOS PRUEBA) ---
+# --- 3. INICIALIZACIÓN PROFUNDA ---
 def generar_qr_base64(datos):
     qr = qrcode.QRCode(version=1, box_size=5, border=1)
     qr.add_data(datos)
@@ -153,17 +157,17 @@ def inicializar_bd():
             
         conf = data_cargada["_CONFIG_"]
         
-        for lb in ["recordatorios", "notificaciones", "mensajes", "tickets_soporte", "social_posts", "social_stories"]:
-            if lb not in conf: conf[lb] = []
+        listas_base = ["recordatorios", "notificaciones", "mensajes", "tickets_soporte", "social_posts", "social_stories"]
+        for lb in listas_base:
+            if lb not in conf:
+                conf[lb] = []
 
-        # Admin Default
         if "lau@admin.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["lau@admin.com"] = {
                 "nombre": "Lau (Admin)", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
                 "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Directora", "dieta": "Ninguna", "specs": "", "cv": "", "portfolio": "", "spotify": "", "amigos": ["director@feten.com", "arte@feten.com"], "acceso_rapido": "Panel General", "alias": "lau_ok"
             }
             
-        # Usuarios Dummy de Prueba
         if "director@feten.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["director@feten.com"] = {
                 "nombre": "Matias (Director)", "pass": "1234", "rol": "Dirección", "nivel": "jefe", "estado": "Aprobado",
@@ -175,7 +179,6 @@ def inicializar_bd():
                 "foto": "", "credencial": "FTN-0003", "edad": "28", "roles_fav": "Escenografía", "dieta": "Vegana", "specs": "", "cv": "", "portfolio": "", "spotify": "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl", "amigos": [], "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte"
             }
 
-        # Posts Dummy
         if not conf["social_posts"]:
             conf["social_posts"] = [
                 {"usuario": "arte@feten.com", "texto": "Armando el set de los años 80, una locura los detalles que estamos consiguiendo. Mañana subo fotos de la utilería.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 12},
@@ -190,7 +193,12 @@ def inicializar_bd():
             if "acceso_rapido" not in info: info["acceso_rapido"] = "Panel General"
             if "alias" not in info: info["alias"] = em.split("@")[0]
 
-        claves_proy = ["archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", "personajes", "locaciones", "crew", "catering", "links", "presupuesto", "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals", "kanban"]
+        claves_proy = [
+            "archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", 
+            "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", 
+            "personajes", "locaciones", "crew", "catering", "links", "presupuesto", 
+            "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals", "kanban"
+        ]
         for nombre_proy, datos_proy in data_cargada.items():
             if nombre_proy != "_CONFIG_":
                 if "contexto_aprobado" not in datos_proy: datos_proy["contexto_aprobado"] = "Proyecto actualizado."
@@ -571,31 +579,32 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
-    # NAVBAR ALINEADA PERFECTA (Foto y Botón alineados al bottom con el mismo alto)
-    c_nav1, c_nav2, c_nav3, c_nav4, c_nav5, c_nav6 = st.columns([1.5, 1.2, 1.2, 4, 1.2, 1.2], vertical_alignment="bottom")
+    # NAVBAR ALINEADA PERFECTA (Alineación Bottom)
+    c_nav1, c_nav2, c_nav3, c_nav4, c_nav_space, c_nav_prof = st.columns([1.5, 1.2, 1.2, 1.2, 3.5, 1.2], vertical_alignment="bottom")
+    
     with c_nav1:
-        st.markdown(f"<img src='{LOGO_URL}' class='logo-img' style='height:40px; margin-bottom:5px;'>", unsafe_allow_html=True)
+        st.markdown(f"<img src='{LOGO_URL}' class='logo-img' style='height:40px; margin-bottom: 5px;'>", unsafe_allow_html=True)
     with c_nav2:
         if st.button("⌂ Dashboard", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Inicio"; st.rerun()
     with c_nav3:
         if st.button("◈ Social", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Social"; st.rerun()
     with c_nav4:
-        pass
-    with c_nav5:
         if st.button("✉ Mensajes", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Mensajes"; st.rerun()
-    with c_nav6:
-        # Contenedor flex para alinear imagen (40px) y botón (aprox 40px) en la misma línea
+    with c_nav_space:
+        pass
+    with c_nav_prof:
+        # Foto centrada JUSTO ARRIBA del botón
         f_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
         st.markdown(f"""
-            <div style="display:flex; justify-content: flex-end; align-items:flex-end; gap: 10px; height:40px; margin-bottom: 2px;">
-                <img src='{f_src}' style='width: 36px; height: 36px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover;'>
+            <div style="display:flex; justify-content: center; margin-bottom: 8px;">
+                <img src='{f_src}' style='width: 45px; height: 45px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover;'>
             </div>
         """, unsafe_allow_html=True)
         if st.button("⚙ Perfil", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Perfil"; st.rerun()
             
     st.markdown("<hr style='border-color: #1C1C1F; margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
-    # --- INICIO (DASHBOARD COMPLETO) ---
+    # --- INICIO ---
     if st.session_state["ruta"] == "Inicio":
         col_q1, col_q2, col_q3, col_q4 = st.columns(4)
         with col_q1:
@@ -659,7 +668,7 @@ else:
                         st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:700;'>{rec['fecha']}</span>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-weight:600; font-size:14px;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
-    # --- SOCIAL (RED NATIVA CERO ERRORES) ---
+    # --- SOCIAL ---
     elif st.session_state["ruta"] == "Social":
         st.markdown("<h2 class='gradient-text'>Workspace Social</h2>", unsafe_allow_html=True)
         col_izq, col_centro, col_der = st.columns([1, 2.5, 1], gap="large")
@@ -691,7 +700,7 @@ else:
                             st.caption(f"Subido a las: {h['timestamp'].split()[1]}")
             st.divider()
             
-            # Muro / Publicar
+            # Muro
             st.markdown("<div class='section-title'>Muro</div>", unsafe_allow_html=True)
             with st.container(border=True):
                 txt_post = st.text_area("¿Qué está pasando?", label_visibility="collapsed")
@@ -702,27 +711,22 @@ else:
                         st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {"usuario": us_act, "texto": txt_post, "imagen": img_b64, "timestamp": obtener_hora_actual(), "likes": 0})
                         guardar_y_recargar()
 
-            # Feed Formateado HTML Puro (Sin Sangrías)
+            # Feed Sin HTML Raw 
             posts = st.session_state["proyectos"]["_CONFIG_"]["social_posts"]
             for i, p in enumerate(posts):
                 ui = db_users[p["usuario"]]
                 fi = f"data:image/jpeg;base64,{ui['foto']}" if ui.get("foto") else "https://via.placeholder.com/150"
                 alias_u = ui.get("alias", p['usuario'].split('@')[0])
-                html_post = f"""<div class="tweet-card">
-<div class="tweet-header">
-<img src="{fi}" class="tweet-avatar">
-<div>
-<p class="tweet-name">{ui['nombre']}</p>
-<p class="tweet-handle">@{alias_u} • {p['timestamp']}</p>
-</div>
-</div>
-{f"<p class='tweet-body'>{p['texto']}</p>" if p.get('texto') else ""}
-{f"<img src='data:image/jpeg;base64,{p['imagen']}' class='tweet-img'>" if p.get('imagen') else ""}
-<div class="tweet-actions">
-<span>♡ {p.get('likes', 0)} Me gusta</span>
-</div>
-</div>"""
-                st.markdown(html_post.replace('\n', ''), unsafe_allow_html=True)
+                
+                with st.container(border=True):
+                    cA, cB = st.columns([1, 10])
+                    with cA: st.markdown(f"<img src='{fi}' style='width:40px;height:40px;border-radius:50%;object-fit:cover;'>", unsafe_allow_html=True)
+                    with cB: st.markdown(f"**{ui['nombre']}** <span style='color:#888;font-size:12px;'>@{alias_u} • {p['timestamp']}</span>", unsafe_allow_html=True)
+                    
+                    if p.get("texto"): st.write(p["texto"])
+                    if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' style='width:100%; border-radius:12px;'>", unsafe_allow_html=True)
+                    
+                    st.markdown(f"<span style='color:#FBAF3B; font-weight:bold; font-size:12px;'>♡ {p.get('likes', 0)} Me gusta</span>", unsafe_allow_html=True)
 
         with col_der:
             st.markdown("<div class='section-title'>A QUIÉN SEGUIR</div>", unsafe_allow_html=True)
