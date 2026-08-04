@@ -26,7 +26,7 @@ st.set_page_config(page_title="Fetén Workspace Pro", page_icon="⚡", layout="w
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
-# --- 2. DISEÑO UI/UX "CINEMATIC OBSIDIAN" ---
+# --- 2. DISEÑO UI/UX "CINEMATIC OBSIDIAN" CON FEED SOCIAL FLOTANTE ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
@@ -605,7 +605,7 @@ else:
     st.markdown("<br>", unsafe_allow_html=True)
 
     # ==========================================
-    # VISTA 1: DASHBOARD
+    # VISTA 1: DASHBOARD CON EL NUEVO FEED SOCIAL INFERIOR DERECHO
     # ==========================================
     if st.session_state["ruta"] == "Inicio":
         st.markdown(f"""
@@ -668,6 +668,26 @@ else:
                     with st.container(border=True):
                         st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:bold;'>{rec['fecha']}</span>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-weight:700; font-size:14px; color:#E2E8F0;'>{rec['titulo']}</div>", unsafe_allow_html=True)
+
+        # --- NUEVO: CUADRADO INFERIOR DERECHO CON PUBLICACIONES DE LEO MESSI Y LICHA MARTÍNEZ ---
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        col_feed_space, col_feed_box = st.columns([1.5, 1])
+        with col_feed_box:
+            with st.container(border=True):
+                st.markdown("### 🌐 Radar de Actualidad (Feed Oficial)")
+                st.caption("Últimas publicaciones destacadas de cuentas clave.")
+                
+                tab_messi, tab_licha = st.tabs(["🐐 Leo Messi", "🔪 Licha Martínez"])
+                
+                with tab_messi:
+                    st.markdown("**@leomessi** • Hace 2 horas")
+                    st.info("⚽ 'Nuevo objetivo por delante con la misma ilusión de siempre. Vamos con todo.' — Concentrado con la Scaloneta.")
+                    st.caption("📍 Miami / Buenos Aires")
+                    
+                with tab_licha:
+                    st.markdown("**@lisandromartinez** • Hace 5 horas")
+                    st.info("💪 'Dejar el alma en cada pelota. ¡Gran entrenamiento hoy equipo!' 🥩⚔️")
+                    st.caption("📍 Manchester / Predio AFA")
 
     # ==========================================
     # VISTA 2: PERFIL Y CREDENCIAL VIP
