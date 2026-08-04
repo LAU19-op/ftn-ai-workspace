@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit_option_menu import option_menu
 import google.generativeai as genai
 import pandas as pd
@@ -22,109 +23,111 @@ import librosa
 import scipy.signal
 
 # --- 1. CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Fetén Workspace Pro", page_icon="⚡", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="Fetén Workspace Pro", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
-# --- 2. DISEÑO UI/UX "CINEMATIC OBSIDIAN" LIMPIO Y PROFESIONAL ---
+# --- 2. DISEÑO UI/UX "SAAS DARK MODE" (ESTILO VERCEL/LINEAR) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
-    html, body, [class*="css"] { font-family: 'Outfit', sans-serif !important; }
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
     
-    /* Fondo Obsidiana Oscura sofisticado */
+    /* Fondo Dark Pro (Gris Oscuro/Negro) */
     .stApp {
-        background-color: #050505 !important;
-        background-image: radial-gradient(circle at 15% 50%, rgba(251, 175, 59, 0.08), transparent 25%), radial-gradient(circle at 85% 30%, rgba(180, 113, 63, 0.08), transparent 25%) !important;
-        color: #E2E8F0 !important;
+        background-color: #0A0A0A !important;
+        color: #EDEDED !important;
     }
 
-    .logo-blend { filter: brightness(1.2) contrast(1.2); mix-blend-mode: screen; }
+    .logo-blend { filter: brightness(1.5) contrast(1.2); }
 
-    /* Contenedores modulares oscuros nativos (sin casillas blancas horribles) */
+    /* Tarjetas Modulares SaaS (Bordes finos, fondos sutiles) */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: rgba(20, 20, 25, 0.6) !important;
-        backdrop-filter: blur(20px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.06) !important;
-        border-radius: 24px !important;
+        background-color: #111111 !important;
+        border: 1px solid #222222 !important;
+        border-radius: 12px !important;
         padding: 1.5rem !important;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05) !important;
-        transition: all 0.4s ease !important;
-        margin-bottom: 12px !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+        transition: border-color 0.2s ease !important;
+        margin-bottom: 16px !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: rgba(251, 175, 59, 0.3) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 15px 50px rgba(251, 175, 59, 0.15) !important;
+        border-color: #333333 !important;
     }
     
-    h1, h2 { background: linear-gradient(to right, #FDFCF8, #FBAF3B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800 !important; letter-spacing: -0.5px !important; }
-    h3, h4 { color: #E2E8F0 !important; font-weight: 600 !important; }
+    /* Títulos y tipografía limpia */
+    h1, h2, h3, h4 { color: #FAFAFA !important; font-weight: 700 !important; letter-spacing: -0.02em !important; }
+    p, span, div { color: #A1A1AA !important; }
     
+    /* Inputs estilo Vercel */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea {
-        background-color: rgba(0,0,0,0.5) !important; 
-        border: 1px solid rgba(255,255,255,0.1) !important; 
-        color: white !important;
-        border-radius: 14px !important; 
-        padding: 14px !important; 
-        transition: all 0.3s ease !important;
+        background-color: #0A0A0A !important; 
+        border: 1px solid #333333 !important; 
+        color: #EDEDED !important;
+        border-radius: 8px !important; 
+        padding: 12px 14px !important; 
+        font-weight: 400 !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease !important;
     }
     .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { 
         border-color: #FBAF3B !important; 
-        box-shadow: 0 0 15px rgba(251, 175, 59, 0.2) !important; 
+        box-shadow: 0 0 0 1px #FBAF3B !important; 
     }
     
+    /* Botones primarios (Ámbar suave) */
     .stButton button {
-        background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%) !important; 
-        border: none !important; 
-        color: #000 !important;
-        border-radius: 14px !important; 
-        font-weight: 800 !important; 
-        padding: 0.7rem 1.5rem !important; 
-        transition: all 0.3s ease !important;
+        background-color: #EDEDED !important; 
+        border: 1px solid #EDEDED !important; 
+        color: #0A0A0A !important;
+        border-radius: 8px !important; 
+        font-weight: 600 !important; 
+        padding: 0.5rem 1rem !important; 
+        transition: all 0.2s ease !important;
         width: 100% !important;
     }
-    .stButton button:hover { transform: scale(1.01) translateY(-2px) !important; box-shadow: 0 10px 25px rgba(251, 175, 59, 0.4) !important; }
-    .stButton button p { color: #050505 !important; font-weight: 800 !important; }
+    .stButton button:hover { background-color: #FFFFFF !important; transform: translateY(-1px); }
+    .stButton button p { color: #0A0A0A !important; font-weight: 600 !important; margin: 0; }
     
+    /* Botones secundarios */
     [data-testid="stBaseButton-secondary"] { 
-        background: rgba(255,255,255,0.05) !important; 
-        border: 1px solid rgba(255,255,255,0.1) !important; 
-        color: #FBAF3B !important; 
-        width: 100% !important; 
+        background-color: #111111 !important; 
+        border: 1px solid #333333 !important; 
+        color: #EDEDED !important; 
     }
-    [data-testid="stBaseButton-secondary"]:hover { border-color: #FBAF3B !important; background: rgba(251,175,59,0.1) !important; }
-    [data-testid="stBaseButton-secondary"] p { color: #FBAF3B !important; }
+    [data-testid="stBaseButton-secondary"]:hover { border-color: #666666 !important; background-color: #1A1A1A !important; }
+    [data-testid="stBaseButton-secondary"] p { color: #EDEDED !important; }
 
-    .avatar-circle { border-radius: 50%; object-fit: cover; border: 3px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.3); }
+    /* Avatares */
+    .avatar-circle { border-radius: 50%; object-fit: cover; border: 2px solid #333333; }
     
+    /* Credencial VIP rediseñada (Clean UI) */
     .credencial-feten {
-        background: linear-gradient(135deg, #111 0%, #1A1A1A 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08); border-top: 1px solid rgba(255,255,255,0.2);
-        border-radius: 30px; padding: 30px; width: 100%; max-width: 380px; margin: 20px auto; text-align: center;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative; overflow: hidden;
+        background-color: #0A0A0A;
+        border: 1px solid #333333;
+        border-radius: 16px; padding: 30px; width: 100%; max-width: 380px; margin: 0 auto; text-align: center;
+        position: relative; overflow: hidden;
     }
-    .credencial-feten::after {
-        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-        background: linear-gradient(transparent, rgba(251, 175, 59, 0.05), transparent); transform: rotate(45deg); pointer-events: none;
+    .credencial-feten::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+        background: linear-gradient(90deg, #FBAF3B, #B4713F);
     }
-    .credencial-logo-img { width: 90px; margin-bottom: 15px; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5)); mix-blend-mode: screen;}
-    .credencial-img { width: 110px; height: 110px; border-radius: 50%; border: 3px solid #FBAF3B; margin-bottom: 15px; object-fit: cover;}
-    .credencial-name { font-size: 24px; font-weight: 800; margin: 0; color: #FDFCF8 !important;}
-    .credencial-role { font-size: 11px; color: #FBAF3B !important; margin-top: 5px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 3px;}
-    .qr-box { background: white; padding: 10px; border-radius: 12px; display: inline-block; margin-bottom: 15px;}
-    .credencial-id-box { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
-    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 16px; letter-spacing: 4px; color: #FFFFFF !important;}
+    .credencial-logo-img { width: 80px; margin-bottom: 20px; mix-blend-mode: screen;}
+    .credencial-img { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #333; margin-bottom: 15px; object-fit: cover;}
+    .credencial-name { font-size: 20px; font-weight: 700; margin: 0; color: #FAFAFA !important;}
+    .credencial-role { font-size: 12px; color: #888 !important; margin-top: 4px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;}
+    .qr-box { background: white; padding: 10px; border-radius: 8px; display: inline-block; margin-bottom: 15px;}
+    .credencial-id-box { background: #111; padding: 10px; border-radius: 8px; border: 1px solid #222; }
+    .credencial-id { font-family: 'Courier New', monospace; font-weight: bold; font-size: 14px; letter-spacing: 2px; color: #FBAF3B !important;}
 
-    [data-testid="stMetricValue"] { color: #FBAF3B !important; font-size: 2.3rem !important; font-weight: 800 !important; }
-    [data-testid="stMetricLabel"] { color: #94A3B8 !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 700 !important; }
-
-    @media (max-width: 768px) {
-        [data-testid="column"] { width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }
-        .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; padding-top: 1.5rem !important; }
-    }
+    /* Métricas Dashboard */
+    [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2rem !important; font-weight: 700 !important; }
+    [data-testid="stMetricLabel"] { color: #888888 !important; font-size: 0.8rem !important; font-weight: 500 !important; }
+    
+    /* Ocultar etiquetas raras de métricas */
+    [data-testid="stMetricDelta"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -522,7 +525,7 @@ def ventana_checkout(proyecto):
             st.success(f"**Subtotal: ${total_r:,.2f} / jornada**")
             link_rental = next((d["url"] for d in directorio if d["nombre"] == r_name), None)
             if link_rental:
-                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: linear-gradient(135deg, #FBAF3B 0%, #B4713F 100%); color:white; padding:10px 15px; text-decoration:none; border-radius:8px; font-weight:bold; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: #EDEDED; color:#0A0A0A; padding:8px 12px; text-decoration:none; border-radius:6px; font-weight:600; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
 
 @st.dialog("⚠️ Purga de Base de Datos")
 def ventana_vaciar_comparador(proyecto):
@@ -536,14 +539,13 @@ def ventana_vaciar_comparador(proyecto):
 if "usuario_logueado" not in st.session_state:
     st.session_state["usuario_logueado"] = None
 
-# --- 6. PANTALLA DE ACCESO Y REGISTRO (ESTILO OBSIDIANA) ---
+# --- 6. PANTALLA DE ACCESO Y REGISTRO (DISEÑO CLEAN DARK) ---
 if st.session_state["usuario_logueado"] is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
-        st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' width='220' class='logo-blend' style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; font-size: 1.5rem; margin-bottom: 5px;'>Ingresá a tu cuenta</h2>", unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' width='200' class='logo-blend' style='margin-bottom: 5px;'></div>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; font-size: 1.4rem; color: #FAFAFA; margin-bottom: 20px;'>Ingresa a tu cuenta</h2>", unsafe_allow_html=True)
         
         tab_login, tab_registro = st.tabs(["Iniciar Sesión", "Registrarse"])
         db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
@@ -595,29 +597,27 @@ else:
                 st.session_state["ruta"] = "Inicio"
                 st.rerun()
         else:
-            st.markdown(f"<img src='{LOGO_URL}' height='40' class='logo-blend' style='margin-top:5px;'>", unsafe_allow_html=True)
+            st.markdown(f"<img src='{LOGO_URL}' height='35' class='logo-blend' style='margin-top:8px;'>", unsafe_allow_html=True)
             
     with c_head_right:
         foto_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
-        st.markdown(f"<img src='{foto_src}' class='avatar-circle' style='float:right; width:40px; height:40px;'>", unsafe_allow_html=True)
+        st.markdown(f"<img src='{foto_src}' class='avatar-circle' style='float:right; width:38px; height:38px;'>", unsafe_allow_html=True)
         if st.button("Perfil", key="btn_mi_perfil"):
             st.session_state["ruta"] = "Perfil"
             st.rerun()
     st.markdown("<br>", unsafe_allow_html=True)
 
     # ==========================================
-    # VISTA 1: DASHBOARD CON EL NUEVO FEED SOCIAL INFERIOR DERECHO
+    # VISTA 1: DASHBOARD CON FEED IG REAL INTEGRADO (HTML)
     # ==========================================
     if st.session_state["ruta"] == "Inicio":
         st.markdown(f"""
-            <div class="welcome-card">
+            <div style="background: #111; border: 1px solid #222; border-radius: 16px; padding: 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h1 style='margin:0; font-size: 1.8rem; background: linear-gradient(to right, #FDFCF8, #FBAF3B); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>¡Hola, {mis_datos['nombre']}!</h1>
-                    <p style='color:#FBAF3B !important; font-weight:600; font-size:1rem; margin:0;'>{rol_actual.upper()}</p>
+                    <h1 style='margin:0; font-size: 1.6rem; color: #FAFAFA;'>¡Hola, {mis_datos['nombre']}!</h1>
+                    <p style='color:#888; font-weight:500; font-size:0.9rem; margin:0;'>{rol_actual.upper()}</p>
                 </div>
-                <div style='text-align:right;'>
-                    <span style='font-size:24px;'>🎬</span>
-                </div>
+                <div style='text-align:right;'><span style='font-size:24px;'>⚡</span></div>
             </div>
         """, unsafe_allow_html=True)
         
@@ -629,7 +629,8 @@ else:
                     st.session_state["proyectos"]["_CONFIG_"]["notificaciones"] = []
                     guardar_y_recargar()
 
-        c_main, c_side = st.columns([2.5, 1])
+        # Distribución principal: Izquierda Proyectos, Derecha Radar IG
+        c_main, c_side = st.columns([2.2, 1.2], gap="large")
         
         with c_main:
             st.markdown("<div class='section-title-card'>❖ PROYECTOS ACTIVOS</div>", unsafe_allow_html=True)
@@ -651,15 +652,15 @@ else:
                 for idx, proy in enumerate(lista_proyectos):
                     with cols_grid[idx % 2]:
                         with st.container(border=True):
-                            st.markdown(f"<h2>{proy}</h2>", unsafe_allow_html=True)
+                            st.markdown(f"<h3 style='margin-bottom: 4px;'>{proy}</h3>", unsafe_allow_html=True)
                             st.caption(f"☖ {len(st.session_state['proyectos'][proy].get('crew',[]))} Personas | ⚙ {len(st.session_state['proyectos'][proy].get('equipos',[]))} Equipos")
                             st.markdown("<br>", unsafe_allow_html=True)
-                            if st.button("ENTRAR AL TABLERO", key=f"entrar_{proy}", use_container_width=True, type="primary"):
+                            if st.button("ENTRAR", key=f"entrar_{proy}", use_container_width=True, type="primary"):
                                 st.session_state["proyecto_activo"] = proy
                                 st.session_state["ruta"] = "Proyecto"
                                 st.rerun()
 
-        with c_side:
+            st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("<div class='section-title-card'>📅 AGENDA GLOBAL</div>", unsafe_allow_html=True)
             if st.button("✦ Nueva Tarea", use_container_width=True):
                 ventana_recordatorio(es_admin=(nivel_actual in ["jefe_supremo", "jefe"]), autor=mis_datos['nombre'])
@@ -668,34 +669,39 @@ else:
                 if rec["tipo"] == "Global (Toda la Productora)" or rec["autor"] == mis_datos["nombre"]:
                     with st.container(border=True):
                         st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:bold;'>{rec['fecha']}</span>", unsafe_allow_html=True)
-                        st.markdown(f"<div style='font-weight:700; font-size:14px; color:#E2E8F0;'>{rec['titulo']}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-weight:700; font-size:14px; color:#FAFAFA;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
-        # --- NUEVO: CUADRADO INFERIOR DERECHO CON PUBLICACIONES DE LEO MESSI Y LICHA MARTÍNEZ ---
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        col_feed_space, col_feed_box = st.columns([1.5, 1])
-        with col_feed_box:
-            with st.container(border=True):
-                st.markdown("### 🌐 Radar de Actualidad (Feed Oficial)")
-                st.caption("Últimas publicaciones destacadas de cuentas clave.")
+        with c_side:
+            # CONTENEDOR NATIVO DE INSTAGRAM SCROLLEABLE (SIN INVENTAR TEXTO)
+            st.markdown("<div class='section-title-card'>🌐 RADAR DE ACTUALIDAD</div>", unsafe_allow_html=True)
+            st.caption("Feed Oficial de Instagram. Usa la rueda del mouse para bajar y ver todo el contenido y las fotos reales.")
+            
+            c_ig1, c_ig2 = st.columns(2)
+            c_ig1.button("📸 Ver Feed", use_container_width=True)
+            c_ig2.button("⭕ Ver Historias", use_container_width=True)
+            
+            # Incorporación del script oficial de Instagram dentro de un div con scroll nativo y estética oscura
+            ig_html = """
+            <div style="height: 600px; overflow-y: scroll; overflow-x: hidden; border-radius: 12px; border: 1px solid #333; background: #000; padding-bottom: 20px;">
+                <script async src="//www.instagram.com/embed.js"></script>
                 
-                tab_messi, tab_licha = st.tabs(["🐐 Leo Messi", "🔪 Licha Martínez"])
+                <!-- Post de Messi -->
+                <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/C-s7_5zO95h/?utm_source=ig_embed&amp;utm_campaign=loading" data-instgrm-version="14" style=" background:#000; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:100%; padding:0; width:99%;">
+                </blockquote>
                 
-                with tab_messi:
-                    st.markdown("**@leomessi** • Hace 2 horas")
-                    st.info("⚽ 'Nuevo objetivo por delante con la misma ilusión de siempre. Vamos con todo.' — Concentrado con la Scaloneta.")
-                    st.caption("📍 Miami / Buenos Aires")
-                    
-                with tab_licha:
-                    st.markdown("**@lisandromartinez** • Hace 5 horas")
-                    st.info("💪 'Dejar el alma en cada pelota. ¡Gran entrenamiento hoy equipo!' 🥩⚔️")
-                    st.caption("📍 Manchester / Predio AFA")
+                <!-- Post de Licha Martinez -->
+                <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/C-vxm8lNoS4/?utm_source=ig_embed&amp;utm_campaign=loading" data-instgrm-version="14" style=" background:#000; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:100%; padding:0; width:99%; margin-top: 15px;">
+                </blockquote>
+            </div>
+            """
+            components.html(ig_html, height=620, scrolling=False)
 
     # ==========================================
-    # VISTA 2: PERFIL Y CREDENCIAL VIP
+    # VISTA 2: PERFIL Y CREDENCIAL VIP (ESTRUCTURADO EN TARJETAS)
     # ==========================================
     elif st.session_state["ruta"] == "Perfil":
         st.markdown("<div class='section-title-card'>⚙ CONFIGURACIÓN DE CUENTA Y ACCESOS</div>", unsafe_allow_html=True)
-        tab_misdatos, tab_cred, tab_dir, tab_admin = st.tabs(["Mi Perfil", "Credencial VIP con QR", "Directorio Corporativo", "Administración de Usuarios"])
+        tab_misdatos, tab_cred, tab_dir, tab_admin = st.tabs(["Mi Perfil", "Credencial VIP con QR", "Directorio Corporativo", "Administración"])
         
         with tab_misdatos:
             with st.container(border=True):
@@ -703,14 +709,14 @@ else:
                 with c_img:
                     st.markdown("#### Avatar")
                     foto_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
-                    st.markdown(f"<img src='{foto_src}' class='avatar-circle' style='width:100px;height:100px; border-width:3px;'>", unsafe_allow_html=True)
+                    st.markdown(f"<img src='{foto_src}' class='avatar-circle' style='width:90px;height:90px;'>", unsafe_allow_html=True)
                     nueva_foto = st.file_uploader("Cambiar Imagen", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
                     if nueva_foto and st.button("Actualizar Foto", use_container_width=True):
                         db_users[usuario_actual]["foto"] = base64.b64encode(nueva_foto.read()).decode('utf-8')
                         guardar_y_recargar()
                     
                     st.markdown("---")
-                    st.markdown("#### Mis Estadísticas")
+                    st.markdown("#### Stats")
                     proyectos_count = len([p for p in st.session_state["proyectos"].keys() if p != "_CONFIG_"])
                     st.metric("Proyectos", proyectos_count)
                     st.metric("Nivel", mis_datos['nivel'].capitalize())
@@ -752,7 +758,7 @@ else:
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-            st.caption("Presentá el Código QR en locaciones o rentals para verificar tu identidad como miembro oficial.")
+            st.caption("Presentá el Código QR en locaciones o rentals para verificar tu identidad.")
 
         with tab_dir:
             st.markdown("### Directorio Corporativo y Conexiones")
@@ -773,14 +779,14 @@ else:
                                 st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#FBAF3B;'>Ver Portafolio</a>", unsafe_allow_html=True)
 
         with tab_admin:
-            st.markdown("### Gestión de Accesos y Solicitudes de Usuarios")
+            st.markdown("### Gestión de Accesos")
             st.caption("Aprobación y asignación de roles para nuevas cuentas registradas.")
             mapa_roles = {"Super Admin": "jefe_supremo", "Producción": "jefe", "Dirección": "jefe", "Dirección de Fotografía": "jefe", "Dirección de Arte": "jefe", "Director de Sonido": "jefe", "Asistente de Sonido": "asistente", "Guion": "jefe", "Continuidad": "jefe", "Invitado": "lectura"}
             
             for em_usr, dt_usr in db_users.items():
                 with st.container(border=True):
                     c1, c2, c3, c4 = st.columns([2, 1.5, 1.5, 1])
-                    c1.markdown(f"**{dt_usr['nombre']}**<br><span style='font-size:12px; color:gray;'>{em_usr}</span>", unsafe_allow_html=True)
+                    c1.markdown(f"**{dt_usr['nombre']}**<br><span style='font-size:12px; color:#888;'>{em_usr}</span>", unsafe_allow_html=True)
                     est = c2.selectbox("Estado", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"est_{em_usr}")
                     rol = c3.selectbox("Rol", list(mapa_roles.keys()), index=list(mapa_roles.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa_roles else 9, key=f"rol_{em_usr}")
                     if c4.button("Guardar", key=f"btn_adm_{em_usr}", use_container_width=True):
@@ -788,7 +794,7 @@ else:
                         guardar_y_recargar()
 
     # ==========================================
-    # VISTA 3: PROYECTO
+    # VISTA 3: PROYECTO (TODOS LOS MÓDULOS INTACTOS)
     # ==========================================
     elif st.session_state["ruta"] == "Proyecto":
         proyecto_elegido = st.session_state["proyecto_activo"]
@@ -810,7 +816,7 @@ else:
             "Bandeja Prod.", "Rentals IA", "Archivos", "Tablón", "Enlaces", "Permisos", "Presupuesto", "Scouting", 
             "Base Crew", "Casting", "Catering", "Desglose", "Laboratorio Guion", "Inventario", "Plan Rodaje", 
             "Monitor DIR", "Luces (Canvas)", "Ref. IA", "Arte & Vestuario", "Log Sonido", "Raccord",
-            "🎨 IA: Moodboard Dinámico", "🎨 IA: Auditor de Anacronismos", "🎨 IA: Guía de Utilería DIY",
+            "🎨 IA: Moodboard Dinámico", "🎨 IA: Auditor Anacronismos", "🎨 IA: Utilería DIY",
             "🎧 IA: Analizador Espectral", "🎧 IA: Matriz de Ruido", "🎧 IA: Sugerente Foley"
         ])
         iconos_nav.extend([
@@ -838,7 +844,7 @@ else:
             elif rol_actual == "Dirección de Fotografía" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Luces (Canvas)", "Ref. IA", "Inventario", "Archivos", "Tablón", "Enlaces"]:
                 nav_final.append(op)
                 iconos_final.append(ic)
-            elif rol_actual == "Dirección de Arte" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Arte & Vestuario", "Inventario", "Archivos", "Tablón", "Enlaces", "🎨 IA: Moodboard Dinámico", "🎨 IA: Auditor de Anacronismos", "🎨 IA: Guía de Utilería DIY"]:
+            elif rol_actual == "Dirección de Arte" and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Arte & Vestuario", "Inventario", "Archivos", "Tablón", "Enlaces", "🎨 IA: Moodboard Dinámico", "🎨 IA: Auditor Anacronismos", "🎨 IA: Utilería DIY"]:
                 nav_final.append(op)
                 iconos_final.append(ic)
             elif "Sonido" in rol_actual and op in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Log Sonido", "Inventario", "Archivos", "Tablón", "Enlaces", "🎧 IA: Analizador Espectral", "🎧 IA: Matriz de Ruido", "🎧 IA: Sugerente Foley"]:
@@ -859,11 +865,11 @@ else:
             seccion_elegida = option_menu(
                 menu_title="DEPARTAMENTOS", options=nav_final, icons=iconos_final, menu_icon="cast", default_index=0,
                 styles={
-                    "container": {"padding": "10px", "background-color": "rgba(20, 20, 25, 0.6)", "border-radius": "16px", "border": "1px solid rgba(255, 255, 255, 0.05)"},
-                    "icon": {"color": "#FBAF3B", "font-size": "15px"},
-                    "menu-title": {"color": "#94A3B8", "font-size": "11px", "letter-spacing": "2px", "font-weight": "800"},
-                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "2px 0", "color": "#E2E8F0", "border-radius": "8px", "padding": "8px"},
-                    "nav-link-selected": {"background-color": "rgba(251, 175, 59, 0.2)", "color": "#FBAF3B", "font-weight": "700", "border-left": "4px solid #FBAF3B"},
+                    "container": {"padding": "10px", "background-color": "#111", "border-radius": "12px", "border": "1px solid #222"},
+                    "icon": {"color": "#888", "font-size": "15px"},
+                    "menu-title": {"color": "#666", "font-size": "11px", "letter-spacing": "2px", "font-weight": "800"},
+                    "nav-link": {"font-size": "13px", "text-align": "left", "margin": "2px 0", "color": "#CCC", "border-radius": "8px", "padding": "8px"},
+                    "nav-link-selected": {"background-color": "#222", "color": "#FFF", "font-weight": "700", "border-left": "3px solid #FFF"},
                 }
             )
         
@@ -882,7 +888,7 @@ else:
                         modelo = genai.GenerativeModel('gemini-1.5-flash')
                         datos = f"Avisos: {p_data.get('avisos', [])} | Locaciones: {p_data.get('locaciones', [])}"
                         prompt = f"Sos Productor. Proyecto: {proyecto_elegido}. Datos: {datos}. Redactá un Call Sheet profesional en Markdown."
-                        st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:15px; border-radius:12px; border: 1px solid rgba(255,255,255,0.08); overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background:#111; padding:15px; border-radius:12px; border: 1px solid #222; overflow-x: auto;'>{modelo.generate_content(prompt).text}</div>", unsafe_allow_html=True)
                     except: st.error("Falta API Key Gemini.")
 
             elif seccion_elegida == "Tablero Kanban":
@@ -986,13 +992,13 @@ else:
                             total_cart += item["precio"]
                             with cols_cart[i % 2]:
                                 with st.container(border=True):
-                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#FBAF3B; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:13px; color:#E2E8F0;'>{item['nombre'][:25]}...</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:10px; font-weight:bold; color:#888; margin:0;'>{item.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-weight:700; margin:0; font-size:13px; color:#FFF;'>{item['nombre'][:25]}...</p>", unsafe_allow_html=True)
                                     st.markdown(f"**${item['precio']:,.2f}**")
                                     if st.button("Remover", key=f"quit_cart_{i}", use_container_width=True):
                                         p_data["carrito_rentals"].pop(i)
                                         guardar_y_recargar()
-                        st.markdown(f"<h4 style='text-align:right; color:#FBAF3B; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
+                        st.markdown(f"<h4 style='text-align:right; color:#FFF; font-size:1rem;'>Total: ${total_cart:,.2f} / Día</h4>", unsafe_allow_html=True)
                 
                 st.markdown("### Base Analizada")
                 rentals_lista = p_data.get("comparador_rentals", [])
@@ -1009,10 +1015,10 @@ else:
                             with cols[i % 2]:
                                 with st.container(border=True):
                                     if r["precio"] == menor_precio and r["precio"] > 0:
-                                        st.markdown("<span style='background:rgba(251, 175, 59, 0.2); border: 1px solid #FBAF3B; color:#FBAF3B; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#FBAF3B; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:13px; color:#E2E8F0;'>{r['nombre']}</p>", unsafe_allow_html=True)
-                                    st.markdown(f"<h3 style='margin:0; color:#FBAF3B; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
+                                        st.markdown("<span style='background:#FFF; color:#000; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;'>MÁS CONVENIENTE</span>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='font-size:11px; font-weight:bold; color:#888; margin:0; margin-top:5px;'>{r.get('rental', 'N/A')}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='margin:0; font-weight:600; font-size:13px; color:#FFF;'>{r['nombre']}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<h3 style='margin:0; color:#FFF; font-size:18px;'>${r['precio']:,.2f}</h3>", unsafe_allow_html=True)
                                     c_add, c_del = st.columns(2)
                                     if c_add.button("Añadir", key=f"add_{idx_orig}", use_container_width=True, type="primary"):
                                         p_data["carrito_rentals"].append(r)
@@ -1086,7 +1092,7 @@ else:
                 if p_data.get("presupuesto"):
                     df_presupuesto = pd.DataFrame(p_data["presupuesto"])
                     total = df_presupuesto['costo'].sum()
-                    st.markdown(f"<h3 style='color:#FBAF3B; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
+                    st.markdown(f"<h3 style='color:#FFF; font-size: 1.2rem;'>Total: ${total:,.2f}</h3>", unsafe_allow_html=True)
                     fig = px.pie(df_presupuesto, values='costo', names='area', title='Distribución', color_discrete_sequence=px.colors.sequential.YlOrBr)
                     fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                     st.plotly_chart(fig, use_container_width=True)
@@ -1195,7 +1201,7 @@ else:
                 color_mapping = {"Principal": "#FFD700", "Relleno": "#1E90FF", "Contraluz": "#8A2BE2", "Actor": "#FF4500", "Cámara": "#2D2926"}
                 tipo = st.selectbox("Elemento", list(color_mapping.keys()))
                 grosor = st.slider("Grosor", 1, 10, 3)
-                st_canvas(fill_color="rgba(255,255,255,0)", stroke_width=grosor, stroke_color=color_mapping[tipo], background_color="#1A1A1A", width=330, height=350, drawing_mode=modo, key="canvas_luces_pro")
+                st_canvas(fill_color="rgba(255,255,255,0)", stroke_width=grosor, stroke_color=color_mapping[tipo], background_color="#111", width=330, height=350, drawing_mode=modo, key="canvas_luces_pro")
 
             elif seccion_elegida == "Ref. IA":
                 st.markdown("<h2>Lab Visual</h2>", unsafe_allow_html=True)
@@ -1256,10 +1262,10 @@ else:
                                 img
                             ])
                             st.success("Análisis Estético Completado:")
-                            st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                         except Exception as e: st.error(f"Error: {e}")
 
-            elif seccion_elegida == "🎨 IA: Auditor de Anacronismos":
+            elif seccion_elegida == "🎨 IA: Auditor Anacronismos":
                 st.markdown("<h2>🎨 Auditor de Anacronismos Históricos</h2>", unsafe_allow_html=True)
                 st.caption("Verifica si un objeto de utilería pertenece a la época exacta de tu guion.")
                 epoca_set = st.text_input("Época de ambientación (Ej: Buenos Aires en 1930)")
@@ -1275,10 +1281,10 @@ else:
                                     f"Actúa como historiador de arte y utilero mayor. Analiza si este objeto es anacrónico para una producción ambientada en '{epoca_set}'. Indica si se puede usar, qué detalles cambiar o si hay un error evidente.",
                                     img
                                 ])
-                                st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                             except Exception as e: st.error(f"Error: {e}")
 
-            elif seccion_elegida == "🎨 IA: Guía de Utilería DIY":
+            elif seccion_elegida == "🎨 IA: Utilería DIY":
                 st.markdown("<h2>🎨 Guía de Utilería DIY (Hazlo Tu Mismo)</h2>", unsafe_allow_html=True)
                 st.caption("Diseña elementos de diseño de producción de bajo costo con materiales caseros.")
                 objeto_deseado = st.text_input("¿Qué elemento necesitas fabricar? (Ej: Un libro antiguo encuadernado en cuero)")
@@ -1289,7 +1295,7 @@ else:
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 mod = genai.GenerativeModel('gemini-1.5-flash')
                                 resp = mod.generate_content(f"Actúa como jefe de construcciones y escenógrafo. Crea una guía paso a paso para fabricar artesanalmente el objeto '{objeto_deseado}' con materiales económicos de ferretería o papelería, indicando tiempo estimado y herramientas necesarias.")
-                                st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                             except Exception as e: st.error(f"Error: {e}")
 
             # ==========================================
@@ -1325,7 +1331,7 @@ else:
                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                             mod = genai.GenerativeModel('gemini-1.5-flash')
                             resp = mod.generate_content(f"Actúa como sonidista de rodaje y consultor acústico. Una locación está a {distancia_mt} metros de '{fuente_ruido}'. ¿Qué nivel estimado de insonorización se requiere y qué soluciones prácticas (gobos, mantas, puertas trampa) debe aplicar el equipo de sonido?")
-                            st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                         except Exception as e: st.error(f"Error: {e}")
 
             elif seccion_elegida == "🎧 IA: Sugerente Foley":
@@ -1339,5 +1345,5 @@ else:
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 mod = genai.GenerativeModel('gemini-1.5-flash')
                                 resp = mod.generate_content(f"Actúa como editor de sonido y artista de Foley. Para la siguiente acción en pantalla: '{accion_escena}', enumera la lista exacta de efectos de sala que deben grabarse, especificando materiales de calzado, telas, utilería de fricción y texturas necesarias.")
-                                st.markdown(f"<div style='background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);'>{resp.text}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{resp.text}</div>", unsafe_allow_html=True)
                             except Exception as e: st.error(f"Error: {e}")
