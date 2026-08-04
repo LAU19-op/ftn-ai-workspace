@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit_option_menu import option_menu
 import google.generativeai as genai
 import pandas as pd
@@ -116,11 +117,15 @@ st.markdown("""
     [data-testid="stBaseButton-secondary"]:hover { border-color: #52525B !important; color: #FAFAFA !important; }
     [data-testid="stBaseButton-secondary"] p { color: inherit !important; }
 
-    /* Top Navbar Alignments */
-    .top-nav-avatar {
-        width: 48px; height: 48px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover;
-    }
+    /* Avatares */
+    .avatar-circle { border-radius: 50%; object-fit: cover; border: 2px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.3); }
 
+    /* Historias de Red Social */
+    .story-circle {
+        border-radius: 50%; object-fit: cover; border: 3px solid #FBAF3B; padding: 2px;
+        width: 64px; height: 64px; box-shadow: 0 4px 12px rgba(251, 175, 59, 0.2);
+    }
+    
     /* Credencial VIP rediseñada (Clean UI) */
     .credencial-feten {
         background-color: #0A0A0B;
@@ -143,24 +148,8 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2.2rem !important; font-weight: 800 !important; letter-spacing: -1px; }
     [data-testid="stMetricLabel"] { color: #A1A1AA !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 600 !important; }
 
-    /* Feed Social Nativo Customizado */
-    .social-feed-container {
-        height: 520px; overflow-y: auto; padding-right: 8px;
-    }
-    .social-feed-container::-webkit-scrollbar { width: 6px; }
-    .social-feed-container::-webkit-scrollbar-thumb { background: #27272A; border-radius: 10px; }
-    
-    .social-card {
-        background: #0E0E11; border: 1px solid #1C1C1F; border-radius: 12px; padding: 16px; margin-bottom: 16px;
-    }
-    .social-header { display: flex; align-items: center; margin-bottom: 12px; }
-    .social-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #333; margin-right: 12px; object-fit: cover; }
-    .social-user { margin: 0; font-size: 14px; font-weight: 600; color: #FAFAFA; display: flex; align-items: center; gap: 4px; }
-    .social-verified { color: #38BDF8; font-size: 12px; }
-    .social-time { margin: 0; font-size: 11px; color: #71717A; }
-    .social-text { font-size: 13px; color: #D4D4D8; margin-bottom: 12px; line-height: 1.5; }
-    .social-image { width: 100%; height: 220px; border-radius: 8px; object-fit: cover; border: 1px solid #1C1C1F; margin-bottom: 12px; }
-    .social-actions { display: flex; gap: 16px; color: #A1A1AA; font-size: 13px; font-weight: 500; }
+    /* Ocultar etiquetas de métricas */
+    [data-testid="stMetricDelta"] { display: none; }
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -197,13 +186,15 @@ def inicializar_bd():
                         "usuarios": {
                             "lau@admin.com": {
                                 "nombre": "Lau (Admin)", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
-                                "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Directora / Productora", "dieta": "Ninguna", "specs": "", "cv": "", "portfolio": "", "acceso_rapido": "Panel General"
+                                "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Directora / Productora", "dieta": "Ninguna", "specs": "", "cv": "", "portfolio": "", "acceso_rapido": "Panel General", "spotify": ""
                             }
-                        }, "recordatorios": [], "notificaciones": [], "mensajes": [], "tickets_soporte": []
+                        }, "recordatorios": [], "notificaciones": [], "mensajes": [], "tickets_soporte": [], "social_posts": [], "social_stories": []
                     }
                 # Asegurar que existan las nuevas bases
                 if "mensajes" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["mensajes"] = []
                 if "tickets_soporte" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["tickets_soporte"] = []
+                if "social_posts" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["social_posts"] = []
+                if "social_stories" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["social_stories"] = []
                 if "notificaciones" not in data_cargada["_CONFIG_"]: data_cargada["_CONFIG_"]["notificaciones"] = []
                 
                 claves_necesarias = [
@@ -218,6 +209,7 @@ def inicializar_bd():
                             if "estado" not in info_u: info_u["estado"] = "Aprobado"
                             if "credencial" not in info_u: info_u["credencial"] = f"FTN-{random.randint(1000, 9999)}"
                             if "acceso_rapido" not in info_u: info_u["acceso_rapido"] = "Panel General"
+                            if "spotify" not in info_u: info_u["spotify"] = ""
                         continue
                     if "contexto_aprobado" not in datos_proy: datos_proy["contexto_aprobado"] = "Proyecto actualizado."
                     for clave in claves_necesarias:
@@ -229,9 +221,9 @@ def inicializar_bd():
                     "usuarios": {
                         "lau@admin.com": {
                             "nombre": "Lau (Admin)", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
-                            "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Super Admin", "dieta": "", "specs": "", "cv": "", "portfolio": "", "acceso_rapido": "Panel General"
+                            "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Super Admin", "dieta": "", "specs": "", "cv": "", "portfolio": "", "acceso_rapido": "Panel General", "spotify": ""
                         }
-                    }, "recordatorios": [], "notificaciones": [], "mensajes": [], "tickets_soporte": []
+                    }, "recordatorios": [], "notificaciones": [], "mensajes": [], "tickets_soporte": [], "social_posts": [], "social_stories": []
                 }
             }
 
@@ -241,19 +233,32 @@ if "ruta" not in st.session_state: st.session_state["ruta"] = "Inicio"
 if "proyecto_activo" not in st.session_state: st.session_state["proyecto_activo"] = None
 if "menu_option" not in st.session_state: st.session_state["menu_option"] = "Panel General"
 
-# --- 4. MODALES DE GESTIÓN ---
+# --- 4. MODALES DE GESTIÓN GLOBALES ---
 @st.dialog("◈ Reportar un Problema (Soporte Técnico)")
 def ventana_soporte(usuario):
     asunto = st.text_input("Asunto del reporte")
     desc = st.text_area("Descripción detallada del problema o bug")
     if st.button("Enviar Ticket a Soporte", use_container_width=True):
         if asunto and desc:
+            # Solución del error de fecha
             st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({
-                "usuario": usuario, "fecha": str(date.today()), "asunto": asunto, "desc": desc, "estado": "Pendiente"
+                "usuario": usuario, "fecha": datetime.now().strftime("%Y-%m-%d %H:%M"), "asunto": asunto, "desc": desc, "estado": "Pendiente"
             })
             guardar_y_recargar()
 
-@st.dialog("✦ Nueva Tarea Kanban")
+@st.dialog("◈ Subir Historia (24h)")
+def ventana_historia(usuario):
+    foto_hist = st.file_uploader("Foto para tu historia", type=["jpg", "png", "jpeg"])
+    if st.button("Publicar Historia", use_container_width=True):
+        if foto_hist:
+            b64 = base64.b64encode(foto_hist.read()).decode('utf-8')
+            st.session_state["proyectos"]["_CONFIG_"]["social_stories"].append({
+                "usuario": usuario, "foto": b64, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+            guardar_y_recargar()
+
+# --- MODALES DEL PROYECTO ---
+@st.dialog("◈ Nueva Tarea Kanban")
 def ventana_kanban(proyecto, autor):
     tarea = st.text_input("Descripción de la Tarea")
     estado = st.selectbox("Estado Inicial", ["Pendiente", "En Proceso", "Completado"])
@@ -262,7 +267,7 @@ def ventana_kanban(proyecto, autor):
             st.session_state["proyectos"][proyecto]["kanban"].append({"tarea": tarea, "estado": estado, "autor": autor})
             guardar_y_recargar()
 
-@st.dialog("✦ Nuevo Recordatorio Global")
+@st.dialog("◈ Nuevo Recordatorio Global")
 def ventana_recordatorio(es_admin, autor):
     titulo = st.text_input("Título de la Tarea")
     fecha = st.date_input("Fecha Límite")
@@ -329,7 +334,7 @@ def ventana_catering(proyecto):
             st.session_state["proyectos"][proyecto]["catering"].append({"nombre": nombre, "dieta": dieta, "alergias": alergias})
             guardar_y_recargar()
 
-@st.dialog("✉ Pedido de Equipamiento (Ticket)")
+@st.dialog("✉ Pedido de Equipamiento")
 def ventana_pedido(proyecto, area):
     item_nombre = st.text_input("Ítem / Equipo")
     justificacion = st.text_area("Justificación")
@@ -409,7 +414,7 @@ def ventana_sonido(proyecto):
             st.session_state["proyectos"][proyecto]["sonido_log"].append({"escena": escena, "toma": toma, "pistas": pistas, "obs": obs})
             guardar_y_recargar()
 
-@st.dialog("🎬 Calificar Toma")
+@st.dialog("◈ Calificar Toma")
 def ventana_toma_dir(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC")
@@ -441,7 +446,7 @@ def ventana_link(proyecto):
             st.session_state["proyectos"][proyecto]["links"].append({"titulo": titulo, "url": url, "desc": desc})
             guardar_y_recargar()
 
-@st.dialog("◈ Registrar Gasto (Presupuesto)")
+@st.dialog("◈ Registrar Gasto")
 def ventana_presupuesto(proyecto):
     item = st.text_input("Concepto")
     costo = st.number_input("Costo Neto ($)", min_value=0.0)
@@ -519,6 +524,7 @@ def ventana_comparador_rental(proyecto):
                                 prod.update({"rental": rental_elegido, "url_rental": url_rental_elegido})
                                 st.session_state["proyectos"][proyecto]["comparador_rentals"].append(prod)
                             guardar_y_recargar()
+                        else: st.warning("Datos ilegibles.")
                     except Exception as e: st.error(f"Error sistémico: {e}")
 
     with tab_excel:
@@ -580,7 +586,7 @@ def ventana_checkout(proyecto):
             st.success(f"Subtotal: ${total_r:,.2f} / jornada")
             link_rental = next((d["url"] for d in directorio if d["nombre"] == r_name), None)
             if link_rental:
-                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: #FBAF3B; color:#050505; padding:8px 12px; text-decoration:none; border-radius:8px; font-weight:700; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{link_rental}' target='_blank' style='background: #FBAF3B; color:#0A0A0A; padding:8px 12px; text-decoration:none; border-radius:6px; font-weight:600; display:inline-block; margin-top:10px;'>Contactar Proveedor</a>", unsafe_allow_html=True)
 
 @st.dialog("Purga de Base de Datos")
 def ventana_vaciar_comparador(proyecto):
@@ -630,7 +636,7 @@ if st.session_state["usuario_logueado"] is None:
                         foto_b64 = base64.b64encode(foto_reg.read()).decode('utf-8')
                         db_users[email_reg] = {
                             "nombre": nombre_reg, "pass": pass_reg, "rol": "Invitado", "nivel": "lectura", "estado": "Pendiente",
-                            "foto": foto_b64, "credencial": f"FTN-{random.randint(1000, 9999)}", "edad": "", "roles_fav": "", "dieta": "", "specs": "", "cv": "", "portfolio": "", "acceso_rapido": "Panel General"
+                            "foto": foto_b64, "credencial": f"FTN-{random.randint(1000, 9999)}", "edad": "", "roles_fav": "", "dieta": "", "specs": "", "cv": "", "portfolio": "", "acceso_rapido": "Panel General", "spotify": ""
                         }
                         guardar_y_recargar()
                         st.success("Solicitud enviada con éxito.")
@@ -645,34 +651,37 @@ else:
     nivel_actual = mis_datos["nivel"]
     
     # --- NAVBAR PROFESIONAL ALINEADA ---
-    c_head_left, c_head_mid, c_head_msg, c_head_prof = st.columns([1.5, 4, 1, 1])
-    with c_head_left:
-        st.markdown(f"<img src='{LOGO_URL}' class='logo-img logo-blend' style='max-height:45px; margin-top:5px; cursor:pointer;'>", unsafe_allow_html=True)
-        if st.button("⌂ Dashboard", type="secondary"):
+    # Uso un contenedor y columnas ajustadas para que la foto de perfil y los botones queden en la misma línea
+    col_logo, col_dash, col_soc, col_space, col_msg, col_prof_img, col_prof_btn = st.columns([0.6, 1.2, 1.2, 3.8, 1.2, 0.5, 1.2], vertical_alignment="bottom")
+    
+    with col_logo:
+        st.markdown(f"<img src='{LOGO_URL}' class='logo-img logo-blend' style='max-height:45px; margin-bottom:5px;'>", unsafe_allow_html=True)
+    with col_dash:
+        if st.button("⌂ Dashboard", use_container_width=True, type="secondary"):
             st.session_state["ruta"] = "Inicio"
             st.rerun()
-            
-    with c_head_msg:
-        st.markdown("<br>", unsafe_allow_html=True)
+    with col_soc:
+        if st.button("◈ Social", use_container_width=True, type="secondary"):
+            st.session_state["ruta"] = "Social"
+            st.rerun()
+    with col_space:
+        pass # Espacio central
+    with col_msg:
         if st.button("✉ Mensajes", use_container_width=True, type="secondary"):
             st.session_state["ruta"] = "Mensajes"
             st.rerun()
-
-    with c_head_prof:
+    with col_prof_img:
         foto_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
-        st.markdown(f"""
-            <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 5px;">
-                <img src='{foto_src}' class='top-nav-avatar'>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"<img src='{foto_src}' class='avatar-circle' style='width:45px; height:45px; margin-bottom:4px; margin-left:10px;'>", unsafe_allow_html=True)
+    with col_prof_btn:
         if st.button("⚙ Perfil", use_container_width=True, type="secondary"):
             st.session_state["ruta"] = "Perfil"
             st.rerun()
             
-    st.markdown("<hr style='border-color: #1C1C1F; margin-top: 10px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color: #1C1C1F; margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
     # ==========================================
-    # VISTA 1: DASHBOARD CON FEED SOCIAL NATIVO
+    # VISTA 1: DASHBOARD
     # ==========================================
     if st.session_state["ruta"] == "Inicio":
         
@@ -705,7 +714,7 @@ else:
                 st.markdown("<p style='font-size:12px; color:#A1A1AA; font-weight:700; margin:0; margin-bottom: 5px;'>SOPORTE</p>", unsafe_allow_html=True)
                 if st.button("Reportar Problema", type="secondary"): ventana_soporte(usuario_actual)
 
-        c_main, c_side = st.columns([2.2, 1.2], gap="large")
+        c_main, c_side = st.columns([2.5, 1], gap="large")
         
         with c_main:
             st.markdown("<div class='section-title'>PROYECTOS EN DESARROLLO</div>", unsafe_allow_html=True)
@@ -736,7 +745,7 @@ else:
                                 st.session_state["ruta"] = "Proyecto"
                                 st.rerun()
 
-            st.markdown("<br>", unsafe_allow_html=True)
+        with c_side:
             st.markdown("<div class='section-title'>AGENDA DE PRODUCCIÓN</div>", unsafe_allow_html=True)
             if st.button("Agregar Recordatorio", use_container_width=True, type="secondary"):
                 ventana_recordatorio(es_admin=(nivel_actual in ["jefe_supremo", "jefe"]), autor=mis_datos['nombre'])
@@ -747,49 +756,83 @@ else:
                         st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:700;'>{rec['fecha']}</span>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-weight:600; font-size:15px; color:#E2E8F0;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
-        with c_side:
-            st.markdown("<div class='section-title'>RADAR SOCIAL (IG)</div>", unsafe_allow_html=True)
+    # ==========================================
+    # VISTA: RED SOCIAL (NUEVA)
+    # ==========================================
+    elif st.session_state["ruta"] == "Social":
+        st.markdown("<h2 class='gradient-text' style='margin-bottom: 20px;'>Red Social del Estudio</h2>", unsafe_allow_html=True)
+        
+        # --- HISTORIAS ---
+        st.markdown("<div class='section-title'>Historias 24h</div>", unsafe_allow_html=True)
+        if st.button("✦ Subir Historia", type="secondary"): ventana_historia(usuario_actual)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        historias = st.session_state["proyectos"]["_CONFIG_"].get("social_stories", [])
+        ahora = datetime.now()
+        historias_activas = [h for h in historias if (ahora - datetime.strptime(h["timestamp"], "%Y-%m-%d %H:%M:%S")).total_seconds() < 86400]
+        
+        if historias_activas:
+            cols_hist = st.columns(min(len(historias_activas), 8))
+            for idx, hist in enumerate(historias_activas[:8]):
+                with cols_hist[idx]:
+                    st.markdown(f"<img src='data:image/jpeg;base64,{hist['foto']}' class='story-circle'>", unsafe_allow_html=True)
+                    st.caption(db_users[hist['usuario']]['nombre'].split()[0])
+        else:
+            st.info("No hay historias nuevas.")
             
-            # FEED SOCIAL HTML/CSS NATIVO TOTALMENTE REALISTA Y FUNCIONAL
-            feed_html = """
-            <div class="social-feed-container">
-                <!-- Post de Messi -->
-                <div class="social-card">
-                    <div class="social-header">
-                        <img src="https://i.pravatar.cc/150?u=messi" class="social-avatar">
-                        <div>
-                            <p class="social-user">leomessi <span class="social-verified">✔</span></p>
-                            <p class="social-time">Hace 2 horas</p>
-                        </div>
-                    </div>
-                    <img src="https://images.unsplash.com/photo-1518605368461-1ee7e520eb18?auto=format&fit=crop&q=80" class="social-image">
-                    <div class="social-actions" style="margin-bottom: 8px; font-weight: bold; color: #FAFAFA;">♡ 4.2M Me gusta</div>
-                    <p class="social-text"><strong style='color:#FAFAFA;'>leomessi</strong> Nuevo objetivo por delante con la misma ilusión de siempre. Vamos con todo. 🇦🇷</p>
-                </div>
+        st.divider()
+        
+        # --- FEED Y SPOTIFY ---
+        c_feed, c_spot = st.columns([2.5, 1], gap="large")
+        
+        with c_feed:
+            st.markdown("<div class='section-title'>Muro de Publicaciones</div>", unsafe_allow_html=True)
+            
+            with st.container(border=True):
+                texto_post = st.text_area("¿Qué está pasando en el set?", placeholder="Comparte una actualización con el equipo...")
+                img_post = st.file_uploader("Adjuntar imagen", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+                if st.button("Publicar en el Muro", type="primary"):
+                    if texto_post or img_post:
+                        img_b64 = base64.b64encode(img_post.read()).decode('utf-8') if img_post else None
+                        st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
+                            "usuario": usuario_actual, "texto": texto_post, "imagen": img_b64, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "likes": 0
+                        })
+                        guardar_y_recargar()
 
-                <!-- Post de Licha -->
-                <div class="social-card">
-                    <div class="social-header">
-                        <img src="https://i.pravatar.cc/150?u=licha" class="social-avatar">
-                        <div>
-                            <p class="social-user">lisandromartinez <span class="social-verified">✔</span></p>
-                            <p class="social-time">Hace 5 horas</p>
-                        </div>
-                    </div>
-                    <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80" class="social-image">
-                    <div class="social-actions" style="margin-bottom: 8px; font-weight: bold; color: #FAFAFA;">♡ 890K Me gusta</div>
-                    <p class="social-text"><strong style='color:#FAFAFA;'>lisandromartinez</strong> Dejar el alma en cada pelota. ¡Gran entrenamiento hoy equipo!</p>
-                </div>
-            </div>
-            """
-            st.markdown(feed_html, unsafe_allow_html=True)
+            posts = st.session_state["proyectos"]["_CONFIG_"].get("social_posts", [])
+            for p in posts:
+                usr_info = db_users[p["usuario"]]
+                with st.container(border=True):
+                    colA, colB = st.columns([1, 10])
+                    with colA:
+                        f_src = f"data:image/jpeg;base64,{usr_info['foto']}" if usr_info.get("foto") else "https://via.placeholder.com/150"
+                        st.markdown(f"<img src='{f_src}' style='width:45px; height:45px; border-radius:50%; border: 2px solid #333; object-fit:cover;'>", unsafe_allow_html=True)
+                    with colB:
+                        st.markdown(f"**{usr_info['nombre']}** <span style='font-size:12px; color:#71717A;'>• {p['timestamp']}</span>", unsafe_allow_html=True)
+                        
+                    if p.get("texto"):
+                        st.write(p["texto"])
+                    if p.get("imagen"):
+                        st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' style='width:100%; border-radius:12px; margin-top:10px; border: 1px solid #1C1C1F;'>", unsafe_allow_html=True)
+                    
+                    st.markdown(f"<span style='color:#FBAF3B; font-weight:600; font-size:12px; margin-top:10px; display:block;'>✦ {p.get('likes',0)} Me gusta</span>", unsafe_allow_html=True)
+
+        with c_spot:
+            st.markdown("<div class='section-title'>EN SINTONÍA (SPOTIFY)</div>", unsafe_allow_html=True)
+            st.caption("Lo que el equipo está escuchando.")
+            for em, info in db_users.items():
+                if info.get("spotify") and "track/" in info["spotify"]:
+                    with st.container(border=True):
+                        st.markdown(f"<p style='margin:0; font-size:12px; font-weight:700;'>{info['nombre']}</p>", unsafe_allow_html=True)
+                        tid = info["spotify"].split("track/")[1].split("?")[0]
+                        components.iframe(f"https://open.spotify.com/embed/track/{tid}?utm_source=generator&theme=0", height=80)
 
     # ==========================================
-    # VISTA: MENSAJES (SISTEMA DE CHAT NUEVO)
+    # VISTA: MENSAJES (SISTEMA DE CHAT PRIVADO)
     # ==========================================
     elif st.session_state["ruta"] == "Mensajes":
-        st.markdown("<div class='section-title'>MENSAJERÍA PRIVADA</div>", unsafe_allow_html=True)
-        col_list, col_chat = st.columns([1, 2.5])
+        st.markdown("<div class='section-title'>MENSAJERÍA DIRECTA</div>", unsafe_allow_html=True)
+        col_list, col_chat = st.columns([1, 2.5], gap="large")
         
         if "chat_con" not in st.session_state: st.session_state["chat_con"] = None
         
@@ -809,16 +852,15 @@ else:
                 st.markdown(f"### Conversación con {dest_info['nombre']}")
                 st.divider()
                 
-                # Mostrar mensajes
                 historial = [m for m in st.session_state["proyectos"]["_CONFIG_"]["mensajes"] if (m["de"] == usuario_actual and m["para"] == st.session_state["chat_con"]) or (m["de"] == st.session_state["chat_con"] and m["para"] == usuario_actual)]
                 
                 with st.container(height=400):
                     if not historial: st.info("No hay mensajes previos.")
                     for msg in historial:
                         if msg["de"] == usuario_actual:
-                            st.markdown(f"<div style='text-align: right;'><span style='background:#FBAF3B; color:#0A0A0B; padding:8px 12px; border-radius:12px; display:inline-block; margin-bottom:8px;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha']}</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align: right;'><span style='background:#FBAF3B; color:#0A0A0B; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px; font-weight:500;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha']}</span></div>", unsafe_allow_html=True)
                         else:
-                            st.markdown(f"<div style='text-align: left;'><span style='background:#1C1C1F; color:#FAFAFA; padding:8px 12px; border-radius:12px; display:inline-block; margin-bottom:8px;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha']}</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align: left;'><span style='background:#1C1C1F; border:1px solid #27272A; color:#FAFAFA; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px; font-weight:500;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha']}</span></div>", unsafe_allow_html=True)
                 
                 nuevo_msg = st.chat_input("Escribe un mensaje...")
                 if nuevo_msg:
@@ -830,7 +872,7 @@ else:
                 st.info("Selecciona un usuario de la lista para chatear.")
 
     # ==========================================
-    # VISTA 2: PERFIL Y CREDENCIAL VIP
+    # VISTA: PERFIL Y CREDENCIAL VIP
     # ==========================================
     elif st.session_state["ruta"] == "Perfil":
         st.markdown("<div class='section-title'>CONFIGURACIÓN DE CUENTA Y ACCESOS</div>", unsafe_allow_html=True)
@@ -860,9 +902,10 @@ else:
                         edad = c1.text_input("Edad", value=mis_datos.get("edad", ""))
                         roles_fav = c2.text_input("Especialidad Principal", value=mis_datos.get("roles_fav", ""))
                         portfolio = st.text_input("Enlace a Portfolio (Reel/CV)", value=mis_datos.get("portfolio", ""))
+                        spotify_url = st.text_input("Canción de Perfil (Link de Track de Spotify)", value=mis_datos.get("spotify", ""), placeholder="https://open.spotify.com/track/...")
                         specs = st.text_area("Notas o Habilidades Especiales", value=mis_datos.get("specs", ""))
                         if st.form_submit_button("Sincronizar Perfil", use_container_width=True):
-                            db_users[usuario_actual].update({"edad": edad, "roles_fav": roles_fav, "portfolio": portfolio, "specs": specs})
+                            db_users[usuario_actual].update({"edad": edad, "roles_fav": roles_fav, "portfolio": portfolio, "spotify": spotify_url, "specs": specs})
                             guardar_y_recargar()
                             st.success("Perfil sincronizado.")
                 
@@ -909,7 +952,7 @@ else:
                             st.caption(f"{em} | Especialidad: {info.get('roles_fav', 'No especificada')}")
                         with colD3:
                             if info.get('portfolio'):
-                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#FBAF3B; text-decoration:none;'>🔗 Ver Portfolio</a>", unsafe_allow_html=True)
+                                st.markdown(f"<a href='{info['portfolio']}' target='_blank' style='font-size:12px; font-weight:bold; color:#FBAF3B; text-decoration:none;'>⧉ Ver Portfolio</a>", unsafe_allow_html=True)
 
         with tab_admin:
             if rol_actual == "Super Admin":
@@ -936,16 +979,15 @@ else:
                         st.write(tk['desc'])
                         if tk['estado'] == "Pendiente":
                             if st.button("Marcar Resuelto", key=f"tk_{i}"):
-                                # Update original list
                                 idx_real = len(tickets) - 1 - i
                                 st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"][idx_real]["estado"] = "Resuelto"
                                 guardar_y_recargar()
                         else: st.success("Resuelto")
             else:
-                st.warning("Solo los Super Admins pueden ver esta sección.")
+                st.warning("Solo los Super Admins pueden ver la configuración de red.")
 
     # ==========================================
-    # VISTA 3: PROYECTO
+    # VISTA 3: PROYECTO (TODOS LOS MÓDULOS INTACTOS)
     # ==========================================
     elif st.session_state["ruta"] == "Proyecto":
         proyecto_elegido = st.session_state["proyecto_activo"]
@@ -1254,7 +1296,7 @@ else:
                 st.divider()
                 for loc in p_data.get("locaciones", []):
                     with st.container(border=True):
-                        st.markdown(f"### {loc['nombre']}")
+                        st.markdown(f"### ⌖ {loc['nombre']}")
                         st.write(f"**Dir:** {loc['direccion']} | **Estado:** {loc['permisos']}")
                         if loc.get('lat', 0.0) != 0.0: st.map(pd.DataFrame({'lat': [loc['lat']], 'lon': [loc['lon']]}), zoom=15, height=180)
                         st.info(f"**Clima estimado:** {random.choice(['Soleado', 'Nublado', 'Lluvias Aisladas'])}")
@@ -1290,7 +1332,7 @@ else:
                     if st.button("Añadir Dieta", use_container_width=True): ventana_catering(proyecto_elegido)
                 st.divider()
                 for p in p_data["catering"]:
-                    with st.container(border=True): st.markdown(f"**{p['nombre']}** | {p['dieta']}")
+                    with st.container(border=True): st.markdown(f"**{p['nombre']}** | ⎔ {p['dieta']}")
 
             elif seccion_elegida == "Desglose":
                 c1, c2 = st.columns([2.5, 1])
