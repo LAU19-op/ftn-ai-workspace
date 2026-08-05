@@ -13,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, date, timedelta, timezone
 import random
 import time
 import numpy as np
@@ -21,8 +21,9 @@ import matplotlib.pyplot as plt
 import librosa
 import scipy.signal
 import streamlit.components.v1 as components
+import re
 
-# Importación de Spotify con manejo de errores para evitar crasheos si falta en requirements.txt
+# Importación de Spotify para la conexión en tiempo real
 try:
     import spotipy
     from spotipy.oauth2 import SpotifyOAuth
@@ -34,12 +35,14 @@ except ImportError:
 st.set_page_config(page_title="Fetén Workspace Pro", page_icon="✦", layout="wide", initial_sidebar_state="collapsed")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
+
+# HORA DE ARGENTINA (Nativa, UTC-3)
 TZ_AR = timezone(timedelta(hours=-3))
 
 def obtener_hora_actual():
     return datetime.now(TZ_AR).strftime("%Y-%m-%d %H:%M:%S")
 
-# --- 2. DISEÑO UI/UX "SAAS OBSIDIAN PRO" (INSTAGRAM STYLE PARA SOCIAL) ---
+# --- 2. DISEÑO UI/UX "SAAS OBSIDIAN PRO" E "INSTAGRAM WEB" ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -47,7 +50,7 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
     
-    /* Fondo Obsidiana */
+    /* Fondo Obsidiana Premium */
     .stApp {
         background-color: #050505 !important;
         background-image: 
@@ -58,28 +61,30 @@ st.markdown("""
 
     .logo-img { display: block; max-width: 100%; height: auto; filter: brightness(1.5) contrast(1.2); }
 
-    /* Tarjetas Modulares */
+    /* Tarjetas Modulares Base */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: #0A0A0B !important; border: 1px solid #1C1C1F !important; border-radius: 16px !important;
         padding: 1.5rem !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; margin-bottom: 16px !important;
     }
     
+    /* Títulos */
     .gradient-text {
         background: linear-gradient(135deg, #FFFFFF 0%, #FBAF3B 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; letter-spacing: -0.03em;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        font-weight: 800; letter-spacing: -0.03em;
     }
     h1, h2 { font-weight: 800 !important; letter-spacing: -0.02em !important; color: #FAFAFA !important; }
     h3, h4 { color: #D4D4D8 !important; font-weight: 600 !important; letter-spacing: -0.01em !important; }
     .section-title { color: #71717A; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px; }
 
-    /* Formularios */
+    /* Inputs */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea, .stChatInput input {
         background-color: #0E0E11 !important; border: 1px solid #27272A !important; color: #FAFAFA !important;
         border-radius: 10px !important; padding: 12px 16px !important; font-weight: 400 !important;
     }
     .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { border-color: #FBAF3B !important; box-shadow: 0 0 0 1px #FBAF3B !important; }
     
-    /* Botones */
+    /* Botones Primarios */
     .stButton button {
         background: linear-gradient(135deg, #FBAF3B 0%, #D97706 100%) !important; border: none !important; color: #050505 !important;
         border-radius: 10px !important; font-weight: 700 !important; padding: 0.6rem 1rem !important; transition: all 0.2s ease !important; width: 100% !important;
@@ -87,31 +92,38 @@ st.markdown("""
     .stButton button:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(251, 175, 59, 0.3) !important; }
     .stButton button p { color: #050505 !important; font-weight: 700 !important; margin: 0; }
     
-    [data-testid="stBaseButton-secondary"] { background: #0A0A0B !important; border: 1px solid #27272A !important; color: #A1A1AA !important; box-shadow: none !important; }
-    [data-testid="stBaseButton-secondary"]:hover { border-color: #52525B !important; color: #FAFAFA !important; }
+    /* Botones Secundarios (Estilo Twitter Actions) */
+    [data-testid="stBaseButton-secondary"] { background: transparent !important; border: 1px solid #27272A !important; color: #A1A1AA !important; box-shadow: none !important; border-radius: 8px !important; }
+    [data-testid="stBaseButton-secondary"]:hover { border-color: #52525B !important; color: #FBAF3B !important; background: rgba(251, 175, 59, 0.05) !important; }
+
+    /* RED SOCIAL UI */
+    .tweet-card { background: #0A0A0B; border: 1px solid #1C1C1F; border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: border 0.2s; }
+    .tweet-card:hover { border-color: #333; }
+    .tweet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .tweet-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 1px solid #27272A; }
+    .tweet-name { font-weight: 700; color: #FAFAFA; font-size: 15px; margin: 0; }
+    .tweet-handle { color: #71717A; font-size: 13px; margin: 0; }
+    .tweet-body { font-size: 15px; color: #E2E8F0; margin-top: 8px; margin-bottom: 12px; line-height: 1.5; white-space: pre-wrap; }
+    .tweet-img { width: 100%; border-radius: 12px; border: 1px solid #1C1C1F; margin-bottom: 12px; max-height: 500px; object-fit: cover; }
+    
+    .comment-box { background: #111111; border-left: 2px solid #27272A; padding: 10px 15px; margin-top: 10px; border-radius: 0 12px 12px 0; }
+    .repost-badge { font-size: 12px; color: #71717A; font-weight: 600; margin-bottom: 8px; display: block; }
 
     /* Historias estilo Instagram */
     .story-avatar-active {
         border-radius: 50%; padding: 3px; width: 68px; height: 68px; object-fit: cover;
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-        border: 2px solid #050505; /* Borde interno negro para separar la foto del gradiente */
+        border: 2px solid #050505; cursor: pointer; transition: transform 0.2s;
     }
-    .story-avatar-inactive {
-        border-radius: 50%; padding: 2px; width: 68px; height: 68px; object-fit: cover;
-        border: 1px solid #333; background: #050505;
-    }
-    
-    /* Red Social Muro */
-    .tweet-card { background: #0A0A0B; border: 1px solid #1C1C1F; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-    .tweet-header { display: flex; align-items: center; margin-bottom: 10px; justify-content: space-between; }
-    .tweet-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 1px solid #27272A; }
-    .tweet-name { font-weight: 700; color: #FAFAFA; font-size: 15px; margin: 0; }
-    .tweet-handle { color: #71717A; font-size: 13px; margin: 0; }
-    .tweet-body { font-size: 15px; color: #E2E8F0; margin-top: 4px; margin-bottom: 12px; line-height: 1.5; white-space: pre-wrap; }
-    .tweet-img { width: 100%; border-radius: 12px; border: 1px solid #1C1C1F; margin-bottom: 12px; max-height: 400px; object-fit: cover; }
-    .tweet-actions { display: flex; justify-content: space-between; max-width: 300px; color: #71717A; font-size: 13px; font-weight: 600; padding-top: 10px; border-top: 1px solid #1C1C1F; }
+    .story-avatar-active:hover { transform: scale(1.05); }
 
-    /* Indicador Online */
+    /* Reproductor Modal Instagram Web */
+    .ig-modal-header { display: flex; align-items: center; margin-bottom: 15px; }
+    .ig-modal-progress { width: 100%; height: 3px; background: rgba(255,255,255,0.3); border-radius: 3px; margin-bottom: 15px; overflow: hidden; }
+    .ig-modal-progress-bar { width: 100%; height: 100%; background: #FFF; animation: progress 5s linear; }
+    @keyframes progress { 0% { width: 0%; } 100% { width: 100%; } }
+
+    .avatar-circle { border-radius: 50%; object-fit: cover; border: 2px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.3); }
     .online-dot { display: inline-block; width: 10px; height: 10px; background-color: #22C55E; border-radius: 50%; margin-right: 8px; box-shadow: 0 0 8px #22C55E; }
     
     [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2.2rem !important; font-weight: 800 !important; letter-spacing: -1px; }
@@ -121,7 +133,7 @@ st.markdown("""
 
 ARCHIVO_BD = "ftn_database.json"
 
-# --- 3. INICIALIZACIÓN Y BASE DE DATOS ---
+# --- 3. INICIALIZACIÓN PROFUNDA ---
 def generar_qr_base64(datos):
     qr = qrcode.QRCode(version=1, box_size=5, border=1)
     qr.add_data(datos)
@@ -149,34 +161,39 @@ def inicializar_bd():
             
         conf = data_cargada["_CONFIG_"]
         
-        for lb in ["recordatorios", "notificaciones", "mensajes", "tickets_soporte", "social_posts", "social_stories"]:
+        listas_base = ["recordatorios", "notificaciones", "mensajes", "tickets_soporte", "social_posts", "social_stories"]
+        for lb in listas_base:
             if lb not in conf: conf[lb] = []
 
         if "lau@admin.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["lau@admin.com"] = {
                 "nombre": "Lau (Admin)", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
                 "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Directora", "specs": "Amo el cine de terror.", "portfolio": "", 
-                "spotify_token": None, "spotify_track_id": None, "amigos": ["director@feten.com", "arte@feten.com"], "acceso_rapido": "Panel General", "alias": "lau_ok"
+                "spotify_token": None, "spotify_track_id": None, "amigos": ["director@feten.com", "arte@feten.com"], 
+                "acceso_rapido": "Panel General", "alias": "lau_ok", "estado_txt": "🎬 Editando", "guardados": []
             }
             
         if "director@feten.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["director@feten.com"] = {
                 "nombre": "Matias (Director)", "pass": "1234", "rol": "Dirección", "nivel": "jefe", "estado": "Aprobado",
                 "foto": "", "credencial": "FTN-0002", "edad": "35", "roles_fav": "Cine", "specs": "", "portfolio": "", 
-                "spotify_token": None, "spotify_track_id": "4cOdK2wGLETKBW3PvgPWqT", "amigos": [], "acceso_rapido": "Monitor DIR", "alias": "mati_dir"
+                "spotify_token": None, "spotify_track_id": "4cOdK2wGLETKBW3PvgPWqT", "amigos": [], 
+                "acceso_rapido": "Monitor DIR", "alias": "mati_dir", "estado_txt": "🎥 En Set", "guardados": []
             }
         if "arte@feten.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["arte@feten.com"] = {
                 "nombre": "Sofi (Arte)", "pass": "1234", "rol": "Dirección de Arte", "nivel": "jefe", "estado": "Aprobado",
                 "foto": "", "credencial": "FTN-0003", "edad": "28", "roles_fav": "Escenografía", "specs": "", "portfolio": "", 
-                "spotify_token": None, "spotify_track_id": "11dFghVXANMlKmJXsNCbNl", "amigos": [], "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte"
+                "spotify_token": None, "spotify_track_id": "11dFghVXANMlKmJXsNCbNl", "amigos": [], 
+                "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte", "estado_txt": "☕ Descanso", "guardados": []
             }
 
-        if not conf["social_posts"]:
-            conf["social_posts"] = [
-                {"usuario": "arte@feten.com", "texto": "Armando el set de los 80, una locura los detalles.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 12},
-                {"usuario": "director@feten.com", "texto": "Recién terminamos el scouting en San Telmo. ¡La luz es increíble!", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 34}
-            ]
+        # Adaptación de Posts para Twitter Features
+        for p in conf["social_posts"]:
+            if "id" not in p: p["id"] = str(random.randint(100000, 999999))
+            if "comentarios" not in p: p["comentarios"] = []
+            if "reposts" not in p: p["reposts"] = 0
+            if "es_repost" not in p: p["es_repost"] = False
             
         for em, info in conf["usuarios"].items():
             if "amigos" not in info: info["amigos"] = []
@@ -186,6 +203,8 @@ def inicializar_bd():
             if "credencial" not in info: info["credencial"] = f"FTN-{random.randint(1000, 9999)}"
             if "acceso_rapido" not in info: info["acceso_rapido"] = "Panel General"
             if "alias" not in info: info["alias"] = em.split("@")[0]
+            if "estado_txt" not in info: info["estado_txt"] = "Online"
+            if "guardados" not in info: info["guardados"] = []
 
         claves_proy = ["archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", "personajes", "locaciones", "crew", "catering", "links", "presupuesto", "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals", "kanban"]
         for nombre_proy, datos_proy in data_cargada.items():
@@ -202,32 +221,42 @@ if "ruta" not in st.session_state: st.session_state["ruta"] = "Inicio"
 if "proyecto_activo" not in st.session_state: st.session_state["proyecto_activo"] = None
 if "menu_option" not in st.session_state: st.session_state["menu_option"] = "Panel General"
 
-# SPOTIFY API OAUTH HANDLER (Si hay code en URL, procesarlo y guardarlo)
+# OAUTH SPOTIFY
 if SPOTIPY_INSTALLED and "code" in st.query_params and st.session_state.get("usuario_logueado"):
     try:
-        sp_oauth = SpotifyOAuth(
-            client_id=st.secrets["SPOTIFY_CLIENT_ID"],
-            client_secret=st.secrets["SPOTIFY_CLIENT_SECRET"],
-            redirect_uri=st.secrets["SPOTIFY_REDIRECT_URI"],
-            scope="user-read-currently-playing"
-        )
-        token_info = sp_oauth.get_access_token(st.query_params["code"])
-        st.session_state["proyectos"]["_CONFIG_"]["usuarios"][st.session_state["usuario_logueado"]]["spotify_token"] = token_info
-        st.query_params.clear() # Limpiar URL
-        guardar_y_recargar()
-    except Exception as e:
-        st.error("Error validando Spotify. Verificá las credenciales en st.secrets.")
+        if "SPOTIFY_CLIENT_ID" in st.secrets:
+            sp_oauth = SpotifyOAuth(client_id=st.secrets["SPOTIFY_CLIENT_ID"], client_secret=st.secrets["SPOTIFY_CLIENT_SECRET"], redirect_uri=st.secrets["SPOTIFY_REDIRECT_URI"], scope="user-read-currently-playing")
+            token_info = sp_oauth.get_access_token(st.query_params["code"])
+            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][st.session_state["usuario_logueado"]]["spotify_token"] = token_info
+            st.query_params.clear()
+            guardar_y_recargar()
+    except Exception as e: st.error(f"Error OAuth Spotify: {e}")
 
 # --- 4. MODALES ---
-@st.dialog("◈ Reportar Problema")
-def ventana_soporte(usuario):
-    asunto = st.text_input("Asunto")
-    desc = st.text_area("Descripción del bug o problema")
-    if st.button("Enviar Ticket", use_container_width=True):
-        if asunto and desc:
-            st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({"usuario": usuario, "fecha": obtener_hora_actual(), "asunto": asunto, "desc": desc, "estado": "Pendiente"})
-            st.success("Ticket enviado al Administrador.")
-            guardar_y_recargar()
+@st.dialog("◈ Comentar Publicación")
+def dialog_comentar(post_id, usuario):
+    txt = st.text_area("Tu respuesta:")
+    if st.button("Responder", use_container_width=True):
+        if txt:
+            for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"]:
+                if p["id"] == post_id:
+                    p["comentarios"].append({"usuario": usuario, "texto": txt, "timestamp": obtener_hora_actual()})
+                    guardar_y_recargar()
+
+@st.dialog("◈ Reproductor de Historia")
+def ver_historia_dialog(b64_foto, usuario_nombre, f_avatar, tiempo):
+    # Diseño simulando Instagram Web Modal
+    st.markdown(f"""
+        <div class="ig-modal-progress"><div class="ig-modal-progress-bar"></div></div>
+        <div class="ig-modal-header">
+            <img src="{f_avatar}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; margin-right:10px;">
+            <div>
+                <span style="font-weight:700; color:#FAFAFA; font-size:14px;">{usuario_nombre}</span>
+                <span style="color:#A1A1AA; font-size:12px; margin-left:8px;">{tiempo}</span>
+            </div>
+        </div>
+        <img src="data:image/jpeg;base64,{b64_foto}" style="width:100%; max-height: 70vh; border-radius:12px; object-fit:contain; background:#000;">
+    """, unsafe_allow_html=True)
 
 @st.dialog("◈ Subir Historia (24h)")
 def ventana_historia(usuario):
@@ -238,11 +267,6 @@ def ventana_historia(usuario):
             st.session_state["proyectos"]["_CONFIG_"]["social_stories"].append({"usuario": usuario, "foto": b64, "timestamp": obtener_hora_actual()})
             guardar_y_recargar()
 
-@st.dialog("◈ Ver Historia")
-def ver_historia_dialog(b64_foto, usuario_nombre, tiempo):
-    st.markdown(f"**{usuario_nombre}** • {tiempo}")
-    st.markdown(f"<img src='data:image/jpeg;base64,{b64_foto}' style='width:100%; border-radius:12px; object-fit:cover;'>", unsafe_allow_html=True)
-
 @st.dialog("◈ Perfil de Usuario")
 def ver_perfil(em_usuario):
     u_info = st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usuario]
@@ -252,7 +276,7 @@ def ver_perfil(em_usuario):
     with colA: st.markdown(f"<img src='{f_usr}' style='width:100px; height:100px; border-radius:50%; object-fit:cover; border:2px solid #FBAF3B;'>", unsafe_allow_html=True)
     with colB:
         st.markdown(f"<h3 style='margin:0; font-size:22px;'>{u_info['nombre']}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#A1A1AA; margin:0;'>@{u_info['alias']} • {u_info['rol']}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#A1A1AA; margin:0;'>@{u_info['alias']} • {u_info['estado_txt']}</p>", unsafe_allow_html=True)
         st.markdown(f"<p style='font-size:13px; color:#D4D4D8; margin-top:10px;'>{u_info.get('specs', '')}</p>", unsafe_allow_html=True)
     
     st.divider()
@@ -270,20 +294,29 @@ def ver_perfil(em_usuario):
             if p.get("texto"): st.write(p["texto"])
             if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' style='width:100%; border-radius:8px; margin-top:8px;'>", unsafe_allow_html=True)
 
-# Resto de Modales Base...
-@st.dialog("◈ Nueva Tarea Kanban")
+@st.dialog("◈ Reportar Problema")
+def ventana_soporte(usuario):
+    asunto = st.text_input("Asunto")
+    desc = st.text_area("Descripción")
+    if st.button("Enviar Ticket"):
+        if asunto and desc:
+            st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({"usuario": usuario, "fecha": obtener_hora_actual(), "asunto": asunto, "desc": desc, "estado": "Pendiente"})
+            guardar_y_recargar()
+
+# Resto de Modales Base (Proyecto)...
+@st.dialog("◈ Nueva Tarea")
 def ventana_kanban(proyecto, autor):
-    tarea = st.text_input("Descripción de la Tarea")
-    estado = st.selectbox("Estado Inicial", ["Pendiente", "En Proceso", "Completado"])
-    if st.button("Agregar al Tablero", use_container_width=True):
+    tarea = st.text_input("Tarea")
+    estado = st.selectbox("Estado", ["Pendiente", "En Proceso", "Completado"])
+    if st.button("Guardar"):
         if tarea: st.session_state["proyectos"][proyecto]["kanban"].append({"tarea": tarea, "estado": estado, "autor": autor}); guardar_y_recargar()
 
-@st.dialog("◈ Recordatorio Global")
+@st.dialog("◈ Recordatorio")
 def ventana_recordatorio(es_admin, autor):
     titulo = st.text_input("Título")
-    fecha = st.date_input("Fecha Límite")
+    fecha = st.date_input("Fecha")
     tipo = st.selectbox("Visibilidad", ["Privado", "Global"]) if es_admin else "Privado"
-    if st.button("Guardar", use_container_width=True):
+    if st.button("Guardar"):
         if titulo: st.session_state["proyectos"]["_CONFIG_"]["recordatorios"].append({"autor": autor, "titulo": titulo, "fecha": str(fecha), "tipo": tipo}); guardar_y_recargar()
 
 @st.dialog("⟡ Emitir Comunicado")
@@ -332,7 +365,7 @@ def ventana_catering(proyecto):
     if st.button("Guardar", use_container_width=True):
         if nombre: st.session_state["proyectos"][proyecto]["catering"].append({"nombre": nombre, "dieta": dieta, "alergias": alergias}); guardar_y_recargar()
 
-@st.dialog("✉ Pedido de Equipamiento")
+@st.dialog("✉ Pedido")
 def ventana_pedido(proyecto, area):
     item_nombre = st.text_input("Equipo")
     justificacion = st.text_area("Notas")
@@ -340,7 +373,7 @@ def ventana_pedido(proyecto, area):
     if st.button("Enviar", use_container_width=True):
         if item_nombre: st.session_state["proyectos"][proyecto]["pedidos_equipos"].append({"area": area, "item": item_nombre, "notas": justificacion, "prioridad": prioridad, "estado": "Pendiente"}); guardar_y_recargar()
 
-@st.dialog("⚙ Cargar Equipo al Inventario")
+@st.dialog("⚙ Cargar Inventario")
 def ventana_equipo(proyecto, area):
     col1, col2 = st.columns(2)
     item_nombre = col1.text_input("Ítem")
@@ -556,7 +589,7 @@ if st.session_state["usuario_logueado"] is None:
                 f_reg = st.file_uploader("Foto ID", type=["jpg", "png", "jpeg"])
                 if st.button("Registrar", use_container_width=True):
                     if n_reg and e_reg and p_reg and f_reg:
-                        db[e_reg] = {"nombre": n_reg, "pass": p_reg, "rol": "Invitado", "nivel": "lectura", "estado": "Pendiente", "foto": base64.b64encode(f_reg.read()).decode('utf-8'), "credencial": f"FTN-{random.randint(1000,9999)}", "edad": "", "roles_fav": "", "portfolio": "", "spotify_token": None, "spotify_track_id": None, "amigos": [], "acceso_rapido": "Panel General", "alias": e_reg.split("@")[0], "specs": ""}
+                        db[e_reg] = {"nombre": n_reg, "pass": p_reg, "rol": "Invitado", "nivel": "lectura", "estado": "Pendiente", "foto": base64.b64encode(f_reg.read()).decode('utf-8'), "credencial": f"FTN-{random.randint(1000,9999)}", "edad": "", "roles_fav": "", "portfolio": "", "spotify_token": None, "spotify_track_id": None, "amigos": [], "acceso_rapido": "Panel General", "alias": e_reg.split("@")[0], "specs": "", "estado_txt": "Online", "guardados": []}
                         guardar_y_recargar()
                         st.success("Enviado al administrador.")
 
@@ -568,7 +601,7 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
-    # NAVBAR ALINEADA PERFECTA (Alineación Vertical desde el fondo)
+    # NAVBAR ALINEADA PERFECTA (Alineación Bottom)
     c_nav1, c_nav2, c_nav3, c_nav4, c_nav_space, c_nav_prof = st.columns([1.5, 1.2, 1.2, 1.2, 3.5, 1.2], vertical_alignment="bottom")
     
     with c_nav1:
@@ -582,17 +615,18 @@ else:
     with c_nav_space:
         pass
     with c_nav_prof:
+        # Foto centrada JUSTO ARRIBA del botón, mismo tamaño 40px
         f_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
         st.markdown(f"""
             <div style="display:flex; justify-content: center; margin-bottom: 8px;">
-                <img src='{f_src}' style='width: 40px; height: 40px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover;'>
+                <img src='{f_src}' style='width: 45px; height: 45px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover;'>
             </div>
         """, unsafe_allow_html=True)
         if st.button("⚙ Perfil", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Perfil"; st.rerun()
             
     st.markdown("<hr style='border-color: #1C1C1F; margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
-    # --- INICIO ---
+    # --- INICIO DASHBOARD ---
     if st.session_state["ruta"] == "Inicio":
         col_q1, col_q2, col_q3, col_q4 = st.columns(4)
         with col_q1:
@@ -656,7 +690,7 @@ else:
                         st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:700;'>{rec['fecha']}</span>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-weight:600; font-size:14px;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
-    # --- SOCIAL ---
+    # --- SOCIAL (TWITTER / IG STYLE) ---
     elif st.session_state["ruta"] == "Social":
         st.markdown("<h2 class='gradient-text'>Workspace Social</h2>", unsafe_allow_html=True)
         col_izq, col_centro, col_der = st.columns([1, 2.5, 1.2], gap="large")
@@ -667,40 +701,48 @@ else:
                 st.markdown(f"<img src='{f_usr}' class='avatar-circle' style='width:60px; height:60px; margin-bottom:10px;'>", unsafe_allow_html=True)
                 st.markdown(f"#### {mis_datos['nombre']}")
                 st.caption(f"@{mis_datos.get('alias', us_act.split('@')[0])}")
+                st.markdown(f"**{mis_datos.get('estado_txt', 'Online')}**")
+                st.divider()
                 st.markdown(f"**Siguiendo:** {len(mis_datos.get('amigos', []))}")
+                st.markdown(f"**Guardados:** {len(mis_datos.get('guardados', []))}")
                 
         with col_centro:
-            # Historias Estilo Instagram (Interactivas)
+            # Historias (Estilo IG Web)
             st.markdown("<div class='section-title'>Historias 24h</div>", unsafe_allow_html=True)
             ahora = datetime.now(TZ_AR)
             h_activas = [h for h in st.session_state["proyectos"]["_CONFIG_"]["social_stories"] if (ahora - datetime.strptime(h["timestamp"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ_AR)).total_seconds() < 86400]
             
             c_hist = st.columns(6)
             with c_hist[0]:
-                if st.button("➕", help="Subir Historia"): ventana_historia(us_act)
+                if st.button("➕", help="Subir Historia", type="secondary"): ventana_historia(us_act)
             
             for idx, h in enumerate(reversed(h_activas)):
                 if idx + 1 < 6:
                     with c_hist[idx + 1]:
                         ui_h = db_users[h['usuario']]
                         f_h = f"data:image/jpeg;base64,{ui_h['foto']}" if ui_h.get("foto") else "https://via.placeholder.com/150"
+                        
+                        # Imagen Circular Clickable (Borde Activo)
                         st.markdown(f"<img src='{f_h}' class='story-avatar-active'>", unsafe_allow_html=True)
-                        if st.button(ui_h['nombre'].split()[0], key=f"v_h_{idx}"):
-                            ver_historia_dialog(h['foto'], ui_h['nombre'], h['timestamp'])
+                        if st.button(f"⟡ {ui_h['nombre'].split()[0]}", key=f"vh_{idx}", type="secondary"):
+                            ver_historia_dialog(h['foto'], ui_h['nombre'], f_h, h['timestamp'].split()[1])
             st.divider()
             
-            # Muro Publicar
+            # Muro (Crear Post)
             st.markdown("<div class='section-title'>Muro</div>", unsafe_allow_html=True)
             with st.container(border=True):
-                txt_post = st.text_area("¿Qué está pasando en el set?", label_visibility="collapsed")
+                txt_post = st.text_area("¿Qué está pasando?", label_visibility="collapsed")
                 img_post = st.file_uploader("Adjuntar foto", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-                if st.button("Publicar en Muro"):
+                if st.button("Publicar en Muro", type="primary"):
                     if txt_post or img_post:
                         img_b64 = base64.b64encode(img_post.read()).decode('utf-8') if img_post else None
-                        st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {"usuario": us_act, "texto": txt_post, "imagen": img_b64, "timestamp": obtener_hora_actual(), "likes": 0})
+                        st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
+                            "id": str(random.randint(100000, 999999)), "usuario": us_act, "texto": txt_post, "imagen": img_b64, 
+                            "timestamp": obtener_hora_actual(), "likes": 0, "comentarios": [], "reposts": 0, "es_repost": False
+                        })
                         guardar_y_recargar()
 
-            # Feed Formateado HTML Puro SIN sangrías para evitar error de Streamlit
+            # Feed Formateado Puro con Acciones Completas
             posts = st.session_state["proyectos"]["_CONFIG_"]["social_posts"]
             for i, p in enumerate(posts):
                 ui = db_users[p["usuario"]]
@@ -708,37 +750,71 @@ else:
                 alias_u = ui.get("alias", p['usuario'].split('@')[0])
                 
                 with st.container(border=True):
+                    if p.get("es_repost"):
+                        st.markdown(f"<span class='repost-badge'>🔁 Reposteado</span>", unsafe_allow_html=True)
+                    
                     c_av, c_info = st.columns([1, 8])
                     with c_av:
-                        st.markdown(f"<img src='{fi}' style='width:45px;height:45px;border-radius:50%;object-fit:cover;border:1px solid #333;'>", unsafe_allow_html=True)
+                        st.markdown(f"<img src='{fi}' class='tweet-avatar'>", unsafe_allow_html=True)
                     with c_info:
-                        st.markdown(f"**{ui['nombre']}** <span style='color:#71717A;font-size:13px;'>@{alias_u} • {p['timestamp']}</span>", unsafe_allow_html=True)
+                        st.markdown(f"<p class='tweet-name'>{ui['nombre']} <span class='tweet-handle'>@{alias_u} • {p['timestamp']}</span></p>", unsafe_allow_html=True)
                     
-                    if p.get("texto"): st.markdown(f"<p style='color:#E2E8F0;font-size:15px;margin-top:10px;'>{p['texto']}</p>", unsafe_allow_html=True)
-                    if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' style='width:100%;border-radius:12px;margin-top:10px;border:1px solid #1C1C1F;'>", unsafe_allow_html=True)
+                    if p.get("texto"): st.markdown(f"<p class='tweet-body'>{p['texto']}</p>", unsafe_allow_html=True)
+                    if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' class='tweet-img'>", unsafe_allow_html=True)
                     
-                    c_like, c_perfil = st.columns(2)
-                    c_like.markdown(f"<span style='color:#71717A;font-weight:600;font-size:13px;'>♡ {p.get('likes', 0)} Me gusta</span>", unsafe_allow_html=True)
-                    if c_perfil.button("Ver Perfil", key=f"vp_{i}_{p['usuario']}", type="secondary"): ver_perfil(p['usuario'])
+                    # Interacciones (Twitter Style)
+                    c_lik, c_com, c_rep, c_sav = st.columns(4)
+                    if c_lik.button(f"♡ {p.get('likes', 0)}", key=f"lik_{p['id']}", type="secondary"):
+                        p["likes"] = p.get("likes", 0) + 1
+                        guardar_y_recargar()
+                    if c_com.button(f"💬 {len(p.get('comentarios', []))}", key=f"com_{p['id']}", type="secondary"):
+                        dialog_comentar(p['id'], us_act)
+                    if c_rep.button(f"🔁 {p.get('reposts', 0)}", key=f"rep_{p['id']}", type="secondary"):
+                        # Crear repost
+                        p["reposts"] = p.get("reposts", 0) + 1
+                        st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
+                            "id": str(random.randint(100000, 999999)), "usuario": p['usuario'], "texto": p.get('texto'), "imagen": p.get('imagen'), 
+                            "timestamp": obtener_hora_actual(), "likes": 0, "comentarios": [], "reposts": 0, "es_repost": True
+                        })
+                        guardar_y_recargar()
+                    if c_sav.button("🔖", key=f"sav_{p['id']}", type="secondary"):
+                        if p['id'] not in mis_datos.get("guardados", []):
+                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["guardados"].append(p['id'])
+                            guardar_y_recargar()
+                    
+                    # Mostrar comentarios si hay
+                    for com in p.get("comentarios", []):
+                        st.markdown(f"<div class='comment-box'><strong>{db_users[com['usuario']]['nombre']}</strong> <span style='font-size:11px;color:#71717A;'>{com['timestamp']}</span><br>{com['texto']}</div>", unsafe_allow_html=True)
 
         with col_der:
-            st.markdown("<div class='section-title'>A QUIÉN SEGUIR</div>", unsafe_allow_html=True)
+            # Tendencias (Extraídas de los posts)
+            st.markdown("<div class='section-title'>📈 TENDENCIAS</div>", unsafe_allow_html=True)
+            textos_feed = " ".join([p.get('texto', '') for p in posts if p.get('texto')])
+            hashtags = re.findall(r"#(\w+)", textos_feed)
+            if hashtags:
+                top_tags = pd.Series(hashtags).value_counts().head(5)
+                for tag, count in top_tags.items():
+                    with st.container(border=True):
+                        st.markdown(f"**#{tag}**<br><span style='font-size:11px;color:#71717A;'>{count} posts</span>", unsafe_allow_html=True)
+            else:
+                st.info("Aún no hay hashtags en uso.")
+
+            st.markdown("<br><div class='section-title'>A QUIÉN SEGUIR</div>", unsafe_allow_html=True)
             for em, info in db_users.items():
                 if em != us_act and em not in mis_datos.get("amigos", []):
                     with st.container(border=True):
                         st.markdown(f"<p style='margin:0; font-weight:600;'>{info['nombre']}</p><p style='margin:0; font-size:11px; color:#A1A1AA;'>{info['rol']}</p>", unsafe_allow_html=True)
-                        if st.button("Seguir", key=f"seg_{em}", type="secondary"):
+                        c_vp, c_sg = st.columns(2)
+                        if c_vp.button("Perfil", key=f"vp_{em}", type="secondary"): ver_perfil(em)
+                        if c_sg.button("Seguir", key=f"seg_{em}", type="secondary"):
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["amigos"].append(em)
                             guardar_y_recargar()
             
             st.markdown("<br><div class='section-title'>🟢 EN VIVO (SPOTIFY)</div>", unsafe_allow_html=True)
-            st.caption("Si conectaste tu cuenta oficial de Spotify (OAuth), acá se mostrará en tiempo real tu pista actual.")
-            
             amigos_seguir = mis_datos.get("amigos", []) + [us_act]
             for em in amigos_seguir:
                 if em in db_users:
                     info = db_users[em]
-                    # Integración Real Spotify API (Si hay token)
                     if SPOTIPY_INSTALLED and info.get("spotify_token"):
                         try:
                             sp = spotipy.Spotify(auth=info["spotify_token"]["access_token"])
@@ -748,14 +824,8 @@ else:
                                 with st.container(border=True):
                                     st.markdown(f"<p style='margin:0; font-size:12px; font-weight:700;'><span class='online-dot'></span>{info['nombre']}</p>", unsafe_allow_html=True)
                                     components.iframe(f"https://open.spotify.com/embed/track/{tid}?utm_source=generator&theme=0", height=80)
-                                continue # Pasa al siguiente usuario
-                        except: pass # Token expirado o error de API
-
-                    # Fallback visual: si no hay Spotify OAuth pero pegó su link manualmente
-                    elif info.get("spotify_track_id"):
-                        with st.container(border=True):
-                            st.markdown(f"<p style='margin:0; font-size:12px; font-weight:700;'><span class='online-dot'></span>{info['nombre']}</p>", unsafe_allow_html=True)
-                            components.iframe(f"https://open.spotify.com/embed/track/{info['spotify_track_id']}?utm_source=generator&theme=0", height=80)
+                                continue
+                        except: pass
 
     # --- MENSAJES ---
     elif st.session_state["ruta"] == "Mensajes":
@@ -797,7 +867,7 @@ else:
     # --- PERFIL Y ADMIN ---
     elif st.session_state["ruta"] == "Perfil":
         st.markdown("<div class='section-title'>AJUSTES DE CUENTA</div>", unsafe_allow_html=True)
-        t_per, t_cred, t_dir, t_adm = st.tabs(["Mi Perfil", "Credencial", "Directorio", "Admin"])
+        t_per, t_g, t_cred, t_dir, t_adm = st.tabs(["Mi Perfil", "Guardados", "Credencial", "Directorio", "Admin"])
         
         with t_per:
             c_img, c_form = st.columns([1, 2.5])
@@ -815,31 +885,42 @@ else:
                     st.markdown("#### Datos Personales")
                     c1, c2 = st.columns(2)
                     al = c1.text_input("Alias / Arroba (@)", value=mis_datos.get("alias", us_act.split("@")[0]))
-                    rf = c2.text_input("Especialidad", value=mis_datos.get("roles_fav", ""))
+                    es = c2.text_input("Estado / Actividad", value=mis_datos.get("estado_txt", "Online"), placeholder="Ej: 🎥 Filmando")
+                    rf = st.text_input("Especialidad", value=mis_datos.get("roles_fav", ""))
                     spc = st.text_area("Biografía / Notas de Perfil", value=mis_datos.get("specs", ""))
                     
                     st.markdown("#### Spotify Integration")
-                    if not SPOTIPY_INSTALLED:
-                        st.warning("⚠️ spotipy no está en requirements.txt. Solo funcionará el reproductor estático.")
+                    sp_p = st.text_input("Canción Anclada (Se ve en tu Perfil)", value=mis_datos.get("spotify_track_id", ""), placeholder="Ej: https://open.spotify.com/track/...")
                     
-                    # Logica de Spotify Manual (Fallback)
-                    sp_p = st.text_input("Link de Track de Spotify (Fallback Estático)", value=mis_datos.get("spotify_track_id", ""), placeholder="https://open.spotify.com/track/...")
-                    
-                    # Botón de Vinculación Real (OAuth)
                     if SPOTIPY_INSTALLED:
                         try:
                             sp_oauth = SpotifyOAuth(client_id=st.secrets["SPOTIFY_CLIENT_ID"], client_secret=st.secrets["SPOTIFY_CLIENT_SECRET"], redirect_uri=st.secrets["SPOTIFY_REDIRECT_URI"], scope="user-read-currently-playing")
                             auth_url = sp_oauth.get_authorize_url()
-                            st.markdown(f"[🔗 **Vincular cuenta real de Spotify para 'En vivo'**]({auth_url})")
-                        except: st.info("Para vincular Spotify real, el Admin debe configurar st.secrets.")
+                            st.markdown(f"[🔗 **Vincular cuenta de Spotify (Para emitir 'En Vivo')**]({auth_url})")
+                        except: st.info("Faltan credenciales de Spotify en st.secrets para conectar el vivo.")
 
                     if st.form_submit_button("Sincronizar Perfil"):
                         t_id = sp_p.split("track/")[1].split("?")[0] if "track/" in sp_p else sp_p
-                        db_users[us_act].update({"alias": al, "roles_fav": rf, "specs": spc, "spotify_track_id": t_id})
+                        db_users[us_act].update({"alias": al, "estado_txt": es, "roles_fav": rf, "specs": spc, "spotify_track_id": t_id})
                         guardar_y_recargar()
                         st.success("Perfil sincronizado.")
             st.divider()
             if st.button("Cerrar Sesión", type="secondary"): st.session_state["usuario_logueado"] = None; st.session_state["ruta"] = "Inicio"; st.rerun()
+
+        with t_g:
+            st.markdown("### Posts Guardados 🔖")
+            mis_g = mis_datos.get("guardados", [])
+            if not mis_g: st.info("No has guardado nada aún.")
+            for pid in mis_g:
+                post = next((p for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"] if p["id"] == pid), None)
+                if post:
+                    with st.container(border=True):
+                        st.write(f"**{db_users[post['usuario']]['nombre']}** - {post['timestamp']}")
+                        if post.get("texto"): st.write(post["texto"])
+                        if post.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{post['imagen']}' style='height:150px;border-radius:8px;'>", unsafe_allow_html=True)
+                        if st.button("Eliminar", key=f"ds_{pid}", type="secondary"):
+                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["guardados"].remove(pid)
+                            guardar_y_recargar()
 
         with t_cred:
             qr_b64 = generar_qr_base64(f"ID:{mis_datos.get('credencial')}|N:{mis_datos['nombre']}")
@@ -885,7 +966,7 @@ else:
                         else: st.success("Resuelto")
             else: st.warning("Solo Super Admins.")
 
-    # --- PROYECTO ---
+    # --- PROYECTO (HERRAMIENTAS INTACTAS) ---
     elif st.session_state["ruta"] == "Proyecto":
         pr = st.session_state["proyecto_activo"]
         pd_proy = st.session_state["proyectos"][pr]
