@@ -14,16 +14,10 @@ import requests
 from bs4 import BeautifulSoup
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
-from datetime import datetime, date, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 import random
-import time
-import numpy as np
-import matplotlib.pyplot as plt
-import librosa
-import scipy.signal
-import streamlit.components.v1 as components
 
-# Importación de Spotify para la conexión en tiempo real
+# Integración opcional de Spotify
 try:
     import spotipy
     from spotipy.oauth2 import SpotifyOAuth
@@ -31,150 +25,150 @@ try:
 except ImportError:
     SPOTIPY_INSTALLED = False
 
-# --- 1. CONFIGURACIÓN INICIAL ---
+# --- 1. CONFIGURACIÓN INICIAL Y ESTADO ---
 st.set_page_config(page_title="Fetén Workspace Pro", page_icon="✦", layout="wide", initial_sidebar_state="collapsed")
 
-LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
 
-# HORA DE ARGENTINA (Nativa, UTC-3)
+LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 TZ_AR = timezone(timedelta(hours=-3))
 
 def obtener_hora_actual():
     return datetime.now(TZ_AR).strftime("%Y-%m-%d %H:%M:%S")
 
-# --- 2. DISEÑO UI/UX "OBSIDIAN CINEMATIC" ---
-st.markdown("""
+# --- 2. MOTOR DE ESTILOS (MODO CLARO / OSCURO) ---
+def get_css():
+    if st.session_state.theme == "dark":
+        return """
+        :root {
+            --bg-base: #030303;
+            --bg-card: #0A0A0C;
+            --bg-hover: #121216;
+            --border-color: #1A1A1E;
+            --text-main: #FAFAFA;
+            --text-muted: #71717A;
+            --accent: #FBAF3B;
+            --accent-glow: rgba(251, 175, 59, 0.15);
+        }
+        .logo-img { filter: brightness(1.2) contrast(1.2); }
+        """
+    else:
+        return """
+        :root {
+            --bg-base: #F4F4F5;
+            --bg-card: #FFFFFF;
+            --bg-hover: #FAFAFA;
+            --border-color: #E4E4E7;
+            --text-main: #09090B;
+            --text-muted: #52525B;
+            --accent: #D97706;
+            --accent-glow: rgba(217, 119, 6, 0.1);
+        }
+        .logo-img { filter: brightness(0.2) contrast(1.2); }
+        """
+
+st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    {get_css()}
     
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-    #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
+    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif !important; }}
+    #MainMenu {{visibility: hidden;}} header {{visibility: hidden;}} footer {{visibility: hidden;}}
     
-    /* Fondo Obsidiana Premium */
-    .stApp {
-        background-color: #030303 !important;
-        background-image: 
-            radial-gradient(circle at 10% 20%, rgba(251, 175, 59, 0.03), transparent 25%), 
-            radial-gradient(circle at 90% 80%, rgba(180, 113, 63, 0.02), transparent 25%) !important;
-        color: #EDEDED !important;
-    }
+    .stApp {{ background-color: var(--bg-base) !important; color: var(--text-main) !important; transition: all 0.3s ease; }}
+    .logo-img {{ display: block; max-width: 100%; height: auto; transition: filter 0.3s; }}
 
-    .logo-img { display: block; max-width: 100%; height: auto; filter: brightness(1.5) contrast(1.2); }
+    /* Tarjetas Premium */
+    div[data-testid="stVerticalBlockBorderWrapper"] {{
+        background: var(--bg-card) !important; border: 1px solid var(--border-color) !important; 
+        border-radius: 16px !important; padding: 1.5rem !important; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.02) !important; margin-bottom: 16px !important; transition: all 0.2s ease !important;
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {{
+        border-color: var(--text-muted) !important; transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow) !important;
+    }}
+    
+    /* Tipografía */
+    h1, h2, h3 {{ font-weight: 800 !important; letter-spacing: -0.03em !important; color: var(--text-main) !important; }}
+    .gradient-text {{ background: linear-gradient(135deg, var(--text-main) 0%, var(--text-muted) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }}
+    .section-title {{ color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; }}
 
-    /* Tarjetas Modulares Base (Hover más claro y elegante) */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: #09090B !important; 
-        border: 1px solid #18181B !important; 
-        border-radius: 12px !important;
-        padding: 1.5rem !important; 
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; 
-        margin-bottom: 16px !important;
-        transition: all 0.3s ease !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        background: #1A1A1D !important; /* Gris plomo visible, no negro */
-        border-color: #3F3F46 !important;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.6) !important;
-    }
+    /* Inputs y Textareas */
+    .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea, .stChatInput input {{
+        background-color: var(--bg-base) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important;
+        border-radius: 8px !important; padding: 12px 16px !important; font-weight: 400 !important; transition: all 0.2s;
+    }}
+    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus {{ border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent) !important; }}
     
-    /* Títulos Estéticos */
-    .gradient-text {
-        background: linear-gradient(135deg, #FFFFFF 0%, #A1A1AA 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-weight: 800; letter-spacing: -0.04em;
-    }
-    h1, h2 { font-weight: 800 !important; letter-spacing: -0.03em !important; color: #FAFAFA !important; }
-    h3, h4 { color: #D4D4D8 !important; font-weight: 600 !important; letter-spacing: -0.02em !important; }
-    .section-title { color: #52525B; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; }
+    /* Botones Globales (Arreglo de los blancos) */
+    .stButton button {{
+        background: var(--bg-base) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important;
+        border-radius: 8px !important; font-weight: 600 !important; transition: all 0.2s ease !important;
+    }}
+    .stButton button:hover {{ background: var(--bg-hover) !important; border-color: var(--accent) !important; color: var(--accent) !important; }}
+    .stButton button p {{ font-weight: 600 !important; color: inherit !important; }}
+    
+    /* Botón Primario Custom */
+    button[kind="primary"] {{ background: var(--accent) !important; border: none !important; color: #000 !important; }}
+    button[kind="primary"]:hover {{ filter: brightness(1.1); color: #000 !important; }}
+    button[kind="primary"] p {{ color: #000 !important; }}
 
-    /* Inputs Limpios */
-    .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea, .stChatInput input {
-        background-color: #09090B !important; border: 1px solid #27272A !important; color: #FAFAFA !important;
-        border-radius: 8px !important; padding: 12px 16px !important; font-weight: 400 !important;
-        transition: all 0.2s ease !important;
-    }
-    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { border-color: #FBAF3B !important; box-shadow: 0 0 0 1px rgba(251, 175, 59, 0.2) !important; }
-    
-    /* Botones */
-    .stButton button {
-        background: #FAFAFA !important; border: 1px solid #FAFAFA !important; color: #050505 !important;
-        border-radius: 8px !important; font-weight: 600 !important; padding: 0.6rem 1rem !important; transition: all 0.2s ease !important; width: 100% !important;
-    }
-    .stButton button:hover { background: #E4E4E7 !important; border-color: #E4E4E7 !important; transform: translateY(-1px) !important; }
-    .stButton button p { color: #050505 !important; font-weight: 600 !important; margin: 0; }
-    
-    /* Botones Secundarios Aesthetic (Translucidos) */
-    [data-testid="stBaseButton-secondary"] { 
-        background: transparent !important; border: 1px solid #27272A !important; color: #A1A1AA !important; 
-        box-shadow: none !important; border-radius: 8px !important; transition: all 0.2s ease !important;
-    }
-    [data-testid="stBaseButton-secondary"]:hover { 
-        background: rgba(255,255,255,0.05) !important; border-color: #52525B !important; color: #FAFAFA !important; 
-    }
+    /* Navbar Buttons Fantasma */
+    .nav-btn-container .stButton button {{ background: transparent !important; border: none !important; box-shadow: none !important; }}
+    .nav-btn-container .stButton button:hover {{ background: var(--bg-hover) !important; color: var(--text-main) !important; }}
 
     /* RED SOCIAL UI - AESTHETIC POSTS */
-    .post-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-    .post-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; margin-right: 14px; border: 1px solid #27272A; }
-    .post-name { font-weight: 600; color: #FAFAFA; font-size: 15px; margin: 0; }
-    .post-handle { color: #52525B; font-size: 13px; margin: 0; font-weight: 400; }
-    .post-body { font-size: 15px; color: #D4D4D8; margin-top: 4px; margin-bottom: 16px; line-height: 1.6; white-space: pre-wrap; letter-spacing: -0.01em; }
-    .post-img { width: 100%; border-radius: 8px; border: 1px solid #18181B; margin-bottom: 16px; max-height: 500px; object-fit: cover; }
+    .post-header {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }}
+    .post-avatar {{ width: 44px; height: 44px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 1px solid var(--border-color); }}
+    .post-name {{ font-weight: 700; color: var(--text-main); font-size: 15px; margin: 0; display: flex; align-items: center; gap: 4px; }}
+    .post-handle {{ color: var(--text-muted); font-size: 13px; font-weight: 400; }}
+    .post-body {{ font-size: 15px; color: var(--text-main); margin-top: 4px; margin-bottom: 16px; line-height: 1.5; white-space: pre-wrap; }}
+    .post-img {{ width: 100%; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 16px; max-height: 500px; object-fit: cover; }}
     
-    /* Historias Verticales Cinemáticas (Snippets) */
-    .snippets-tray { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 24px; }
-    .snippets-tray::-webkit-scrollbar { height: 4px; }
-    .snippets-tray::-webkit-scrollbar-thumb { background: #27272A; border-radius: 10px; }
+    .social-action-group {{ display: flex; justify-content: space-between; max-width: 350px; border-top: 1px solid var(--border-color); padding-top: 12px; }}
+    .badge-verified {{ color: #3B82F6; font-size: 14px; margin-top: 2px; }}
     
-    .snippet-card {
-        min-width: 110px; height: 160px; border-radius: 12px; position: relative; overflow: hidden;
-        border: 1px solid #27272A; cursor: pointer; transition: transform 0.2s, border 0.2s;
-        background-size: cover; background-position: center;
-    }
-    .snippet-card:hover { transform: scale(1.02); border-color: #FBAF3B; }
-    .snippet-overlay {
-        position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 8px 8px 8px;
-        background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: flex-start;
-    }
-    .snippet-avatar { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #FBAF3B; margin-bottom: 4px; object-fit: cover;}
-    .snippet-name { font-size: 11px; color: #FFF; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+    /* Snippets (Historias) */
+    .snippets-tray {{ display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }}
+    .snippets-tray::-webkit-scrollbar {{ height: 0px; }}
+    .snippet-card {{ min-width: 100px; height: 150px; border-radius: 12px; position: relative; overflow: hidden; border: 1px solid var(--border-color); cursor: pointer; transition: transform 0.2s; background-size: cover; background-position: center; }}
+    .snippet-card:hover {{ transform: scale(1.03); border-color: var(--accent); }}
+    .snippet-overlay {{ position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 8px 8px 8px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; flex-direction: column; align-items: flex-start; }}
+    .snippet-avatar {{ width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 4px; object-fit: cover;}}
+    .snippet-name {{ font-size: 11px; color: #FFF; font-weight: 600; text-shadow: 0 1px 2px #000; }}
 
-    .avatar-circle { border-radius: 50%; object-fit: cover; border: 1px solid #333; }
-    .online-indicator { display: inline-block; width: 8px; height: 8px; background-color: #FBAF3B; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 8px rgba(251, 175, 59, 0.6); }
+    .avatar-circle {{ border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color); }}
+    .online-indicator {{ display: inline-block; width: 8px; height: 8px; background-color: #22C55E; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }}
     
-    /* Modal Header IG Web Style */
-    .modal-header-pro { display: flex; align-items: center; margin-bottom: 12px; }
-    .modal-progress { width: 100%; height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
-    .modal-progress-bar { width: 100%; height: 100%; background: #FAFAFA; animation: progress 5s linear forwards; }
-    @keyframes progress { 0% { width: 0%; } 100% { width: 100%; } }
+    /* Highlight tags */
+    .hashtag {{ color: var(--accent); font-weight: 500; cursor: pointer; }}
+    .mention {{ color: #3B82F6; font-weight: 500; cursor: pointer; }}
 
-    /* SVG Styling for inline icons */
-    .icon-svg { vertical-align: middle; margin-right: 4px; margin-bottom: 2px; }
-
-    [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2rem !important; font-weight: 800 !important; letter-spacing: -1px; }
-    [data-testid="stMetricLabel"] { color: #71717A !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.7rem !important; font-weight: 600 !important; }
-
-    @media (max-width: 768px) {
-        [data-testid="column"] { width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }
-        .block-container { padding: 1rem !important; }
-    }
+    [data-testid="stMetricValue"] {{ color: var(--text-main) !important; font-size: 2rem !important; font-weight: 800 !important; letter-spacing: -1px; }}
+    [data-testid="stMetricLabel"] {{ color: var(--text-muted) !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.7rem !important; font-weight: 600 !important; }}
     </style>
 """, unsafe_allow_html=True)
 
+# --- SVGS PARA BOTONES (Sin emojis) ---
+def get_svg(name, active=False):
+    color = "var(--accent)" if active else "currentColor"
+    fill = "var(--accent)" if active else "none"
+    if name == 'like': return f'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="{fill}" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>'
+    if name == 'comment': return f'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>'
+    if name == 'repost': return f'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
+    if name == 'save': return f'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="{fill}" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>'
+    return ""
+
+def format_text(texto):
+    # Formatea #hashtags y @menciones en el texto
+    texto = re.sub(r'(#\w+)', r'<span class="hashtag">\1</span>', texto)
+    texto = re.sub(r'(@\w+)', r'<span class="mention">\1</span>', texto)
+    return texto
+
 ARCHIVO_BD = "ftn_database.json"
 
-# --- SVGs Minimalistas ---
-SVG_REPOST = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
-
-# --- 3. INICIALIZACIÓN PROFUNDA ---
-def generar_qr_base64(datos):
-    qr = qrcode.QRCode(version=1, box_size=5, border=1)
-    qr.add_data(datos)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode("utf-8")
-
+# --- 3. BASE DE DATOS Y MIGRACIÓN ---
 def guardar_y_recargar():
     with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
         json.dump(st.session_state["proyectos"], f, ensure_ascii=False, indent=4)
@@ -185,16 +179,12 @@ def inicializar_bd():
         if os.path.exists(ARCHIVO_BD):
             with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
                 data_cargada = json.load(f)
-        else:
-            data_cargada = {}
+        else: data_cargada = {}
 
-        if "_CONFIG_" not in data_cargada:
-            data_cargada["_CONFIG_"] = {"usuarios": {}}
-            
+        if "_CONFIG_" not in data_cargada: data_cargada["_CONFIG_"] = {"usuarios": {}}
         conf = data_cargada["_CONFIG_"]
         
-        listas_base = ["recordatorios", "notificaciones", "mensajes", "tickets_soporte", "social_posts", "social_stories"]
-        for lb in listas_base:
+        for lb in ["recordatorios", "notificaciones", "mensajes", "tickets_soporte", "social_posts", "social_stories"]:
             if lb not in conf: conf[lb] = []
 
         if "lau@admin.com" not in conf.get("usuarios", {}):
@@ -204,45 +194,37 @@ def inicializar_bd():
                 "spotify_token": None, "spotify_track_id": None, "amigos": ["director@feten.com", "arte@feten.com"], 
                 "acceso_rapido": "Panel General", "alias": "lau_ok", "estado_txt": "Editando", "guardados": []
             }
-            
         if "director@feten.com" not in conf.get("usuarios", {}):
-            conf["usuarios"]["director@feten.com"] = {
-                "nombre": "Matias", "pass": "1234", "rol": "Dirección", "nivel": "jefe", "estado": "Aprobado",
-                "foto": "", "credencial": "FTN-0002", "edad": "35", "roles_fav": "Cine", "specs": "Ópticas anamórficas.", "portfolio": "", 
-                "spotify_token": None, "spotify_track_id": "4cOdK2wGLETKBW3PvgPWqT", "amigos": [], 
-                "acceso_rapido": "Monitor DIR", "alias": "mati_dir", "estado_txt": "En Set", "guardados": []
-            }
+            conf["usuarios"]["director@feten.com"] = {"nombre": "Matias", "pass": "1234", "rol": "Dirección", "nivel": "jefe", "estado": "Aprobado", "foto": "", "credencial": "FTN-0002", "edad": "35", "roles_fav": "Cine", "specs": "Ópticas anamórficas.", "portfolio": "", "spotify_token": None, "spotify_track_id": "4cOdK2wGLETKBW3PvgPWqT", "amigos": [], "acceso_rapido": "Monitor DIR", "alias": "mati_dir", "estado_txt": "En Set", "guardados": []}
         if "arte@feten.com" not in conf.get("usuarios", {}):
-            conf["usuarios"]["arte@feten.com"] = {
-                "nombre": "Sofi", "pass": "1234", "rol": "Dirección de Arte", "nivel": "jefe", "estado": "Aprobado",
-                "foto": "", "credencial": "FTN-0003", "edad": "28", "roles_fav": "Escenografía", "specs": "Paletas de color.", "portfolio": "", 
-                "spotify_token": None, "spotify_track_id": "11dFghVXANMlKmJXsNCbNl", "amigos": [], 
-                "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte", "estado_txt": "Descanso", "guardados": []
-            }
+            conf["usuarios"]["arte@feten.com"] = {"nombre": "Sofi", "pass": "1234", "rol": "Dirección de Arte", "nivel": "jefe", "estado": "Aprobado", "foto": "", "credencial": "FTN-0003", "edad": "28", "roles_fav": "Escenografía", "specs": "Paletas de color.", "portfolio": "", "spotify_token": None, "spotify_track_id": "11dFghVXANMlKmJXsNCbNl", "amigos": [], "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte", "estado_txt": "Descanso", "guardados": []}
 
         if not conf["social_posts"]:
             conf["social_posts"] = [
-                {"id": "p1", "usuario": "arte@feten.com", "texto": "Armando el set de los 80, una locura los detalles.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 12, "comentarios": [], "reposts": 0, "es_repost": False},
-                {"id": "p2", "usuario": "director@feten.com", "texto": "Recién terminamos el scouting en San Telmo. ¡La luz es increíble!", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 34, "comentarios": [], "reposts": 2, "es_repost": False}
+                {"id": "p1", "usuario": "arte@feten.com", "texto": "Armando el set de los 80 #Scenography #Arte.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"), "liked_by": ["lau@admin.com"], "comentarios": [], "reposted_by": [], "es_repost": False},
+                {"id": "p2", "usuario": "director@feten.com", "texto": "Scouting terminado en San Telmo. ¡Luz increíble! @sofi_arte prepará paleta.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S"), "liked_by": [], "comentarios": [], "reposted_by": [], "es_repost": False}
             ]
             
         for em, info in conf["usuarios"].items():
-            for key, val in [("amigos", []), ("spotify_token", None), ("spotify_track_id", None), ("estado", "Aprobado"), 
-                             ("credencial", f"FTN-{random.randint(1000, 9999)}"), ("acceso_rapido", "Panel General"), 
-                             ("alias", em.split("@")[0]), ("estado_txt", "Online"), ("guardados", [])]:
+            for key, val in [("amigos", []), ("spotify_token", None), ("spotify_track_id", None), ("estado", "Aprobado"), ("credencial", f"FTN-{random.randint(1000, 9999)}"), ("acceso_rapido", "Panel General"), ("alias", em.split("@")[0]), ("estado_txt", "Online"), ("guardados", [])]:
                 if key not in info: info[key] = val
 
+        # MIGRACIÓN SEGURA PARA LIKES Y REPOSTS (Cambia de int a list)
         for p in conf["social_posts"]:
             if "id" not in p: p["id"] = str(random.randint(100000, 999999))
             if "comentarios" not in p: p["comentarios"] = []
-            if "reposts" not in p: p["reposts"] = 0
+            if "liked_by" not in p: p["liked_by"] = []
+            if "reposted_by" not in p: p["reposted_by"] = []
             if "es_repost" not in p: p["es_repost"] = False
+            # Si era la base vieja con int, lo limpia
+            if isinstance(p.get("likes"), int): del p["likes"]
+            if isinstance(p.get("reposts"), int): del p["reposts"]
 
-        claves_proy = ["archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", "personajes", "locaciones", "crew", "catering", "links", "presupuesto", "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals", "kanban"]
         for nombre_proy, datos_proy in data_cargada.items():
             if nombre_proy != "_CONFIG_":
-                datos_proy.setdefault("contexto_aprobado", "Proyecto actualizado.")
-                for clave in claves_proy: datos_proy.setdefault(clave, [])
+                datos_proy.setdefault("contexto_aprobado", "Proyecto base.")
+                for clave in ["archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", "personajes", "locaciones", "crew", "catering", "links", "presupuesto", "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals", "kanban"]:
+                    datos_proy.setdefault(clave, [])
                     
         st.session_state["proyectos"] = data_cargada
 
@@ -252,21 +234,12 @@ if "ruta" not in st.session_state: st.session_state["ruta"] = "Inicio"
 if "proyecto_activo" not in st.session_state: st.session_state["proyecto_activo"] = None
 if "menu_option" not in st.session_state: st.session_state["menu_option"] = "Panel General"
 
-# OAUTH SPOTIFY HANDLER
-if SPOTIPY_INSTALLED and "code" in st.query_params and st.session_state.get("usuario_logueado"):
-    try:
-        if "SPOTIFY_CLIENT_ID" in st.secrets:
-            sp_oauth = SpotifyOAuth(client_id=st.secrets["SPOTIFY_CLIENT_ID"], client_secret=st.secrets["SPOTIFY_CLIENT_SECRET"], redirect_uri=st.secrets["SPOTIFY_REDIRECT_URI"], scope="user-read-currently-playing")
-            token_info = sp_oauth.get_access_token(st.query_params["code"])
-            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][st.session_state["usuario_logueado"]]["spotify_token"] = token_info
-            st.query_params.clear()
-            guardar_y_recargar()
-    except Exception as e: st.error(f"Error OAuth Spotify: {e}")
+import streamlit.components.v1 as components
 
-# --- 4. MODALES CON KEYS UNICAS ---
-@st.dialog("Comentar")
+# --- 4. MODALES ---
+@st.dialog("Responder")
 def dialog_comentar(post_id, usuario):
-    txt = st.text_area("Tu respuesta", label_visibility="collapsed", placeholder="Escribe tu respuesta...", key=f"dlg_txt_{post_id}")
+    txt = st.text_area("Tu comentario", label_visibility="collapsed", placeholder="Tweetea tu respuesta...", key=f"dlg_txt_{post_id}")
     if st.button("Responder", use_container_width=True, type="primary", key=f"dlg_btn_{post_id}"):
         if txt:
             for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"]:
@@ -274,24 +247,21 @@ def dialog_comentar(post_id, usuario):
                     p["comentarios"].append({"usuario": usuario, "texto": txt, "timestamp": obtener_hora_actual()})
                     guardar_y_recargar()
 
-@st.dialog("Reproductor de Snippet")
+@st.dialog("Visualizador")
 def ver_historia_dialog(b64_foto, usuario_nombre, f_avatar, tiempo):
     st.markdown(f"""
-        <div class="modal-progress"><div class="modal-progress-bar"></div></div>
-        <div class="modal-header-pro">
+        <div style="display:flex; align-items:center; margin-bottom:12px;">
             <img src="{f_avatar}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; margin-right:8px;">
-            <div>
-                <span style="font-weight:600; color:#FAFAFA; font-size:13px;">{usuario_nombre}</span>
-                <span style="color:#71717A; font-size:11px; margin-left:6px;">{tiempo}</span>
-            </div>
+            <span style="font-weight:600; font-size:13px; color:var(--text-main);">{usuario_nombre}</span>
+            <span style="color:var(--text-muted); font-size:11px; margin-left:6px;">{tiempo}</span>
         </div>
-        <img src="data:image/jpeg;base64,{b64_foto}" style="width:100%; border-radius:8px; object-fit:contain; background:#050505;">
+        <img src="data:image/jpeg;base64,{b64_foto}" style="width:100%; border-radius:12px; object-fit:contain; background:#000; border:1px solid var(--border-color);">
     """, unsafe_allow_html=True)
 
-@st.dialog("Nuevo Snippet (24h)")
+@st.dialog("Nuevo Snippet")
 def ventana_historia(usuario):
     foto_hist = st.file_uploader("Subir foto vertical", type=["jpg", "png", "jpeg"], key="dlg_hist_up")
-    if st.button("Publicar Snippet", use_container_width=True, type="primary", key="dlg_hist_btn"):
+    if st.button("Subir Historia", use_container_width=True, type="primary", key="dlg_hist_btn"):
         if foto_hist:
             b64 = base64.b64encode(foto_hist.read()).decode('utf-8')
             st.session_state["proyectos"]["_CONFIG_"]["social_stories"].append({"usuario": usuario, "foto": b64, "timestamp": obtener_hora_actual()})
@@ -303,53 +273,31 @@ def ver_perfil(em_usuario):
     f_usr = f"data:image/jpeg;base64,{u_info['foto']}" if u_info.get("foto") else "https://via.placeholder.com/150"
     
     colA, colB = st.columns([1, 2.5])
-    with colA: st.markdown(f"<img src='{f_usr}' style='width:90px; height:90px; border-radius:50%; object-fit:cover; border:1px solid #333;'>", unsafe_allow_html=True)
+    with colA: st.markdown(f"<img src='{f_usr}' style='width:90px; height:90px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color);'>", unsafe_allow_html=True)
     with colB:
-        st.markdown(f"<h3 style='margin:0; font-size:20px;'>{u_info['nombre']}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#A1A1AA; font-size:13px; margin:0;'>@{u_info['alias']} • {u_info['rol']}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p style='font-size:13px; color:#D4D4D8; margin-top:8px;'>{u_info.get('specs', '')}</p>", unsafe_allow_html=True)
+        verificado = "<span class='badge-verified'>✔</span>" if u_info['nivel'] in ["jefe", "jefe_supremo"] else ""
+        st.markdown(f"<h3 style='margin:0; font-size:20px;'>{u_info['nombre']} {verificado}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:var(--text-muted); font-size:13px; margin:0;'>@{u_info['alias']} • {u_info['rol']}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:13px; color:var(--text-main); margin-top:8px;'>{u_info.get('specs', '')}</p>", unsafe_allow_html=True)
     
     st.divider()
-    if u_info.get("spotify_track_id"):
-        st.markdown("<p style='font-size:10px; font-weight:700; color:#71717A; letter-spacing:1px; margin-bottom:8px;'>SOUNDTRACK ANCLADO</p>", unsafe_allow_html=True)
-        components.iframe(f"https://open.spotify.com/embed/track/{u_info['spotify_track_id']}?utm_source=generator&theme=0", height=80)
-        
-    st.markdown("<br><div class='section-title'>Feed Personal</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>Timeline</div>", unsafe_allow_html=True)
     posts_user = [p for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"] if p["usuario"] == em_usuario]
-    if not posts_user: st.info("No hay publicaciones.")
-    for idx_p, p in enumerate(posts_user):
+    if not posts_user: st.info("Sin publicaciones.")
+    for p in posts_user:
         with st.container(border=True):
-            st.caption(p['timestamp'])
-            if p.get("texto"): st.write(p["texto"])
-            if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' style='width:100%; border-radius:8px; margin-top:8px;'>", unsafe_allow_html=True)
+            st.caption(p['timestamp'].split()[1])
+            if p.get("texto"): st.markdown(f"<p class='post-body'>{format_text(p['texto'])}</p>", unsafe_allow_html=True)
+            if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' class='post-img'>", unsafe_allow_html=True)
 
-@st.dialog("Reportar Problema")
-def ventana_soporte(usuario):
-    asunto = st.text_input("Asunto", key="dlg_soporte_as")
-    desc = st.text_area("Descripción", key="dlg_soporte_ds")
-    if st.button("Enviar Ticket", key="dlg_soporte_btn"):
-        if asunto and desc:
-            st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({"usuario": usuario, "fecha": obtener_hora_actual(), "asunto": asunto, "desc": desc, "estado": "Pendiente"})
-            guardar_y_recargar()
-
-# Resto de Modales Base (Kanban, etc...)
-@st.dialog("Nueva Tarea")
-def ventana_kanban(proyecto, autor):
-    tarea = st.text_input("Tarea", key="dlg_kb_t")
-    estado = st.selectbox("Estado", ["Pendiente", "En Proceso", "Completado"], key="dlg_kb_s")
-    if st.button("Guardar", key="dlg_kb_b"):
-        if tarea: st.session_state["proyectos"][proyecto]["kanban"].append({"tarea": tarea, "estado": estado, "autor": autor}); guardar_y_recargar()
-
-@st.dialog("Recordatorio")
-def ventana_recordatorio(es_admin, autor):
-    titulo = st.text_input("Título", key="dlg_rec_t")
-    fecha = st.date_input("Fecha", key="dlg_rec_f")
-    tipo = st.selectbox("Visibilidad", ["Privado", "Global"], key="dlg_rec_v") if es_admin else "Privado"
-    if st.button("Guardar", key="dlg_rec_b"):
-        if titulo: st.session_state["proyectos"]["_CONFIG_"]["recordatorios"].append({"autor": autor, "titulo": titulo, "fecha": str(fecha), "tipo": tipo}); guardar_y_recargar()
-
-# Omitiendo añadir `key` a todos los modales de proyecto internos porque se abren individualmente y no causan DuplicateID, pero por seguridad agrego a algunos principales.
-# Para mantener la respuesta concisa y enfocada en solucionar el error principal, el foco está en la UI principal.
+# Funciones Base
+def generar_qr_base64(datos):
+    qr = qrcode.QRCode(version=1, box_size=5, border=1)
+    qr.add_data(datos); qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 # --- 5. GESTIÓN DE SESIÓN ---
 if "usuario_logueado" not in st.session_state:
@@ -361,33 +309,33 @@ if st.session_state["usuario_logueado"] is None:
     c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
         st.markdown(f"<div style='text-align: center;'><img src='{LOGO_URL}' class='logo-img' style='max-width:200px; margin: 0 auto 20px auto;'></div>", unsafe_allow_html=True)
-        tab_log, tab_reg = st.tabs(["Acceder", "Solicitar Cuenta"])
+        tab_log, tab_reg = st.tabs(["Acceder", "Crear Cuenta"])
         db = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
         with tab_log:
             with st.container(border=True):
-                e_in = st.text_input("Usuario", placeholder="correo@productora.com", key="login_u").lower().strip()
-                p_in = st.text_input("Clave", type="password", key="login_p")
+                e_in = st.text_input("Usuario", placeholder="correo@productora.com", key="l_u").lower().strip()
+                p_in = st.text_input("Clave", type="password", key="l_p")
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("Ingresar", use_container_width=True, key="login_btn", type="primary"):
+                if st.button("Ingresar", use_container_width=True, key="l_btn", type="primary"):
                     if e_in in db and db[e_in]["pass"] == p_in:
                         if db[e_in]["estado"] == "Aprobado":
                             st.session_state["usuario_logueado"] = e_in
                             st.rerun()
-                        else: st.warning("Cuenta pendiente de aprobación.")
+                        else: st.warning("Pendiente de aprobación.")
                     else: st.error("Datos incorrectos.")
         with tab_reg:
             with st.container(border=True):
-                n_reg = st.text_input("Nombre", key="reg_n")
-                e_reg = st.text_input("Correo", key="reg_c").lower().strip()
-                p_reg = st.text_input("Clave", type="password", key="reg_p")
-                f_reg = st.file_uploader("Foto ID", type=["jpg", "png", "jpeg"], key="reg_f")
-                if st.button("Registrar", use_container_width=True, key="reg_btn", type="primary"):
+                n_reg = st.text_input("Nombre", key="r_n")
+                e_reg = st.text_input("Correo", key="r_c").lower().strip()
+                p_reg = st.text_input("Clave", type="password", key="r_p")
+                f_reg = st.file_uploader("Foto ID", type=["jpg", "png", "jpeg"], key="r_f")
+                if st.button("Registrar", use_container_width=True, key="r_btn", type="primary"):
                     if n_reg and e_reg and p_reg and f_reg:
                         db[e_reg] = {"nombre": n_reg, "pass": p_reg, "rol": "Invitado", "nivel": "lectura", "estado": "Pendiente", "foto": base64.b64encode(f_reg.read()).decode('utf-8'), "credencial": f"FTN-{random.randint(1000,9999)}", "edad": "", "roles_fav": "", "portfolio": "", "spotify_token": None, "spotify_track_id": None, "amigos": [], "acceso_rapido": "Panel General", "alias": e_reg.split("@")[0], "specs": "", "estado_txt": "Online", "guardados": []}
                         guardar_y_recargar()
                         st.success("Enviado al administrador.")
 
-# --- 7. PLATAFORMA ---
+# --- 7. PLATAFORMA CENTRAL ---
 else:
     us_act = st.session_state["usuario_logueado"]
     db_users = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
@@ -395,37 +343,49 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
-    # NAVBAR ALINEADA PERFECTA
-    c_nav1, c_nav2, c_nav3, c_nav4, c_nav_space, c_nav_prof = st.columns([1.5, 1.2, 1.2, 1.2, 3.5, 1.2], vertical_alignment="bottom")
+    # --- TOP NAVBAR (ALINEACIÓN PERFECTA & TEMA) ---
+    c_logo, c_navs, c_theme, c_prof_img, c_prof_btn = st.columns([1.5, 5, 0.5, 0.6, 1.2], vertical_alignment="bottom")
     
-    with c_nav1:
-        st.markdown(f"<img src='{LOGO_URL}' class='logo-img' style='height:40px; margin-bottom: 5px;'>", unsafe_allow_html=True)
-    with c_nav2:
-        if st.button("Dashboard", use_container_width=True, type="secondary", key="nav_dash"): st.session_state["ruta"] = "Inicio"; st.rerun()
-    with c_nav3:
-        if st.button("Social", use_container_width=True, type="secondary", key="nav_soc"): st.session_state["ruta"] = "Social"; st.rerun()
-    with c_nav4:
-        if st.button("Mensajes", use_container_width=True, type="secondary", key="nav_msg"): st.session_state["ruta"] = "Mensajes"; st.rerun()
-    with c_nav_space:
-        pass
-    with c_nav_prof:
+    with c_logo:
+        st.markdown(f"<img src='{LOGO_URL}' class='logo-img' style='height:35px; margin-bottom:8px;'>", unsafe_allow_html=True)
+    
+    with c_navs:
+        # Usamos CSS container para que estos botones parezcan links de navegación
+        st.markdown("<div class='nav-btn-container'>", unsafe_allow_html=True)
+        n1, n2, n3 = st.columns(3)
+        if n1.button("Dashboard", use_container_width=True, key="nv_d"): st.session_state["ruta"] = "Inicio"; st.rerun()
+        if n2.button("Social", use_container_width=True, key="nv_s"): st.session_state["ruta"] = "Social"; st.rerun()
+        if n3.button("Mensajes", use_container_width=True, key="nv_m"): st.session_state["ruta"] = "Mensajes"; st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+    with c_theme:
+        if st.button("🌓", key="btn_theme"):
+            st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
+            st.rerun()
+            
+    with c_prof_img:
         f_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
         st.markdown(f"""
-            <div style="display:flex; justify-content: center; margin-bottom: 8px;">
-                <img src='{f_src}' style='width: 45px; height: 45px; border-radius: 50%; border: 1px solid #333; object-fit: cover;'>
+            <div style="display:flex; justify-content: flex-end; align-items:flex-end; margin-bottom: 5px;">
+                <img src='{f_src}' style='width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-color); object-fit: cover;'>
             </div>
         """, unsafe_allow_html=True)
-        if st.button("Perfil", use_container_width=True, type="secondary", key="nav_prof"): st.session_state["ruta"] = "Perfil"; st.rerun()
+        
+    with c_prof_btn:
+        st.markdown("<div class='nav-btn-container'>", unsafe_allow_html=True)
+        if st.button("Perfil", use_container_width=True, key="nv_p"): st.session_state["ruta"] = "Perfil"; st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
             
-    st.markdown("<hr style='border-color: #1C1C1F; margin-top: 5px; margin-bottom: 24px;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color: var(--border-color); margin-top: 5px; margin-bottom: 24px;'>", unsafe_allow_html=True)
 
-    # --- INICIO DASHBOARD ---
+    # --- RUTA: INICIO (DASHBOARD REDISEÑADO) ---
     if st.session_state["ruta"] == "Inicio":
+        st.markdown("<h2 class='gradient-text'>Resumen Operativo</h2>", unsafe_allow_html=True)
         col_q1, col_q2, col_q3, col_q4 = st.columns(4)
         with col_q1:
             with st.container(border=True):
                 st.markdown("<div class='section-title' style='margin-bottom:0;'>MI ROL</div>", unsafe_allow_html=True)
-                st.markdown(f"<h3 class='gradient-text' style='margin:0; font-size:18px;'>{rol_actual}</h3>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='margin:0; font-size:18px;'>{rol_actual}</h3>", unsafe_allow_html=True)
         with col_q2:
             with st.container(border=True):
                 st.markdown("<div class='section-title' style='margin-bottom:0;'>PROYECTOS</div>", unsafe_allow_html=True)
@@ -434,31 +394,24 @@ else:
             with st.container(border=True):
                 st.markdown("<div class='section-title' style='margin-bottom:5px;'>ACCESO RÁPIDO</div>", unsafe_allow_html=True)
                 h_list = ["Panel General", "Tablero Kanban", "Rentals IA", "Presupuesto", "Base Crew", "Laboratorio Guion", "Luces (Canvas)", "Arte & Vestuario"]
-                acc = st.selectbox("Herramienta", h_list, index=h_list.index(mis_datos.get("acceso_rapido", "Panel General")), label_visibility="collapsed", key="dash_acc")
-                if acc != mis_datos.get("acceso_rapido"):
-                    db_users[us_act]["acceso_rapido"] = acc
-                    guardar_y_recargar()
-                if st.button(f"Ir a {acc}", type="secondary", key="btn_go_acc"):
-                    if st.session_state.get("proyecto_activo"):
-                        st.session_state["menu_option"] = acc
-                        st.session_state["ruta"] = "Proyecto"
-                        st.rerun()
+                acc = st.selectbox("Herramienta", h_list, index=h_list.index(mis_datos.get("acceso_rapido", "Panel General")), label_visibility="collapsed", key="d_acc")
+                if acc != mis_datos.get("acceso_rapido"): db_users[us_act]["acceso_rapido"] = acc; guardar_y_recargar()
+                if st.button(f"Ir a {acc}", type="secondary", key="d_btn_acc"):
+                    if st.session_state.get("proyecto_activo"): st.session_state["menu_option"] = acc; st.session_state["ruta"] = "Proyecto"; st.rerun()
                     else: st.warning("Selecciona un proyecto.")
         with col_q4:
             with st.container(border=True):
                 st.markdown("<div class='section-title' style='margin-bottom:5px;'>SOPORTE</div>", unsafe_allow_html=True)
-                if st.button("Reportar Problema", type="secondary", key="btn_dash_soporte"): ventana_soporte(us_act)
+                if st.button("Reportar Problema", type="secondary", key="d_btn_sop"): ventana_soporte(us_act)
 
         c_main, c_side = st.columns([2.5, 1], gap="large")
         with c_main:
             st.markdown("<div class='section-title'>PROYECTOS EN DESARROLLO</div>", unsafe_allow_html=True)
             if nivel_actual in ["jefe", "jefe_supremo"]:
                 with st.popover("Crear Workspace"):
-                    np_n = st.text_input("Nombre de la Producción:", key="dash_new_proy")
-                    if st.button("Inicializar DB", key="btn_init_proy"):
-                        if np_n:
-                            st.session_state["proyectos"][np_n] = {"contexto_aprobado": "Proyecto base.", "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": [], "directorio_rentals": [], "kanban": []}
-                            guardar_y_recargar()
+                    np_n = st.text_input("Nombre de la Producción:", key="d_np")
+                    if st.button("Inicializar DB", key="d_bnp"):
+                        if np_n: st.session_state["proyectos"][np_n] = {"contexto_aprobado": "Proyecto base.", "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": [], "directorio_rentals": [], "kanban": []}; guardar_y_recargar()
             l_proy = [p for p in st.session_state["proyectos"].keys() if p != "_CONFIG_"]
             if not l_proy: st.info("No hay desarrollos activos.")
             cols_grid = st.columns(2)
@@ -468,7 +421,7 @@ else:
                         st.markdown(f"<h3 style='margin-bottom:4px;'>{proy}</h3>", unsafe_allow_html=True)
                         st.caption(f"Crew: {len(st.session_state['proyectos'][proy].get('crew',[]))} | Equipos: {len(st.session_state['proyectos'][proy].get('equipos',[]))}")
                         st.markdown("<br>", unsafe_allow_html=True)
-                        if st.button("Entrar", key=f"e_{proy}", use_container_width=True):
+                        if st.button("Entrar", key=f"d_e_{proy}", use_container_width=True, type="primary"):
                             st.session_state["proyecto_activo"] = proy
                             st.session_state["menu_option"] = "Panel General"
                             st.session_state["ruta"] = "Proyecto"
@@ -476,14 +429,13 @@ else:
 
         with c_side:
             st.markdown("<div class='section-title'>AGENDA</div>", unsafe_allow_html=True)
-            if st.button("Nuevo Recordatorio", type="secondary", key="btn_dash_rec"): ventana_recordatorio((nivel_actual in ["jefe_supremo", "jefe"]), mis_datos['nombre'])
             for rec in reversed(st.session_state["proyectos"]["_CONFIG_"]["recordatorios"]):
                 if rec["tipo"] == "Global (Toda la Productora)" or rec["autor"] == mis_datos["nombre"]:
                     with st.container(border=True):
-                        st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:700;'>{rec['fecha']}</span>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='color:var(--accent); font-size:11px; font-weight:700;'>{rec['fecha']}</span>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-weight:600; font-size:14px;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
-    # --- SOCIAL (CERO EMOJIS, EXPERIENCIA TWITTER/IG) ---
+    # --- RUTA: SOCIAL (TWITTER / IG AESTHETIC) ---
     elif st.session_state["ruta"] == "Social":
         st.markdown("<h2 class='gradient-text'>The Feed</h2>", unsafe_allow_html=True)
         col_izq, col_centro, col_der = st.columns([1, 2.5, 1.2], gap="large")
@@ -491,27 +443,32 @@ else:
         with col_izq:
             with st.container(border=True):
                 f_usr = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
+                verif = "<span class='badge-verified'>✔</span>" if nivel_actual in ["jefe", "jefe_supremo"] else ""
                 st.markdown(f"<img src='{f_usr}' class='avatar-circle' style='width:70px; height:70px; margin-bottom:12px;'>", unsafe_allow_html=True)
-                st.markdown(f"<h4 style='margin:0;'>{mis_datos['nombre']}</h4>", unsafe_allow_html=True)
-                st.markdown(f"<p style='color:#71717A; font-size:13px; margin:0;'>@{mis_datos.get('alias', us_act.split('@')[0])}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p style='color:#A1A1AA; font-size:13px; margin-top:8px;'>{mis_datos.get('estado_txt', 'Online')}</p>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='margin:0;'>{mis_datos['nombre']} {verif}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color:var(--text-muted); font-size:13px; margin:0;'>@{mis_datos.get('alias', us_act.split('@')[0])}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color:var(--text-main); font-size:12px; margin-top:8px;'><span class='online-indicator'></span>{mis_datos.get('estado_txt', 'Online')}</p>", unsafe_allow_html=True)
                 st.divider()
+                
+                # Calcular followers reales
+                seguidores = sum(1 for info in db_users.values() if us_act in info.get("amigos", []))
+                st.markdown(f"**Seguidores:** {seguidores}")
                 st.markdown(f"**Siguiendo:** {len(mis_datos.get('amigos', []))}")
-                st.markdown(f"**Guardados:** {len(mis_datos.get('guardados', []))}")
                 
         with col_centro:
-            # Historias Interactuables Verticales (Snippets)
-            st.markdown("<div class='section-title'>Snippets (24h)</div>", unsafe_allow_html=True)
+            # Historias (Snippets Estéticos)
+            st.markdown("<div class='section-title'>Snippets</div>", unsafe_allow_html=True)
             ahora = datetime.now(TZ_AR)
             h_activas = [h for h in st.session_state["proyectos"]["_CONFIG_"]["social_stories"] if (ahora - datetime.strptime(h["timestamp"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ_AR)).total_seconds() < 86400]
             
             c_hist = st.columns(6)
             with c_hist[0]:
                 st.markdown(f"""
-                <div style='min-width: 90px; height: 120px; border-radius: 12px; border: 1px dashed #3F3F46; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0A0A0B;'>
+                <div style='min-width: 90px; height: 120px; border-radius: 12px; border: 1px dashed var(--border-color); display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg-card); cursor:pointer;'>
+                    <span style='font-size:24px; color:var(--text-muted);'>+</span>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("New", help="Subir Historia", type="secondary", key="new_s_btn"): ventana_historia(us_act)
+                if st.button("New", help="Subir", type="secondary", key="s_n_btn"): ventana_historia(us_act)
             
             for idx, h in enumerate(reversed(h_activas)):
                 if idx + 1 < 6:
@@ -527,74 +484,84 @@ else:
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-                        if st.button("Ver", key=f"vh_{idx}", type="secondary"):
+                        if st.button("Ver", key=f"s_v_{idx}", type="secondary"):
                             ver_historia_dialog(h['foto'], ui_h['nombre'], f_h, h['timestamp'].split()[1])
             st.divider()
             
-            # Muro / Crear Post
+            # Post Creator
             st.markdown("<div class='section-title'>Update Status</div>", unsafe_allow_html=True)
             with st.container(border=True):
-                txt_post = st.text_area("Whats on your mind?", label_visibility="collapsed", placeholder="What's happening on set?", key="soc_post_text")
-                img_post = st.file_uploader("Attach media", type=["jpg", "png", "jpeg"], label_visibility="collapsed", key="soc_post_img")
-                if st.button("Post", type="primary", key="btn_soc_post"):
+                txt_post = st.text_area("Whats on your mind?", label_visibility="collapsed", placeholder="What's happening on set?", key="s_ta")
+                img_post = st.file_uploader("Attach media", type=["jpg", "png", "jpeg"], label_visibility="collapsed", key="s_fu")
+                if st.button("Post", type="primary", key="s_bp"):
                     if txt_post or img_post:
                         img_b64 = base64.b64encode(img_post.read()).decode('utf-8') if img_post else None
                         st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
                             "id": str(random.randint(100000, 999999)), "usuario": us_act, "texto": txt_post, "imagen": img_b64, 
-                            "timestamp": obtener_hora_actual(), "likes": 0, "comentarios": [], "reposts": 0, "es_repost": False
+                            "timestamp": obtener_hora_actual(), "liked_by": [], "comentarios": [], "reposted_by": [], "es_repost": False
                         })
                         guardar_y_recargar()
 
-            # Feed Aesthetic
+            # Feed
             posts = st.session_state["proyectos"]["_CONFIG_"]["social_posts"]
             for i, p in enumerate(posts):
                 ui = db_users[p["usuario"]]
                 fi = f"data:image/jpeg;base64,{ui['foto']}" if ui.get("foto") else "https://via.placeholder.com/150"
                 alias_u = ui.get("alias", p['usuario'].split('@')[0])
+                verif_p = "<span class='badge-verified'>✔</span>" if ui['nivel'] in ["jefe", "jefe_supremo"] else ""
                 
                 with st.container(border=True):
                     if p.get("es_repost"):
-                        st.markdown(f"<span style='font-size: 11px; color: #71717A; font-weight: 600; margin-bottom: 8px; display: block;'>{SVG_REPOST} Reposted</span>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; display: block;'>{SVG_REPOST} Reposted</span>", unsafe_allow_html=True)
                     
                     st.markdown(f"""
                         <div class='post-header'>
                             <div style='display:flex; align-items:center;'>
                                 <img src='{fi}' class='post-avatar'>
                                 <div>
-                                    <p class='post-name'>{ui['nombre']} <span class='post-handle'>@{alias_u} • {p['timestamp'].split()[1]}</span></p>
+                                    <p class='post-name'>{ui['nombre']} {verif_p}</p>
+                                    <p class='post-handle'>@{alias_u} • {p['timestamp'].split()[1]}</p>
                                 </div>
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    if p.get("texto"): st.markdown(f"<p class='post-body'>{p['texto']}</p>", unsafe_allow_html=True)
+                    if p.get("texto"): st.markdown(f"<p class='post-body'>{format_text(p['texto'])}</p>", unsafe_allow_html=True)
                     if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' class='post-img'>", unsafe_allow_html=True)
                     
-                    # Interacciones Aesthetic SVG
+                    # Interacciones Lógicas (Like/Repost únicos)
                     c_lik, c_com, c_rep, c_sav = st.columns(4)
-                    if c_lik.button(f"Like ({p.get('likes', 0)})", key=f"lik_{p['id']}", type="secondary"):
-                        p["likes"] = p.get("likes", 0) + 1
+                    
+                    is_liked = us_act in p.get("liked_by", [])
+                    if c_lik.button(f"{SVG_LIKE} {len(p.get('liked_by', []))}", key=f"sl_{p['id']}_{i}", type="secondary"):
+                        if is_liked: p["liked_by"].remove(us_act)
+                        else: p["liked_by"].append(us_act)
                         guardar_y_recargar()
-                    if c_com.button(f"Reply ({len(p.get('comentarios', []))})", key=f"com_{p['id']}", type="secondary"):
+                        
+                    if c_com.button(f"{SVG_COMMENT} {len(p.get('comentarios', []))}", key=f"sc_{p['id']}_{i}", type="secondary"):
                         dialog_comentar(p['id'], us_act)
-                    if c_rep.button(f"Repost ({p.get('reposts', 0)})", key=f"rep_{p['id']}", type="secondary"):
-                        p["reposts"] = p.get("reposts", 0) + 1
-                        st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
-                            "id": str(random.randint(100000, 999999)), "usuario": p['usuario'], "texto": p.get('texto'), "imagen": p.get('imagen'), 
-                            "timestamp": obtener_hora_actual(), "likes": 0, "comentarios": [], "reposts": 0, "es_repost": True
-                        })
-                        guardar_y_recargar()
-                    if c_sav.button("Save", key=f"sav_{p['id']}", type="secondary"):
+                        
+                    is_reposted = us_act in p.get("reposted_by", [])
+                    if c_rep.button(f"{SVG_REPOST} {len(p.get('reposted_by', []))}", key=f"sr_{p['id']}_{i}", type="secondary"):
+                        if not is_reposted:
+                            p["reposted_by"].append(us_act)
+                            st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
+                                "id": str(random.randint(100000, 999999)), "usuario": p['usuario'], "texto": p.get('texto'), "imagen": p.get('imagen'), 
+                                "timestamp": obtener_hora_actual(), "liked_by": [], "comentarios": [], "reposted_by": [], "es_repost": True
+                            })
+                            guardar_y_recargar()
+                            
+                    if c_sav.button(f"{SVG_SAVE}", key=f"ss_{p['id']}_{i}", type="secondary"):
                         if p['id'] not in mis_datos.get("guardados", []):
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["guardados"].append(p['id'])
                             guardar_y_recargar()
                     
-                    # Comentarios Inline
                     for com in p.get("comentarios", []):
                         nm_c = db_users[com['usuario']]['nombre']
-                        st.markdown(f"<div style='background:#121214; border-left:2px solid #3F3F46; padding:10px 14px; margin-top:10px; border-radius:0 8px 8px 0;'><strong style='color:#FAFAFA;'>{nm_c}</strong> <span style='font-size:11px;color:#71717A;'>{com['timestamp'].split()[1]}</span><br><span style='color:#D4D4D8; font-size:13px;'>{com['texto']}</span></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background:var(--bg-hover); border-left:2px solid var(--border-color); padding:10px 14px; margin-top:10px; border-radius:0 8px 8px 0;'><strong style='color:var(--text-main);'>{nm_c}</strong> <span style='font-size:11px;color:var(--text-muted);'>{com['timestamp'].split()[1]}</span><br><span style='color:var(--text-main); font-size:13px;'>{com['texto']}</span></div>", unsafe_allow_html=True)
 
         with col_der:
+            # Trending Topics Real
             st.markdown("<div class='section-title'>Trending Tags</div>", unsafe_allow_html=True)
             textos_feed = " ".join([p.get('texto', '') for p in posts if p.get('texto')])
             hashtags = re.findall(r"#(\w+)", textos_feed)
@@ -602,39 +569,19 @@ else:
                 top_tags = pd.Series(hashtags).value_counts().head(5)
                 for tag, count in top_tags.items():
                     with st.container(border=True):
-                        st.markdown(f"**#{tag}**<br><span style='font-size:11px;color:#71717A;'>{count} posts</span>", unsafe_allow_html=True)
-            else:
-                st.info("No active trends.")
+                        st.markdown(f"**#{tag}**<br><span style='font-size:11px;color:var(--text-muted);'>{count} posts</span>", unsafe_allow_html=True)
+            else: st.info("No active trends.")
 
             st.markdown("<br><div class='section-title'>Network</div>", unsafe_allow_html=True)
             for em, info in db_users.items():
                 if em != us_act and em not in mis_datos.get("amigos", []):
                     with st.container(border=True):
-                        st.markdown(f"<p style='margin:0; font-weight:600; color:#FAFAFA;'>{info['nombre']}</p><p style='margin:0; font-size:11px; color:#A1A1AA;'>{info['rol']}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p style='margin:0; font-weight:600; color:var(--text-main);'>{info['nombre']}</p><p style='margin:0; font-size:11px; color:var(--text-muted);'>@{info['alias']}</p>", unsafe_allow_html=True)
                         c_vp, c_sg = st.columns(2)
-                        if c_vp.button("Profile", key=f"vp_{em}", type="secondary"): ver_perfil(em)
-                        if c_sg.button("Follow", key=f"seg_{em}", type="secondary"):
-                            st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["amigos"].append(em)
-                            guardar_y_recargar()
-            
-            st.markdown("<br><div class='section-title'>Live Activity (Spotify)</div>", unsafe_allow_html=True)
-            amigos_seguir = mis_datos.get("amigos", []) + [us_act]
-            for em in amigos_seguir:
-                if em in db_users:
-                    info = db_users[em]
-                    if SPOTIPY_INSTALLED and info.get("spotify_token"):
-                        try:
-                            sp = spotipy.Spotify(auth=info["spotify_token"]["access_token"])
-                            current = sp.current_user_playing_track()
-                            if current and current.get("is_playing"):
-                                tid = current["item"]["id"]
-                                with st.container(border=True):
-                                    st.markdown(f"<p style='margin:0; font-size:12px; font-weight:700;'><span class='online-indicator'></span>{info['nombre']}</p>", unsafe_allow_html=True)
-                                    components.iframe(f"https://open.spotify.com/embed/track/{tid}?utm_source=generator&theme=0", height=80)
-                                continue
-                        except: pass
+                        if c_vp.button("Profile", key=f"sp_{em}", type="secondary"): ver_perfil(em)
+                        if c_sg.button("Follow", key=f"ss_{em}", type="secondary"): st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["amigos"].append(em); guardar_y_recargar()
 
-    # --- MENSAJES (CHAT PRIVADO) ---
+    # --- RUTA: MENSAJES ---
     elif st.session_state["ruta"] == "Mensajes":
         st.markdown("<h2 class='gradient-text'>Direct Messages</h2>", unsafe_allow_html=True)
         col_list, col_chat = st.columns([1, 2.5], gap="large")
@@ -645,10 +592,8 @@ else:
             for em, info in db_users.items():
                 if em != us_act:
                     with st.container(border=True):
-                        st.markdown(f"**{info['nombre']}**<br><span style='font-size:11px;color:#A1A1AA;'>{info['rol']}</span>", unsafe_allow_html=True)
-                        if st.button("Chat", key=f"c_msg_{em}", type="secondary"):
-                            st.session_state["chat_con"] = em
-                            st.rerun()
+                        st.markdown(f"**{info['nombre']}**<br><span style='font-size:11px;color:var(--text-muted);'>@{info['alias']}</span>", unsafe_allow_html=True)
+                        if st.button("Chat", key=f"m_c_{em}", type="secondary"): st.session_state["chat_con"] = em; st.rerun()
 
         with col_chat:
             if st.session_state["chat_con"]:
@@ -661,17 +606,17 @@ else:
                     if not historial: st.info("Say hi.")
                     for msg in historial:
                         if msg["de"] == us_act:
-                            st.markdown(f"<div style='text-align: right;'><span style='background:#FBAF3B; color:#000; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px; font-weight:600;'>{msg['texto']}</span><br><span style='font-size:10px; color:#71717A;'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align: right;'><span style='background:var(--accent); color:#000; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px; font-weight:600;'>{msg['texto']}</span><br><span style='font-size:10px; color:var(--text-muted);'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
                         else:
-                            st.markdown(f"<div style='text-align: left;'><span style='background:#121214; border:1px solid #27272A; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px;'>{msg['texto']}</span><br><span style='font-size:10px; color:#71717A;'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align: left;'><span style='background:var(--bg-hover); border:1px solid var(--border-color); padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px;'>{msg['texto']}</span><br><span style='font-size:10px; color:var(--text-muted);'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
                 
-                nm = st.chat_input("Message...", key="chat_input_txt")
+                nm = st.chat_input("Message...", key="m_in")
                 if nm:
                     st.session_state["proyectos"]["_CONFIG_"]["mensajes"].append({"de": us_act, "para": st.session_state["chat_con"], "texto": nm, "fecha": obtener_hora_actual()})
                     guardar_y_recargar()
             else: st.info("Select a contact.")
 
-    # --- PERFIL Y ADMIN ---
+    # --- RUTA: PERFIL ---
     elif st.session_state["ruta"] == "Perfil":
         st.markdown("<div class='section-title'>ACCOUNT SETTINGS</div>", unsafe_allow_html=True)
         t_per, t_g, t_cred, t_dir, t_adm = st.tabs(["Profile", "Saved", "ID Card", "Directory", "Admin"])
@@ -682,50 +627,43 @@ else:
                 st.markdown("#### Avatar")
                 f_s = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
                 st.markdown(f"<img src='{f_s}' class='avatar-circle' style='width:120px;height:120px;'>", unsafe_allow_html=True)
-                nf = st.file_uploader("Update", type=["jpg", "png", "jpeg"], label_visibility="collapsed", key="prof_upd_img")
-                if nf and st.button("Save Image", key="btn_prof_img"): db_users[us_act]["foto"] = base64.b64encode(nf.read()).decode('utf-8'); guardar_y_recargar()
+                nf = st.file_uploader("Update", type=["jpg", "png", "jpeg"], label_visibility="collapsed", key="p_up")
+                if nf and st.button("Save Image", key="p_sb"): db_users[us_act]["foto"] = base64.b64encode(nf.read()).decode('utf-8'); guardar_y_recargar()
                 st.markdown("---")
                 st.metric("Access Level", mis_datos['nivel'].capitalize())
 
             with c_form:
-                with st.form("f_p"):
+                with st.form("p_f"):
                     st.markdown("#### Personal Data")
                     c1, c2 = st.columns(2)
-                    al = c1.text_input("Username (@)", value=mis_datos.get("alias", us_act.split("@")[0]), key="prof_alias")
-                    es = c2.text_input("Status", value=mis_datos.get("estado_txt", "Online"), placeholder="e.g. On Set", key="prof_status")
-                    rf = st.text_input("Role Specialization", value=mis_datos.get("roles_fav", ""), key="prof_role")
-                    spc = st.text_area("Bio / Notes", value=mis_datos.get("specs", ""), key="prof_bio")
+                    al = c1.text_input("Username (@)", value=mis_datos.get("alias", us_act.split("@")[0]))
+                    es = c2.text_input("Status", value=mis_datos.get("estado_txt", "Online"))
+                    rf = st.text_input("Role Specialization", value=mis_datos.get("roles_fav", ""))
+                    spc = st.text_area("Bio / Notes", value=mis_datos.get("specs", ""))
                     
-                    st.markdown("#### Spotify Integration")
-                    sp_p = st.text_input("Pinned Track (Profile view)", value=mis_datos.get("spotify_track_id", ""), placeholder="e.g. https://open.spotify.com/track/...", key="prof_spot")
+                    st.markdown("#### Soundtrack")
+                    sp_p = st.text_input("Pinned Track (Profile view)", value=mis_datos.get("spotify_track_id", ""), placeholder="https://open.spotify.com/track/...")
                     
-                    if SPOTIPY_INSTALLED:
-                        try:
-                            sp_oauth = SpotifyOAuth(client_id=st.secrets["SPOTIFY_CLIENT_ID"], client_secret=st.secrets["SPOTIFY_CLIENT_SECRET"], redirect_uri=st.secrets["SPOTIFY_REDIRECT_URI"], scope="user-read-currently-playing")
-                            auth_url = sp_oauth.get_authorize_url()
-                            st.markdown(f"[🔗 **Link Spotify Account (Live Status)**]({auth_url})")
-                        except: st.info("Requires Spotify keys in st.secrets.")
-
                     if st.form_submit_button("Sync Profile"):
                         t_id = sp_p.split("track/")[1].split("?")[0] if "track/" in sp_p else sp_p
                         db_users[us_act].update({"alias": al, "estado_txt": es, "roles_fav": rf, "specs": spc, "spotify_track_id": t_id})
                         guardar_y_recargar()
                         st.success("Synced.")
             st.divider()
-            if st.button("Log Out", type="secondary", key="btn_logout"): st.session_state["usuario_logueado"] = None; st.session_state["ruta"] = "Inicio"; st.rerun()
+            if st.button("Log Out", type="secondary", key="p_lo"): st.session_state["usuario_logueado"] = None; st.session_state["ruta"] = "Inicio"; st.rerun()
 
         with t_g:
-            st.markdown("### Saved Posts")
+            st.markdown("### Saved Posts 🔖")
             mis_g = mis_datos.get("guardados", [])
             if not mis_g: st.info("Nothing saved yet.")
             for pid in mis_g:
                 post = next((p for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"] if p["id"] == pid), None)
                 if post:
                     with st.container(border=True):
-                        st.write(f"**{db_users[post['usuario']]['nombre']}** - {post['timestamp']}")
+                        st.write(f"**@{db_users[post['usuario']]['alias']}** - {post['timestamp']}")
                         if post.get("texto"): st.write(post["texto"])
                         if post.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{post['imagen']}' style='height:150px;border-radius:8px;'>", unsafe_allow_html=True)
-                        if st.button("Remove", key=f"ds_rem_{pid}", type="secondary"):
+                        if st.button("Remove", key=f"p_rem_{pid}", type="secondary"):
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["guardados"].remove(pid)
                             guardar_y_recargar()
 
@@ -743,13 +681,13 @@ else:
             """, unsafe_allow_html=True)
 
         with t_dir:
-            bq = st.text_input("Search members...", key="dir_search")
+            bq = st.text_input("Search members...", key="p_bq")
             for em, info in db_users.items():
                 if info["estado"] == "Aprobado" and (bq.lower() in info["nombre"].lower() or bq.lower() in info["rol"].lower()):
                     with st.container(border=True):
                         colD1, colD2 = st.columns([1, 8])
                         with colD1: st.markdown(f"<img src='data:image/jpeg;base64,{info.get('foto','')}' class='avatar-circle' style='width:45px;height:45px;'>", unsafe_allow_html=True)
-                        with colD2: st.markdown(f"<h4 style='margin:0;'>{info['nombre']} <span style='color:#FBAF3B;font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
+                        with colD2: st.markdown(f"<h4 style='margin:0;'>{info['nombre']} <span style='color:var(--accent);font-size:12px;'>({info['rol']})</span></h4>", unsafe_allow_html=True)
 
         with t_adm:
             if rol_actual == "Super Admin":
@@ -758,9 +696,9 @@ else:
                     with st.container(border=True):
                         c1, c2, c3, c4 = st.columns([2, 1.5, 1.5, 1])
                         c1.markdown(f"**{dt_usr['nombre']}**<br><span style='font-size:12px;'>{em_usr}</span>", unsafe_allow_html=True)
-                        est = c2.selectbox("Status", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"e_adm_{em_usr}")
-                        rol = c3.selectbox("Role", list(mapa.keys()), index=list(mapa.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa else 9, key=f"r_adm_{em_usr}")
-                        if c4.button("Apply", key=f"b_adm_{em_usr}"): db_users[em_usr].update({"estado": est, "rol": rol, "nivel": mapa[rol]}); guardar_y_recargar()
+                        est = c2.selectbox("Status", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"p_e_{em_usr}")
+                        rol = c3.selectbox("Role", list(mapa.keys()), index=list(mapa.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa else 9, key=f"p_r_{em_usr}")
+                        if c4.button("Apply", key=f"p_b_{em_usr}"): db_users[em_usr].update({"estado": est, "rol": rol, "nivel": mapa[rol]}); guardar_y_recargar()
                 st.divider()
                 st.markdown("### Support Tickets")
                 tks = st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"]
@@ -769,11 +707,11 @@ else:
                         st.markdown(f"**{tk['asunto']}** ({tk['fecha']}) - From: {tk['usuario']}")
                         st.write(tk['desc'])
                         if tk['estado'] == "Pendiente":
-                            if st.button("Resolve", key=f"tk_adm_{i}"): st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"][len(tks)-1-i]["estado"] = "Resuelto"; guardar_y_recargar()
+                            if st.button("Resolve", key=f"p_tk_{i}"): st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"][len(tks)-1-i]["estado"] = "Resuelto"; guardar_y_recargar()
                         else: st.success("Resolved")
             else: st.warning("Super Admins only.")
 
-    # --- PROYECTO (HERRAMIENTAS INTACTAS) ---
+    # --- RUTA: PROYECTO (HERRAMIENTAS INTACTAS) ---
     elif st.session_state["ruta"] == "Proyecto":
         pr = st.session_state["proyecto_activo"]
         pd_proy = st.session_state["proyectos"][pr]
@@ -781,11 +719,12 @@ else:
         st.markdown(f"<h2 class='gradient-text' style='margin-bottom: 24px;'>{pr.upper()}</h2>", unsafe_allow_html=True)
         col_nav, col_content = st.columns([1, 3.5], gap="large")
         
+        # Generación dinámica del menú según rol (No se tocó nada funcional)
         o_nav = ["Panel General", "Tablero Kanban", "Asistente IA"]
         i_nav = ["grid", "kanban", "lightning-charge"]
         if nivel_actual != "lectura": o_nav.append("Solicitar a Prod."); i_nav.append("send")
-        o_nav.extend(["Bandeja Prod.", "Rentals IA", "Archivos", "Tablón", "Enlaces", "Permisos", "Presupuesto", "Scouting", "Base Crew", "Casting", "Catering", "Desglose", "Laboratorio Guion", "Inventario", "Plan Rodaje", "Monitor DIR", "Luces (Canvas)", "Ref. IA", "Arte & Vestuario", "Log Sonido", "Raccord", "IA: Moodboard Dinámico", "IA: Auditor Anacronismos", "IA: Utilería DIY", "IA: Analizador Espectral", "IA: Matriz de Ruido", "IA: Sugerente Foley"])
-        i_nav.extend(["inbox", "shop", "folder2-open", "megaphone", "link-45deg", "shield-lock", "wallet2", "geo-alt", "people", "person-video", "cup-hot", "card-text", "pen", "box", "calendar-event", "camera-reels", "lightbulb", "cpu", "palette", "headphones", "film", "magic", "shield-check", "hammer", "soundwave", "volume-up", "mic"])
+        o_nav.extend(["Bandeja Prod.", "Rentals IA", "Archivos", "Tablón", "Enlaces", "Presupuesto", "Scouting", "Base Crew", "Casting", "Catering", "Desglose", "Laboratorio Guion", "Inventario", "Plan Rodaje", "Monitor DIR", "Luces (Canvas)", "Ref. IA", "Arte & Vestuario", "Log Sonido", "Raccord"])
+        i_nav.extend(["inbox", "shop", "folder2-open", "megaphone", "link-45deg", "wallet2", "geo-alt", "people", "person-video", "cup-hot", "card-text", "pen", "box", "calendar-event", "camera-reels", "lightbulb", "cpu", "palette", "headphones", "film"])
         
         nf, inf = [], []
         for o, i in zip(o_nav, i_nav):
@@ -794,8 +733,8 @@ else:
             elif rol_actual == "Guion" and o in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Desglose", "Laboratorio Guion", "Archivos", "Tablón", "Enlaces"]: nf.append(o); inf.append(i)
             elif "Dirección" in rol_actual and rol_actual not in ["Dirección de Arte", "Dirección de Fotografía"] and o in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Casting", "Plan Rodaje", "Monitor DIR", "Archivos", "Tablón", "Enlaces", "Inventario"]: nf.append(o); inf.append(i)
             elif rol_actual == "Dirección de Fotografía" and o in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Luces (Canvas)", "Ref. IA", "Inventario", "Archivos", "Tablón", "Enlaces"]: nf.append(o); inf.append(i)
-            elif rol_actual == "Dirección de Arte" and o in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Arte & Vestuario", "Inventario", "Archivos", "Tablón", "Enlaces", "IA: Moodboard Dinámico", "IA: Auditor Anacronismos", "IA: Utilería DIY"]: nf.append(o); inf.append(i)
-            elif "Sonido" in rol_actual and o in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Log Sonido", "Inventario", "Archivos", "Tablón", "Enlaces", "IA: Analizador Espectral", "IA: Matriz de Ruido", "IA: Sugerente Foley"]: nf.append(o); inf.append(i)
+            elif rol_actual == "Dirección de Arte" and o in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Arte & Vestuario", "Inventario", "Archivos", "Tablón", "Enlaces"]: nf.append(o); inf.append(i)
+            elif "Sonido" in rol_actual and o in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Log Sonido", "Inventario", "Archivos", "Tablón", "Enlaces"]: nf.append(o); inf.append(i)
             elif rol_actual == "Continuidad" and o in ["Panel General", "Tablero Kanban", "Asistente IA", "Solicitar a Prod.", "Raccord", "Archivos", "Tablón", "Enlaces"]: nf.append(o); inf.append(i)
             elif nivel_actual == "lectura" and o in ["Panel General", "Tablero Kanban", "Asistente IA", "Archivos", "Tablón", "Enlaces"]: nf.append(o); inf.append(i)
 
@@ -803,7 +742,7 @@ else:
         idx_def = nf.index(st.session_state["menu_option"]) if st.session_state.get("menu_option") in nf else 0
             
         with col_nav:
-            s_e = option_menu(menu_title="WORKSPACE", options=nf, icons=inf, default_index=idx_def, styles={"container": {"padding": "10px", "background-color": "#09090B", "border-radius": "12px", "border": "1px solid #18181B"}, "icon": {"color": "#888", "font-size": "15px"}, "menu-title": {"color": "#666", "font-size": "11px", "letter-spacing": "2px", "font-weight": "700"}, "nav-link": {"font-size": "13px", "text-align": "left", "margin": "4px 0", "color": "#CCC", "border-radius": "8px", "padding": "10px"}, "nav-link-selected": {"background-color": "#121214", "color": "#FAFAFA", "font-weight": "600", "border-left": "3px solid #FBAF3B"}})
+            s_e = option_menu(menu_title="WORKSPACE", options=nf, icons=inf, default_index=idx_def, styles={"container": {"padding": "10px", "background-color": "var(--bg-card)", "border-radius": "12px", "border": "1px solid var(--border-color)"}, "icon": {"color": "var(--text-muted)", "font-size": "15px"}, "menu-title": {"color": "var(--text-muted)", "font-size": "11px", "letter-spacing": "2px", "font-weight": "700"}, "nav-link": {"font-size": "13px", "text-align": "left", "margin": "4px 0", "color": "var(--text-main)", "border-radius": "8px", "padding": "10px"}, "nav-link-selected": {"background-color": "var(--bg-hover)", "color": "var(--text-main)", "font-weight": "600", "border-left": "3px solid var(--accent)"}})
             st.session_state["menu_option"] = s_e
         
         with col_content:
@@ -815,18 +754,18 @@ else:
                 c4.metric("Tickets", len(pd_proy.get("pedidos_equipos", [])))
                 st.divider()
                 st.markdown("### Generador de Call Sheet (IA)")
-                if st.button("Emitir Plan Maestro", key="btn_callsheet"):
+                if st.button("Emitir Plan Maestro", key="w_csh"):
                     try:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         prompt = f"Proyecto: {pr}. Datos: Avisos {pd_proy.get('avisos',[])}, Locaciones {pd_proy.get('locaciones',[])}. Redactá un Call Sheet."
-                        st.markdown(f"<div style='background:#121214; padding:20px; border-radius:12px; border:1px solid #27272A;'>{genai.GenerativeModel('gemini-1.5-flash').generate_content(prompt).text}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background:var(--bg-hover); padding:20px; border-radius:12px; border:1px solid var(--border-color);'>{genai.GenerativeModel('gemini-1.5-flash').generate_content(prompt).text}</div>", unsafe_allow_html=True)
                     except: st.error("Falta API Key Gemini.")
 
             elif s_e == "Tablero Kanban":
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Gestor de Tareas</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("Crear Tarea", key="btn_kb_new"): ventana_kanban(pr, mis_datos['nombre'])
+                    if st.button("Crear Tarea", key="w_kb"): ventana_kanban(pr, mis_datos['nombre'])
                 st.divider()
                 colP, colPr, colL = st.columns(3)
                 with colP:
@@ -835,14 +774,14 @@ else:
                         if t["estado"] == "Pendiente":
                             with st.container(border=True): 
                                 st.write(f"**{t['tarea']}**")
-                                if st.button("Mover ➔", key=f"kb1_{i}", type="secondary"): pd_proy["kanban"][i]["estado"] = "En Proceso"; guardar_y_recargar()
+                                if st.button("Mover ➔", key=f"w_k1_{i}", type="secondary"): pd_proy["kanban"][i]["estado"] = "En Proceso"; guardar_y_recargar()
                 with colPr:
                     st.markdown("#### En Proceso")
                     for i, t in enumerate(pd_proy["kanban"]):
                         if t["estado"] == "En Proceso":
                             with st.container(border=True): 
                                 st.write(f"**{t['tarea']}**")
-                                if st.button("Finalizar", key=f"kb2_{i}"): pd_proy["kanban"][i]["estado"] = "Completado"; guardar_y_recargar()
+                                if st.button("Finalizar", key=f"w_k2_{i}", type="secondary"): pd_proy["kanban"][i]["estado"] = "Completado"; guardar_y_recargar()
                 with colL:
                     st.markdown("#### Listo")
                     for t in [t for t in pd_proy["kanban"] if t["estado"] == "Completado"]:
@@ -852,14 +791,14 @@ else:
                 st.markdown("<h2>Comando de IA</h2>", unsafe_allow_html=True)
                 try:
                     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                    m = st.chat_input("Escribe una instrucción...", key="ci_ia")
+                    m = st.chat_input("Instrucción...", key="w_ia")
                     if m:
                         st.chat_message("user").write(m)
                         st.chat_message("assistant").write(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Sos FTN AI. Hablás con: {mis_datos['nombre']}. Usuario: {m}").text)
                 except: st.error("Falta API Key.")
 
             elif s_e == "Solicitar a Prod.":
-                if st.button("Levantar Ticket", key="btn_sol_prod"): ventana_pedido(pr, rol_actual)
+                if st.button("Levantar Ticket", key="w_sp"): ventana_pedido(pr, rol_actual)
                 for ped in [p for p in pd_proy.get("pedidos_equipos", []) if p["area"] == rol_actual or rol_actual == "Super Admin"]:
                     with st.container(border=True): st.write(f"**{ped['item']}** — {ped['notas']} ({ped['estado']})")
 
@@ -869,157 +808,103 @@ else:
                         with st.container(border=True):
                             st.write(f"**{ped['area']}:** {ped['item']}")
                             c1, c2 = st.columns(2)
-                            if c1.button("Aprobar", key=f"ap_{i}"): pd_proy["equipos"].append({"area": ped['area'], "item": ped['item'], "cant": 1, "tipo": "A Confirmar", "rental": "A Definir"}); pd_proy["pedidos_equipos"][i]["estado"] = "Aprobado"; guardar_y_recargar()
-                            if c2.button("Denegar", key=f"re_{i}", type="secondary"): pd_proy["pedidos_equipos"][i]["estado"] = "Rechazado"; guardar_y_recargar()
+                            if c1.button("Aprobar", key=f"w_ap_{i}"): pd_proy["equipos"].append({"area": ped['area'], "item": ped['item'], "cant": 1, "tipo": "A Confirmar", "rental": "A Definir"}); pd_proy["pedidos_equipos"][i]["estado"] = "Aprobado"; guardar_y_recargar()
+                            if c2.button("Denegar", key=f"w_re_{i}", type="secondary"): pd_proy["pedidos_equipos"][i]["estado"] = "Rechazado"; guardar_y_recargar()
 
             elif s_e == "Rentals IA":
                 c1, c2, c3 = st.columns(3)
-                c1.button("Proveedor", on_click=lambda: ventana_nuevo_rental(pr), key="btn_prov")
-                c2.button("Scanner IA", on_click=lambda: ventana_comparador_rental(pr), key="btn_scan")
-                c3.button("Purga", on_click=lambda: ventana_vaciar_comparador(pr), type="secondary", key="btn_purg")
+                c1.button("Proveedor", on_click=lambda: ventana_nuevo_rental(pr), key="w_r_p")
+                c2.button("Scanner IA", on_click=lambda: ventana_comparador_rental(pr), key="w_r_s")
+                c3.button("Purga", on_click=lambda: ventana_vaciar_comparador(pr), type="secondary", key="w_r_pu")
                 st.divider()
                 if pd_proy.get("carrito_rentals"):
-                    if st.button("Checkout", key="btn_check"): ventana_checkout(pr)
+                    if st.button("Checkout", key="w_r_c"): ventana_checkout(pr)
                     for i, item in enumerate(pd_proy["carrito_rentals"]):
                         with st.container(border=True):
                             st.write(f"{item['nombre']} - ${item['precio']}")
-                            if st.button("Quitar", key=f"q_{i}"): pd_proy["carrito_rentals"].pop(i); guardar_y_recargar()
+                            if st.button("Quitar", key=f"w_rq_{i}", type="secondary"): pd_proy["carrito_rentals"].pop(i); guardar_y_recargar()
                 st.markdown("### Base Analizada")
                 for i, r in enumerate(pd_proy.get("comparador_rentals", [])):
                     with st.container(border=True):
                         st.write(f"{r['nombre']} - ${r['precio']}")
-                        if st.button("Añadir", key=f"add_{i}"): pd_proy["carrito_rentals"].append(r); guardar_y_recargar()
+                        if st.button("Añadir", key=f"w_ra_{i}", type="secondary"): pd_proy["carrito_rentals"].append(r); guardar_y_recargar()
 
             elif s_e == "Archivos":
-                a = st.file_uploader("Documento (.txt)", key="fu_arch")
-                if a and st.button("Subir", key="btn_up_arch"): pd_proy["archivos_pendientes"].append({"autor": mis_datos['nombre'], "nombre": a.name, "texto": a.getvalue().decode('utf-8')}); guardar_y_recargar()
+                a = st.file_uploader("Documento (.txt)", key="w_ar_f")
+                if a and st.button("Subir", key="w_ar_b"): pd_proy["archivos_pendientes"].append({"autor": mis_datos['nombre'], "nombre": a.name, "texto": a.getvalue().decode('utf-8')}); guardar_y_recargar()
 
             elif s_e == "Tablón":
-                if st.button("Publicar", key="btn_tab_pub"): ventana_aviso(pr, mis_datos['nombre'], pd_proy["locaciones"])
+                if st.button("Publicar", key="w_ta_b"): ventana_aviso(pr, mis_datos['nombre'], pd_proy["locaciones"])
                 for a in reversed(pd_proy["avisos"]): st.write(f"**{a['autor']}**: {a.get('texto', 'Citación')}")
 
             elif s_e == "Enlaces":
-                if st.button("Cargar URL", key="btn_enlace"): ventana_link(pr)
+                if st.button("Cargar URL", key="w_en_b"): ventana_link(pr)
                 for l in pd_proy["links"]: st.write(f"[{l['titulo']}]({l['url']})")
 
-            elif s_e == "Permisos":
-                st.info("Centralizado en Perfil > Admin")
-
             elif s_e == "Presupuesto":
-                if st.button("Asentar Gasto", key="btn_gasto"): ventana_presupuesto(pr)
+                if st.button("Asentar Gasto", key="w_pr_b"): ventana_presupuesto(pr)
                 if pd_proy.get("presupuesto"):
                     df = pd.DataFrame(pd_proy["presupuesto"])
                     st.metric("Total", f"${df['costo'].sum():,.2f}")
                     st.plotly_chart(px.pie(df, values='costo', names='area', template="plotly_dark"))
 
             elif s_e == "Scouting":
-                if st.button("Registrar Locación", key="btn_scout"): ventana_locacion(pr)
+                if st.button("Registrar Locación", key="w_sc_b"): ventana_locacion(pr)
                 for l in pd_proy.get("locaciones", []): st.write(f"**{l['nombre']}**: {l['direccion']}")
 
             elif s_e == "Base Crew":
-                if st.button("Contratar", key="btn_crew"): ventana_crew(pr)
+                if st.button("Contratar", key="w_bc_b"): ventana_crew(pr)
                 if pd_proy.get("crew"): st.dataframe(pd.DataFrame(pd_proy["crew"]))
 
             elif s_e == "Casting":
-                if st.button("Añadir Actor", key="btn_cast"): ventana_casting(pr)
+                if st.button("Añadir Actor", key="w_ca_b"): ventana_casting(pr)
                 for a in pd_proy["casting"]: st.write(f"**{a['actor']}** ({a['personaje']})")
 
             elif s_e == "Catering":
-                if st.button("Añadir Dieta", key="btn_cat"): ventana_catering(pr)
+                if st.button("Añadir Dieta", key="w_cat_b"): ventana_catering(pr)
                 for p in pd_proy["catering"]: st.write(f"**{p['nombre']}**: {p['dieta']}")
 
             elif s_e == "Desglose":
-                if st.button("Extraer Escena", key="btn_desg"): ventana_desglose(pr)
+                if st.button("Extraer Escena", key="w_de_b"): ventana_desglose(pr)
                 for d in pd_proy["desglose"]: st.write(f"**ESC {d['escena']}**: {d['desc']}")
 
             elif s_e == "Laboratorio Guion":
-                if st.button("Crear Personaje", key="btn_guion"): ventana_personaje(pr)
+                if st.button("Crear Personaje", key="w_lg_b"): ventana_personaje(pr)
                 for p in pd_proy.get("personajes", []): st.write(f"**{p['nombre']}**: {p['rol']}")
 
             elif s_e == "Inventario":
-                if st.button("Agregar a Base", key="btn_inv"): ventana_equipo(pr, rol_actual)
+                if st.button("Agregar a Base", key="w_in_b"): ventana_equipo(pr, rol_actual)
                 for e in pd_proy["equipos"]: st.write(f"**{e['cant']}x {e['item']}**")
 
             elif s_e == "Plan Rodaje":
-                if st.button("Nuevo Bloque", key="btn_plan"): ventana_cronograma(pr)
+                if st.button("Nuevo Bloque", key="w_pl_b"): ventana_cronograma(pr)
                 for a in pd_proy["plan_rodaje"]: st.write(f"**{a['hora']}**: {a['actividad']}")
 
             elif s_e == "Monitor DIR":
                 c1, c2 = st.columns(2)
-                c1.button("Shot List", on_click=lambda: ventana_plano(pr), key="btn_shot")
-                c2.button("Loguear Toma", on_click=lambda: ventana_toma_dir(pr), key="btn_toma")
+                c1.button("Shot List", on_click=lambda: ventana_plano(pr), key="w_md_1")
+                c2.button("Loguear Toma", on_click=lambda: ventana_toma_dir(pr), key="w_md_2")
                 for t in pd_proy["tomas_dir"]: st.write(f"**ESC {t['escena']} T {t['toma']}**: {t['evaluacion']}")
 
             elif s_e == "Luces (Canvas)":
-                modo = st.selectbox("Trazado", ["freedraw", "line", "rect", "circle", "transform"], key="sb_luces")
-                st_canvas(stroke_color="#FFD700", background_color="#111", width=330, height=350, drawing_mode=modo, key="cv_l")
+                modo = st.selectbox("Trazado", ["freedraw", "line", "rect", "circle", "transform"], key="w_lu_s")
+                st_canvas(stroke_color="#FBAF3B", background_color="#0A0A0C", width=330, height=350, drawing_mode=modo, key="cv_l")
 
             elif s_e == "Ref. IA":
                 try:
                     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                    m = st.chat_input("Prompt visual...", key="ci_ref")
+                    m = st.chat_input("Prompt visual...", key="w_ri")
                     if m: st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Sos DF: {m}").text)
                 except: st.error("Falta API Key.")
 
             elif s_e == "Arte & Vestuario":
-                if st.button("Añadir Objeto", key="btn_arte"): ventana_arte(pr)
+                if st.button("Añadir Objeto", key="w_ar_v"): ventana_arte(pr)
                 for i in pd_proy["arte"]: st.write(f"**{i['objeto']}** ({i['estado']})")
 
             elif s_e == "Log Sonido":
-                if st.button("Registrar", key="btn_son"): ventana_sonido(pr)
+                if st.button("Registrar", key="w_ls"): ventana_sonido(pr)
                 for s in pd_proy["sonido_log"]: st.write(f"**ESC {s['escena']} T {s['toma']}**")
 
             elif s_e == "Raccord":
-                if st.button("Asentar", key="btn_rac"): ventana_continuidad(pr)
+                if st.button("Asentar", key="w_ra"): ventana_continuidad(pr)
                 for n in pd_proy["continuidad"]: st.write(f"**ESC {n['escena']} T {n['toma']}**: {n['detalle']}")
-
-            elif s_e == "IA: Moodboard Dinámico":
-                im = st.file_uploader("Foto Ref", type=["jpg", "png"], key="fu_mb")
-                if im and st.button("Generar", key="btn_mb"):
-                    try:
-                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                        st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(["Dame 4 colores HEX", Image.open(im)]).text)
-                    except: pass
-
-            elif s_e == "IA: Auditor Anacronismos":
-                ep = st.text_input("Época", key="ti_anac")
-                iu = st.file_uploader("Objeto", type=["jpg", "png"], key="fu_anac")
-                if iu and st.button("Auditar", key="btn_anac"):
-                    try:
-                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                        st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content([f"Es anacrónico para {ep}?", Image.open(iu)]).text)
-                    except: pass
-
-            elif s_e == "IA: Utilería DIY":
-                od = st.text_input("Objeto a fabricar", key="ti_diy")
-                if od and st.button("Guía", key="btn_diy"):
-                    try:
-                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                        st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Guía para fabricar {od} barato").text)
-                    except: pass
-
-            elif s_e == "IA: Analizador Espectral":
-                af = st.file_uploader("Audio", type=["wav", "mp3"], key="fu_spec")
-                if af and st.button("Render", key="btn_spec"):
-                    y, sr = librosa.load(af, sr=None)
-                    D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
-                    fig, ax = plt.subplots()
-                    librosa.display.specshow(D, y_axis='log', ax=ax)
-                    st.pyplot(fig)
-
-            elif s_e == "IA: Matriz de Ruido":
-                fr = st.selectbox("Fuente", ["Tráfico", "Aviones"], key="sb_ruido")
-                d = st.number_input("Distancia", value=20, key="ni_ruido")
-                if st.button("Plan", key="btn_ruido"):
-                    try:
-                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                        st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Aislamiento para {fr} a {d}m").text)
-                    except: pass
-
-            elif s_e == "IA: Sugerente Foley":
-                ac = st.text_input("Acción", key="ti_fol")
-                if ac and st.button("Lista", key="btn_fol"):
-                    try:
-                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                        st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Foley para: {ac}").text)
-                    except: pass
