@@ -14,9 +14,13 @@ import requests
 from bs4 import BeautifulSoup
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, date, timedelta, timezone
 import random
 import time
+import numpy as np
+import matplotlib.pyplot as plt
+import librosa
+import scipy.signal
 import streamlit.components.v1 as components
 
 # Importación de Spotify para la conexión en tiempo real
@@ -39,25 +43,43 @@ TZ_AR = timezone(timedelta(hours=-3))
 def obtener_hora_actual():
     return datetime.now(TZ_AR).strftime("%Y-%m-%d %H:%M:%S")
 
-# --- 2. SVGS UNIVERSALES (Minimalismo Puro) ---
-SVG_LIKE = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>'
-SVG_LIKE_FILLED = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#FBAF3B" stroke="#FBAF3B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>'
-SVG_COMMENT = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>'
-SVG_REPOST = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
-SVG_REPOST_FILLED = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
-SVG_SAVE = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>'
-SVG_SAVE_FILLED = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#3B82F6" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>'
+# --- 2. MOTOR DE ESTILOS Y SVGs ---
+# SVGs Minimalistas Universales
+SVG_LIKE = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>'
+SVG_LIKE_FILLED = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#FBAF3B" stroke="#FBAF3B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>'
+SVG_COMMENT = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>'
+SVG_REPOST = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
+SVG_REPOST_FILLED = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
+SVG_SAVE = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>'
+SVG_SAVE_FILLED = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#3B82F6" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>'
 
-# --- 3. MOTOR DE ESTILOS (LINEAR/VERCEL VIBE) ---
 def get_css():
     if st.session_state.theme == "dark":
         return """
-        :root { --bg-base: #000000; --bg-card: #0A0A0C; --bg-hover: #121216; --border-color: #1A1A1E; --border-hover: #3F3F46; --text-main: #FAFAFA; --text-muted: #71717A; --accent: #FBAF3B; --accent-glow: rgba(251, 175, 59, 0.1); }
+        :root {
+            --bg-base: #030303;
+            --bg-card: #0A0A0C;
+            --bg-hover: #1A1A1D;
+            --border-color: #1A1A1E;
+            --text-main: #FAFAFA;
+            --text-muted: #71717A;
+            --accent: #FBAF3B;
+            --accent-glow: rgba(251, 175, 59, 0.15);
+        }
         .logo-img { filter: brightness(1.2) contrast(1.2); }
         """
     else:
         return """
-        :root { --bg-base: #F4F4F5; --bg-card: #FFFFFF; --bg-hover: #FAFAFA; --border-color: #E4E4E7; --border-hover: #A1A1AA; --text-main: #09090B; --text-muted: #52525B; --accent: #D97706; --accent-glow: rgba(217, 119, 6, 0.1); }
+        :root {
+            --bg-base: #F4F4F5;
+            --bg-card: #FFFFFF;
+            --bg-hover: #E4E4E7;
+            --border-color: #D4D4D8;
+            --text-main: #09090B;
+            --text-muted: #52525B;
+            --accent: #D97706;
+            --accent-glow: rgba(217, 119, 6, 0.1);
+        }
         .logo-img { filter: brightness(0.2) contrast(1.2); }
         """
 
@@ -72,50 +94,47 @@ st.markdown(f"""
     .stApp {{ background-color: var(--bg-base) !important; color: var(--text-main) !important; transition: all 0.3s ease; }}
     .logo-img {{ display: block; max-width: 100%; height: auto; transition: filter 0.3s; }}
 
-    /* Tarjetas Modulares - Efecto Glass y Borde Limpio */
+    /* Tarjetas Premium */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         background: var(--bg-card) !important; border: 1px solid var(--border-color) !important; 
         border-radius: 12px !important; padding: 1.5rem !important; 
-        box-shadow: 0 4px 24px rgba(0,0,0,0.04) !important; margin-bottom: 16px !important; transition: all 0.3s ease !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.02) !important; margin-bottom: 16px !important; transition: all 0.2s ease !important;
     }}
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {{
-        border-color: var(--border-hover) !important; transform: translateY(-2px); box-shadow: 0 8px 32px var(--accent-glow) !important;
+        border-color: var(--text-muted) !important; transform: translateY(-1px); box-shadow: 0 8px 30px var(--accent-glow) !important;
+        background: var(--bg-hover) !important;
     }}
     
-    /* Tipografía Premium */
+    /* Tipografía */
     h1, h2, h3 {{ font-weight: 800 !important; letter-spacing: -0.03em !important; color: var(--text-main) !important; }}
     .gradient-text {{ background: linear-gradient(135deg, var(--text-main) 0%, var(--text-muted) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }}
-    .section-title {{ color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; display:block; }}
+    .section-title {{ color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; }}
 
-    /* Inputs Limpios */
+    /* Inputs y Textareas */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea, .stChatInput input {{
         background-color: var(--bg-base) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important;
         border-radius: 8px !important; padding: 12px 16px !important; font-weight: 400 !important; transition: all 0.2s;
     }}
     .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus {{ border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent) !important; }}
     
-    /* Botones Genéricos */
+    /* Botones Globales */
     .stButton button {{
-        background: var(--bg-card) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important;
+        background: var(--bg-base) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important;
         border-radius: 8px !important; font-weight: 600 !important; transition: all 0.2s ease !important;
     }}
     .stButton button:hover {{ background: var(--bg-hover) !important; border-color: var(--accent) !important; color: var(--accent) !important; }}
     .stButton button p {{ font-weight: 600 !important; color: inherit !important; margin: 0; }}
     
     /* Botón Primario Custom */
-    button[kind="primary"] {{ background: var(--text-main) !important; border: none !important; color: var(--bg-base) !important; }}
-    button[kind="primary"]:hover {{ transform: scale(1.02); color: var(--bg-base) !important; opacity: 0.9; }}
-    button[kind="primary"] p {{ color: var(--bg-base) !important; }}
+    button[kind="primary"] {{ background: var(--accent) !important; border: none !important; color: #000 !important; }}
+    button[kind="primary"]:hover {{ filter: brightness(1.1); color: #000 !important; }}
+    button[kind="primary"] p {{ color: #000 !important; }}
 
-    /* Botones Secundarios Aesthetic (Translucidos, sin fondo) */
-    [data-testid="stBaseButton-secondary"] {{ background: transparent !important; border: 1px solid var(--border-color) !important; color: var(--text-muted) !important; box-shadow: none !important; }}
-    [data-testid="stBaseButton-secondary"]:hover {{ background: rgba(255,255,255,0.03) !important; border-color: var(--text-muted) !important; color: var(--text-main) !important; }}
+    /* Navbar Buttons Fantasma */
+    .nav-btn-container .stButton button {{ background: transparent !important; border: none !important; box-shadow: none !important; }}
+    .nav-btn-container .stButton button:hover {{ background: var(--bg-hover) !important; color: var(--text-main) !important; }}
 
-    /* Botones de Navegación Superiores (Totalmente invisibles hasta el hover) */
-    .nav-btn-top button {{ border: none !important; background: transparent !important; font-weight: 600 !important; }}
-    .nav-btn-top button:hover {{ background: var(--bg-hover) !important; color: var(--text-main) !important; border-radius: 8px !important; }}
-
-    /* RED SOCIAL UI */
+    /* RED SOCIAL UI - AESTHETIC POSTS */
     .post-header {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }}
     .post-avatar {{ width: 44px; height: 44px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 1px solid var(--border-color); }}
     .post-name {{ font-weight: 700; color: var(--text-main); font-size: 15px; margin: 0; display: flex; align-items: center; gap: 4px; }}
@@ -123,10 +142,12 @@ st.markdown(f"""
     .post-body {{ font-size: 15px; color: var(--text-main); margin-top: 4px; margin-bottom: 16px; line-height: 1.5; white-space: pre-wrap; }}
     .post-img {{ width: 100%; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 16px; max-height: 500px; object-fit: cover; }}
     
+    .social-action-group {{ display: flex; justify-content: space-between; max-width: 350px; border-top: 1px solid var(--border-color); padding-top: 12px; }}
     .badge-verified {{ color: #3B82F6; font-size: 14px; margin-top: 2px; }}
-    .repost-badge {{ font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; display: flex; align-items:center; gap:6px; }}
-    
-    /* Historias Verticales (Snippets) */
+    .repost-badge {{ font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; display: block; }}
+    .comment-box {{ background: var(--bg-hover); border-left: 2px solid var(--border-color); padding: 10px 14px; margin-top: 10px; border-radius: 0 8px 8px 0; }}
+
+    /* Snippets (Historias) */
     .snippets-tray {{ display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }}
     .snippets-tray::-webkit-scrollbar {{ height: 0px; }}
     .snippet-card {{ min-width: 100px; height: 150px; border-radius: 12px; position: relative; overflow: hidden; border: 1px solid var(--border-color); cursor: pointer; transition: transform 0.2s; background-size: cover; background-position: center; }}
@@ -135,19 +156,25 @@ st.markdown(f"""
     .snippet-avatar {{ width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 4px; object-fit: cover;}}
     .snippet-name {{ font-size: 11px; color: #FFF; font-weight: 600; text-shadow: 0 1px 2px #000; }}
 
-    /* Misc */
+    .avatar-circle {{ border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color); }}
     .online-indicator {{ display: inline-block; width: 8px; height: 8px; background-color: #22C55E; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }}
-    .icon-svg {{ vertical-align: middle; margin-right: 6px; margin-bottom: 2px; }}
-    .hashtag {{ color: var(--accent); font-weight: 500; cursor: pointer; }}
-    .mention {{ color: #3B82F6; font-weight: 500; cursor: pointer; }}
+    
+    /* Modal Header IG Web Style */
+    .modal-header-pro {{ display: flex; align-items: center; margin-bottom: 12px; }}
+    .modal-progress {{ width: 100%; height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 16px; overflow: hidden; }}
+    .modal-progress-bar {{ width: 100%; height: 100%; background: #FAFAFA; animation: progress 5s linear forwards; }}
+    @keyframes progress {{ 0% {{ width: 0%; }} 100% {{ width: 100%; }} }}
 
-    [data-testid="stMetricValue"] {{ color: var(--text-main) !important; font-size: 2.2rem !important; font-weight: 800 !important; letter-spacing: -1px; }}
-    [data-testid="stMetricLabel"] {{ color: var(--text-muted) !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 600 !important; }}
+    /* SVG Styling for inline icons */
+    .icon-svg {{ vertical-align: middle; margin-right: 4px; margin-bottom: 2px; }}
 
-    @media (max-width: 768px) {
-        [data-testid="column"] { width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }
-        .block-container { padding: 1rem !important; }
-    }
+    [data-testid="stMetricValue"] {{ color: var(--text-main) !important; font-size: 2rem !important; font-weight: 800 !important; letter-spacing: -1px; }}
+    [data-testid="stMetricLabel"] {{ color: var(--text-muted) !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.7rem !important; font-weight: 600 !important; }}
+
+    @media (max-width: 768px) {{
+        [data-testid="column"] {{ width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }}
+        .block-container {{ padding: 1rem !important; }}
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -199,6 +226,8 @@ def inicializar_bd():
             if "liked_by" not in p: p["liked_by"] = []
             if "reposted_by" not in p: p["reposted_by"] = []
             if "es_repost" not in p: p["es_repost"] = False
+            if isinstance(p.get("likes"), int): del p["likes"]
+            if isinstance(p.get("reposts"), int): del p["reposts"]
 
         claves_proy = ["archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", "personajes", "locaciones", "crew", "catering", "links", "presupuesto", "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals", "kanban"]
         for nombre_proy, datos_proy in data_cargada.items():
@@ -239,10 +268,13 @@ def dialog_comentar(post_id, usuario):
 @st.dialog("Visualizador")
 def ver_historia_dialog(b64_foto, usuario_nombre, f_avatar, tiempo):
     st.markdown(f"""
-        <div style="display:flex; align-items:center; margin-bottom:12px;">
-            <img src="{f_avatar}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--border-color);">
-            <span style="font-weight:600; font-size:13px; color:var(--text-main);">{usuario_nombre}</span>
-            <span style="color:var(--text-muted); font-size:11px; margin-left:6px;">{tiempo}</span>
+        <div class="modal-progress"><div class="modal-progress-bar"></div></div>
+        <div class="modal-header-pro">
+            <img src="{f_avatar}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; margin-right:8px;">
+            <div>
+                <span style="font-weight:600; color:var(--text-main); font-size:13px;">{usuario_nombre}</span>
+                <span style="color:var(--text-muted); font-size:11px; margin-left:6px;">{tiempo}</span>
+            </div>
         </div>
         <img src="data:image/jpeg;base64,{b64_foto}" style="width:100%; border-radius:12px; object-fit:contain; background:#000; border:1px solid var(--border-color);">
     """, unsafe_allow_html=True)
@@ -283,7 +315,13 @@ def ver_perfil(em_usuario):
             if p.get("texto"): st.markdown(f"<p class='post-body'>{format_text(p['texto'])}</p>", unsafe_allow_html=True)
             if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' class='post-img'>", unsafe_allow_html=True)
 
-# Resto de modales (Funciones)
+@st.dialog("Reportar Problema")
+def ventana_soporte(usuario):
+    a = st.text_input("Asunto", key="dlg_sop_a")
+    d = st.text_area("Descripción", key="dlg_sop_d")
+    if st.button("Enviar Ticket", key="dlg_sop_b"):
+        if a and d: st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({"usuario": usuario, "fecha": obtener_hora_actual(), "asunto": a, "desc": d, "estado": "Pendiente"}); guardar_y_recargar()
+
 @st.dialog("Nueva Tarea")
 def ventana_kanban(proyecto, autor):
     t = st.text_input("Tarea", key="dlg_kb_t")
@@ -291,12 +329,250 @@ def ventana_kanban(proyecto, autor):
     if st.button("Guardar", key="dlg_kb_b"):
         if t: st.session_state["proyectos"][proyecto]["kanban"].append({"tarea": t, "estado": e, "autor": autor}); guardar_y_recargar()
 
-@st.dialog("Reportar Problema")
-def ventana_soporte(usuario):
-    a = st.text_input("Asunto", key="dlg_sop_a")
-    d = st.text_area("Descripción", key="dlg_sop_d")
-    if st.button("Enviar Ticket", key="dlg_sop_b"):
-        if a and d: st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({"usuario": usuario, "fecha": obtener_hora_actual(), "asunto": a, "desc": d, "estado": "Pendiente"}); guardar_y_recargar()
+@st.dialog("Recordatorio")
+def ventana_recordatorio(es_admin, autor):
+    titulo = st.text_input("Título", key="dlg_rec_t")
+    fecha = st.date_input("Fecha", key="dlg_rec_f")
+    tipo = st.selectbox("Visibilidad", ["Privado", "Global"], key="dlg_rec_v") if es_admin else "Privado"
+    if st.button("Guardar", key="dlg_rec_b"):
+        if titulo: st.session_state["proyectos"]["_CONFIG_"]["recordatorios"].append({"autor": autor, "titulo": titulo, "fecha": str(fecha), "tipo": tipo}); guardar_y_recargar()
+
+@st.dialog("Emitir Comunicado")
+def ventana_aviso(proyecto, autor, locaciones_disponibles):
+    tipo = st.radio("Tipo:", ["Aviso General", "Citación Oficial"], horizontal=True, key="av_r")
+    if tipo == "Aviso General":
+        nuevo_aviso = st.text_area("Mensaje:", key="av_t")
+        if st.button("Publicar", use_container_width=True, key="av_b"):
+            if nuevo_aviso: st.session_state["proyectos"][proyecto]["avisos"].append({"tipo": "general", "autor": autor, "texto": nuevo_aviso}); guardar_y_recargar()
+    else:
+        c1, c2 = st.columns(2)
+        fecha = c1.date_input("Fecha de Rodaje", key="av_f")
+        hora = c2.time_input("Hora de Citación", key="av_h")
+        nombres_locs = [l['nombre'] for l in locaciones_disponibles]
+        loc_elegida = st.selectbox("Locación", nombres_locs, key="av_s") if nombres_locs else st.text_input("Locación", key="av_st")
+        notas_citacion = st.text_area("Notas extras", key="av_n")
+        if st.button("Publicar Citación", use_container_width=True, key="av_bc"):
+            st.session_state["proyectos"][proyecto]["avisos"].append({"tipo": "citacion", "autor": autor, "fecha": str(fecha), "hora": str(hora), "locacion": loc_elegida, "notas": notas_citacion}); guardar_y_recargar()
+
+@st.dialog("Registrar Locación")
+def ventana_locacion(proyecto):
+    nombre = st.text_input("Nombre", key="loc_n")
+    direccion = st.text_input("Dirección", key="loc_d")
+    c1, c2 = st.columns(2)
+    lat = c1.number_input("Latitud", format="%.6f", value=0.0, key="loc_la")
+    lon = c2.number_input("Longitud", format="%.6f", value=0.0, key="loc_lo")
+    permisos = st.selectbox("Permisos", ["En gestión", "Aprobado", "No requiere"], key="loc_p")
+    if st.button("Guardar", use_container_width=True, key="loc_b"):
+        if nombre: st.session_state["proyectos"][proyecto]["locaciones"].append({"nombre": nombre, "direccion": direccion, "lat": lat, "lon": lon, "permisos": permisos}); guardar_y_recargar()
+
+@st.dialog("Fichar Crew")
+def ventana_crew(proyecto):
+    nombre = st.text_input("Nombre", key="cr_n")
+    c1, c2 = st.columns(2)
+    rol = c1.text_input("Rol", key="cr_r")
+    telefono = c2.text_input("Teléfono", key="cr_t")
+    obra_social = st.text_input("Seguro/ART", key="cr_o")
+    if st.button("Guardar", use_container_width=True, key="cr_b"):
+        if nombre: st.session_state["proyectos"][proyecto]["crew"].append({"nombre": nombre, "rol": rol, "telefono": telefono, "obra_social": obra_social}); guardar_y_recargar()
+
+@st.dialog("Planilla de Dietas")
+def ventana_catering(proyecto):
+    nombre = st.text_input("Nombre", key="cat_n")
+    dieta = st.selectbox("Restricción", ["Ninguna", "Vegetariano", "Vegano", "Celíaco", "Diabético"], key="cat_d")
+    alergias = st.text_area("Alergias", key="cat_a")
+    if st.button("Guardar", use_container_width=True, key="cat_b"):
+        if nombre: st.session_state["proyectos"][proyecto]["catering"].append({"nombre": nombre, "dieta": dieta, "alergias": alergias}); guardar_y_recargar()
+
+@st.dialog("Pedido")
+def ventana_pedido(proyecto, area):
+    item_nombre = st.text_input("Equipo", key="ped_n")
+    justificacion = st.text_area("Notas", key="ped_j")
+    prioridad = st.selectbox("Urgencia", ["Baja", "Media", "Alta"], key="ped_p")
+    if st.button("Enviar", use_container_width=True, key="ped_b"):
+        if item_nombre: st.session_state["proyectos"][proyecto]["pedidos_equipos"].append({"area": area, "item": item_nombre, "notas": justificacion, "prioridad": prioridad, "estado": "Pendiente"}); guardar_y_recargar()
+
+@st.dialog("Cargar Inventario")
+def ventana_equipo(proyecto, area):
+    col1, col2 = st.columns(2)
+    item_nombre = col1.text_input("Ítem", key="eq_n")
+    cantidad = col2.number_input("Cant", min_value=1, value=1, key="eq_c")
+    tipo = col1.selectbox("Condición", ["Propio", "Alquilado"], key="eq_t")
+    rental = col2.text_input("Rental", disabled=(tipo=="Propio"), key="eq_r")
+    if st.button("Registrar", use_container_width=True, key="eq_b"):
+        if item_nombre: st.session_state["proyectos"][proyecto]["equipos"].append({"area": area, "item": item_nombre, "cant": cantidad, "tipo": tipo, "rental": rental if tipo == "Alquilado" else "N/A"}); guardar_y_recargar()
+
+@st.dialog("Nota de Raccord")
+def ventana_continuidad(proyecto):
+    c1, c2 = st.columns(2)
+    escena = c1.text_input("ESC", key="con_e")
+    toma = c2.text_input("TOMA", key="con_t")
+    detalle = st.text_area("Detalle", key="con_d")
+    if st.button("Guardar", use_container_width=True, key="con_b"):
+        if escena and detalle: st.session_state["proyectos"][proyecto]["continuidad"].append({"escena": escena, "toma": toma, "detalle": detalle}); guardar_y_recargar()
+
+@st.dialog("Archivo de Arte")
+def ventana_arte(proyecto):
+    categoria = st.radio("Tipo:", ["Utilería", "Vestuario"], horizontal=True, key="ar_r")
+    objeto = st.text_input("Objeto", key="ar_o")
+    responsable = st.text_input("Responsable", key="ar_res")
+    estado = st.selectbox("Status", ["Pendiente", "Aprobado", "En Set"], key="ar_s")
+    foto_subida = st.file_uploader("Foto", type=["jpg", "png", "jpeg"], key="ar_f")
+    if st.button("Guardar", use_container_width=True, key="ar_b"):
+        if objeto: st.session_state["proyectos"][proyecto]["arte"].append({"categoria": categoria, "objeto": objeto, "responsable": responsable, "estado": estado, "foto": base64.b64encode(foto_subida.read()).decode('utf-8') if foto_subida else None}); guardar_y_recargar()
+
+@st.dialog("Diagramar Plano")
+def ventana_plano(proyecto):
+    c1, c2 = st.columns(2)
+    escena = c1.text_input("ESC", key="pla_e")
+    toma = c2.text_input("PLANO", key="pla_t")
+    tamano = st.selectbox("Encuadre", ["PG", "PE", "PM", "PP", "PD"], key="pla_s")
+    movimiento = st.selectbox("Movimiento", ["Fijo", "Handheld", "Paneo", "Tilt", "Tracking", "Steady"], key="pla_m")
+    if st.button("Guardar", use_container_width=True, key="pla_b"):
+        if escena: st.session_state["proyectos"][proyecto]["planos"].append({"escena": escena, "toma": toma, "tamano": tamano, "movimiento": movimiento}); guardar_y_recargar()
+
+@st.dialog("Registrar Bloque")
+def ventana_cronograma(proyecto):
+    hora = st.time_input("Hora", key="cro_h")
+    actividad = st.text_input("Actividad", key="cro_a")
+    if st.button("Fijar", use_container_width=True, key="cro_b"):
+        if actividad: st.session_state["proyectos"][proyecto]["plan_rodaje"].append({"hora": str(hora), "actividad": actividad}); guardar_y_recargar()
+
+@st.dialog("Log de Sonido")
+def ventana_sonido(proyecto):
+    c1, c2 = st.columns(2)
+    escena = c1.text_input("ESC", key="son_e")
+    toma = c2.text_input("TOMA", key="son_t")
+    pistas = st.text_area("Pistas", key="son_p")
+    obs = st.text_input("Notas", key="son_o")
+    if st.button("Guardar", use_container_width=True, key="son_b"):
+        if escena: st.session_state["proyectos"][proyecto]["sonido_log"].append({"escena": escena, "toma": toma, "pistas": pistas, "obs": obs}); guardar_y_recargar()
+
+@st.dialog("Calificar Toma")
+def ventana_toma_dir(proyecto):
+    c1, c2 = st.columns(2)
+    escena = c1.text_input("ESC", key="td_e")
+    toma = c2.text_input("TOMA", key="td_t")
+    evaluacion = st.radio("Evaluación", ["BUENA", "MALA", "REGULAR"], horizontal=True, key="td_ev")
+    if st.button("Guardar", use_container_width=True, key="td_b"):
+        if escena: st.session_state["proyectos"][proyecto]["tomas_dir"].append({"escena": escena, "toma": toma, "evaluacion": evaluacion}); guardar_y_recargar()
+
+@st.dialog("Estructurar Personaje")
+def ventana_personaje(proyecto):
+    nombre = st.text_input("Nombre", key="per_n")
+    rol = st.selectbox("Jerarquía", ["Protagonista", "Antagonista", "Secundario"], key="per_r")
+    objetivo = st.text_input("Objetivo", key="per_o")
+    conflicto = st.text_area("Conflicto", key="per_c")
+    if st.button("Guardar", use_container_width=True, key="per_b"):
+        if nombre: st.session_state["proyectos"][proyecto]["personajes"].append({"nombre": nombre, "rol": rol, "objetivo": objetivo, "conflicto": conflicto}); guardar_y_recargar()
+
+@st.dialog("Referencia URL")
+def ventana_link(proyecto):
+    titulo = st.text_input("Título", key="lk_t")
+    url = st.text_input("URL", key="lk_u")
+    desc = st.text_input("Descripción", key="lk_d")
+    if st.button("Guardar", use_container_width=True, key="lk_b"):
+        if titulo and url: st.session_state["proyectos"][proyecto]["links"].append({"titulo": titulo, "url": url, "desc": desc}); guardar_y_recargar()
+
+@st.dialog("Registrar Gasto")
+def ventana_presupuesto(proyecto):
+    item = st.text_input("Concepto", key="pre_i")
+    costo = st.number_input("Costo Neto ($)", min_value=0.0, key="pre_c")
+    area = st.selectbox("Área", ["Técnica", "Arte", "Producción", "Catering", "Transporte"], key="pre_a")
+    estado = st.selectbox("Estado", ["Pendiente", "Abonado"], key="pre_e")
+    if st.button("Registrar", use_container_width=True, key="pre_b"):
+        if item: st.session_state["proyectos"][proyecto]["presupuesto"].append({"item": item, "costo": costo, "area": area, "estado": estado}); guardar_y_recargar()
+
+@st.dialog("Perfil de Casting")
+def ventana_casting(proyecto):
+    actor = st.text_input("Actor", key="cas_a")
+    personaje = st.text_input("Personaje", key="cas_p")
+    reel = st.text_input("Reel", key="cas_r")
+    foto = st.file_uploader("Foto", type=["jpg", "png", "jpeg"], key="cas_f")
+    if st.button("Archivar", use_container_width=True, key="cas_b"):
+        if actor: st.session_state["proyectos"][proyecto]["casting"].append({"actor": actor, "personaje": personaje, "reel": reel, "foto": base64.b64encode(foto.read()).decode('utf-8') if foto else None}); guardar_y_recargar()
+
+@st.dialog("Desglose Escénico")
+def ventana_desglose(proyecto):
+    c1, c2, c3 = st.columns(3)
+    escena = c1.text_input("ESC", key="des_e")
+    intext = c2.selectbox("Locación", ["INT", "EXT", "INT/EXT"], key="des_i")
+    dianoche = c3.selectbox("Horario", ["DÍA", "NOCHE", "ATARDECER"], key="des_h")
+    desc = st.text_area("Acción", key="des_d")
+    if st.button("Guardar", use_container_width=True, key="des_b"):
+        if escena: st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc}); guardar_y_recargar()
+
+@st.dialog("Agregar Rental")
+def ventana_nuevo_rental(proyecto):
+    nombre = st.text_input("Nombre", key="nr_n")
+    url = st.text_input("Sitio Web", key="nr_u")
+    if st.button("Guardar", use_container_width=True, key="nr_b"):
+        if nombre: st.session_state["proyectos"][proyecto]["directorio_rentals"].append({"nombre": nombre, "url": url}); guardar_y_recargar()
+
+@st.dialog("Análisis IA de Equipos")
+def ventana_comparador_rental(proyecto):
+    directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
+    if not directorio:
+        st.warning("Registra un Rental primero.")
+        return
+    rental_elegido = st.selectbox("Asignar a:", [r["nombre"] for r in directorio], key="cr_s")
+    url_rental = next((r["url"] for r in directorio if r["nombre"] == rental_elegido), "#")
+
+    tab_url, tab_excel, tab_img = st.tabs(["URL", "Documento", "Imagen"])
+    with tab_url:
+        url_p = st.text_input("URL del inventario", key="cr_tu")
+        if st.button("Extraer Web", use_container_width=True, key="cr_bu"):
+            try:
+                soup = BeautifulSoup(requests.get(url_p, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10).text, 'html.parser')
+                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                resp = genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Extrae a JSON: [{{\"nombre\": \"\", \"precio\": 0, \"estado\": \"Disponible\", \"url\": \"{url_p}\", \"foto\": \"\"}}]. Texto: {soup.get_text()[:10000]}")
+                for p in json.loads(resp.text.strip().replace("```json", "").replace("```", "")):
+                    p.update({"rental": rental_elegido, "url_rental": url_rental})
+                    st.session_state["proyectos"][proyecto]["comparador_rentals"].append(p)
+                guardar_y_recargar()
+            except Exception as e: st.error(str(e))
+    with tab_excel:
+        arch = st.file_uploader("Archivo (XLSX/CSV)", type=["xlsx", "csv"], key="cr_fx")
+        if st.button("Leer Doc", use_container_width=True, key="cr_bx"):
+            try:
+                df = pd.read_csv(arch) if arch.name.endswith('.csv') else pd.read_excel(arch)
+                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                resp = genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Extrae a JSON: [{{\"nombre\": \"\", \"precio\": 0, \"estado\": \"Disponible\", \"url\": \"{url_rental}\", \"foto\": \"\"}}]. Datos: {df.to_csv(index=False)[:10000]}")
+                for p in json.loads(resp.text.strip().replace("```json", "").replace("```", "")):
+                    p.update({"rental": rental_elegido, "url_rental": url_rental})
+                    st.session_state["proyectos"][proyecto]["comparador_rentals"].append(p)
+                guardar_y_recargar()
+            except: st.error("Error")
+    with tab_img:
+        img_arch = st.file_uploader("Foto", type=["jpg", "png", "jpeg"], key="cr_fi")
+        if st.button("Visión IA", use_container_width=True, key="cr_bi"):
+            try:
+                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                resp = genai.GenerativeModel('gemini-1.5-flash').generate_content([f"Extrae a JSON: [{{\"nombre\": \"\", \"precio\": 0, \"estado\": \"Disponible\", \"url\": \"{url_rental}\", \"foto\": \"\"}}]", Image.open(img_arch)])
+                for p in json.loads(resp.text.strip().replace("```json", "").replace("```", "")):
+                    p.update({"rental": rental_elegido, "url_rental": url_rental})
+                    st.session_state["proyectos"][proyecto]["comparador_rentals"].append(p)
+                guardar_y_recargar()
+            except: st.error("Error")
+
+@st.dialog("Checkout")
+def ventana_checkout(proyecto):
+    carrito = st.session_state["proyectos"][proyecto]["carrito_rentals"]
+    if not carrito: return st.warning("Vacío.")
+    agrupados = {}
+    for i in carrito: agrupados.setdefault(i.get("rental", "Desconocido"), []).append(i)
+    for rn, items in agrupados.items():
+        with st.container(border=True):
+            st.markdown(f"### {rn}")
+            for i in items: st.write(f"✦ {i['nombre']} **(${i['precio']:,.2f})**")
+            st.success(f"Total: ${sum(i['precio'] for i in items):,.2f}")
+
+@st.dialog("Purga de Datos")
+def ventana_vaciar_comparador(proyecto):
+    st.warning("Borrará catálogo y carrito.")
+    if st.button("Confirmar", use_container_width=True, key="pd_b"):
+        st.session_state["proyectos"][proyecto]["comparador_rentals"] = []
+        st.session_state["proyectos"][proyecto]["carrito_rentals"] = []
+        guardar_y_recargar()
 
 
 # --- 6. ACCESO (LOGIN) ---
@@ -339,35 +615,34 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
-    # NAVBAR ALINEADA PERFECTA Y ESTÉTICA (Botones transparentes)
+    # NAVBAR ALINEADA PERFECTA Y ESTÉTICA
     c_nav1, c_nav2, c_nav3, c_nav4, c_nav_space, c_nav_th, c_nav_img, c_nav_btn = st.columns([1.5, 1.2, 1.2, 1.2, 3, 0.5, 0.5, 1.2], vertical_alignment="center")
     
     with c_nav1: st.markdown(f"<img src='{LOGO_URL}' class='logo-img' style='height:38px;'>", unsafe_allow_html=True)
     with c_nav2: 
-        st.markdown("<div class='nav-btn-top'>", unsafe_allow_html=True)
+        st.markdown("<div class='nav-btn-container'>", unsafe_allow_html=True)
         if st.button("Dashboard", use_container_width=True, key="nv_d"): st.session_state["ruta"] = "Inicio"; st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
     with c_nav3:
-        st.markdown("<div class='nav-btn-top'>", unsafe_allow_html=True)
+        st.markdown("<div class='nav-btn-container'>", unsafe_allow_html=True)
         if st.button("Social", use_container_width=True, key="nv_s"): st.session_state["ruta"] = "Social"; st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
     with c_nav4:
-        st.markdown("<div class='nav-btn-top'>", unsafe_allow_html=True)
+        st.markdown("<div class='nav-btn-container'>", unsafe_allow_html=True)
         if st.button("Mensajes", use_container_width=True, key="nv_m"): st.session_state["ruta"] = "Mensajes"; st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
     with c_nav_space: pass
     with c_nav_th:
-        st.markdown("<div class='nav-btn-top'>", unsafe_allow_html=True)
+        st.markdown("<div class='nav-btn-container'>", unsafe_allow_html=True)
         if st.button("🌓", key="btn_th"):
             st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
     with c_nav_img:
-        # Foto nativa, se centra automático con la columna
         f_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
         st.markdown(f"<img src='{f_src}' style='width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color);'>", unsafe_allow_html=True)
     with c_nav_btn:
-        st.markdown("<div class='nav-btn-top'>", unsafe_allow_html=True)
+        st.markdown("<div class='nav-btn-container'>", unsafe_allow_html=True)
         if st.button("Perfil", use_container_width=True, key="nv_p"): st.session_state["ruta"] = "Perfil"; st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
             
@@ -377,7 +652,6 @@ else:
     if st.session_state["ruta"] == "Inicio":
         st.markdown(f"<h2>Welcome back, <span class='gradient-text'>{mis_datos['nombre']}</span>.</h2>", unsafe_allow_html=True)
         
-        # Métricas Row
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Proyectos Activos", len([p for p in st.session_state['proyectos'].keys() if p != '_CONFIG_']))
         total_crew = sum(len(pd_proy.get("crew", [])) for p, pd_proy in st.session_state['proyectos'].items() if p != '_CONFIG_')
@@ -394,7 +668,6 @@ else:
             l_proy = [p for p in st.session_state["proyectos"].keys() if p != "_CONFIG_"]
             if not l_proy: st.info("No hay desarrollos activos.")
             
-            # Grilla de Proyectos
             cols_grid = st.columns(2)
             for idx, proy in enumerate(l_proy):
                 with cols_grid[idx % 2]:
@@ -415,12 +688,10 @@ else:
                             st.rerun()
             
             st.markdown("<br><span class='section-title'>Análisis de Producción</span>", unsafe_allow_html=True)
-            # Gráfico de tareas global si hay data
             df_data = []
             for p, pd_proy in st.session_state['proyectos'].items():
                 if p != '_CONFIG_':
-                    for t in pd_proy.get("kanban", []):
-                        df_data.append({"Proyecto": p, "Estado": t["estado"]})
+                    for t in pd_proy.get("kanban", []): df_data.append({"Proyecto": p, "Estado": t["estado"]})
             if df_data:
                 df = pd.DataFrame(df_data)
                 fig = px.pie(df, names='Estado', hole=0.7, color_discrete_sequence=['#FBAF3B', '#3B82F6', '#22C55E'])
@@ -437,14 +708,13 @@ else:
                         if np_n: st.session_state["proyectos"][np_n] = {"contexto_aprobado": "Proyecto base.", "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": [], "directorio_rentals": [], "kanban": []}; guardar_y_recargar()
             
             st.markdown("<br>", unsafe_allow_html=True)
-            # Botonera de acceso rápido (Grid 2x2)
             c_dr1, c_dr2 = st.columns(2)
             if c_dr1.button("Kanban", use_container_width=True, key="dr_1"): st.session_state["menu_option"] = "Tablero Kanban"; st.session_state["ruta"] = "Proyecto" if st.session_state.get("proyecto_activo") else "Inicio"; st.rerun()
             if c_dr2.button("Presupuesto", use_container_width=True, key="dr_2"): st.session_state["menu_option"] = "Presupuesto"; st.session_state["ruta"] = "Proyecto" if st.session_state.get("proyecto_activo") else "Inicio"; st.rerun()
             if c_dr1.button("Rentals IA", use_container_width=True, key="dr_3"): st.session_state["menu_option"] = "Rentals IA"; st.session_state["ruta"] = "Proyecto" if st.session_state.get("proyecto_activo") else "Inicio"; st.rerun()
             if c_dr2.button("Guiones", use_container_width=True, key="dr_4"): st.session_state["menu_option"] = "Laboratorio Guion"; st.session_state["ruta"] = "Proyecto" if st.session_state.get("proyecto_activo") else "Inicio"; st.rerun()
             
-            if not st.session_state.get("proyecto_activo"): st.caption("Abrí un proyecto primero para usar las herramientas.")
+            if not st.session_state.get("proyecto_activo"): st.caption("Abrí un proyecto primero.")
 
             st.markdown("<br><span class='section-title'>Agenda / Call Sheets</span>", unsafe_allow_html=True)
             if st.button("Nuevo Recordatorio", type="secondary", use_container_width=True, key="d_rec"): ventana_recordatorio((nivel_actual in ["jefe_supremo", "jefe"]), mis_datos['nombre'])
@@ -454,7 +724,7 @@ else:
                         st.markdown(f"<span style='color:var(--accent); font-size:11px; font-weight:700;'>{rec['fecha']}</span>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-weight:600; font-size:14px;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
-    # --- RUTA: SOCIAL (LÓGICA TWITTER/IG EXTREMA) ---
+    # --- RUTA: SOCIAL (TWITTER / IG AESTHETIC) ---
     elif st.session_state["ruta"] == "Social":
         col_izq, col_centro, col_der = st.columns([1, 2.5, 1.2], gap="large")
         
@@ -472,7 +742,6 @@ else:
                 st.markdown(f"**{len(mis_datos.get('amigos', []))}** <span style='color:var(--text-muted); font-size:13px;'>Siguiendo</span>", unsafe_allow_html=True)
                 
         with col_centro:
-            # Snippets Estéticos (IG Web Mode)
             st.markdown("<span class='section-title'>Snippets</span>", unsafe_allow_html=True)
             ahora = datetime.now(TZ_AR)
             h_activas = [h for h in st.session_state["proyectos"]["_CONFIG_"]["social_stories"] if (ahora - datetime.strptime(h["timestamp"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ_AR)).total_seconds() < 86400]
@@ -499,7 +768,6 @@ else:
                         if st.button("Ver", key=f"s_v_{idx}", type="secondary"): ver_historia_dialog(h['foto'], ui_h['nombre'], f_h, h['timestamp'].split()[1])
             st.divider()
             
-            # Post Creator
             st.markdown("<span class='section-title'>Update Status</span>", unsafe_allow_html=True)
             with st.container(border=True):
                 txt_post = st.text_area("Whats on your mind?", label_visibility="collapsed", placeholder="What's happening on set?", key="s_ta")
@@ -515,7 +783,6 @@ else:
                             })
                             guardar_y_recargar()
 
-            # Feed
             posts = st.session_state["proyectos"]["_CONFIG_"]["social_posts"]
             for i, p in enumerate(posts):
                 ui = db_users[p["usuario"]]
@@ -542,7 +809,6 @@ else:
                     if p.get("texto"): st.markdown(f"<div class='post-body'>{format_text(p['texto'])}</div>", unsafe_allow_html=True)
                     if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' class='post-img'>", unsafe_allow_html=True)
                     
-                    # Interacciones Reales SVG
                     st.markdown("<div class='social-action-group'>", unsafe_allow_html=True)
                     c_lik, c_com, c_rep, c_sav = st.columns(4)
                     
@@ -566,9 +832,8 @@ else:
                                 "timestamp": obtener_hora_actual(), "liked_by": [], "comentarios": [], "reposted_by": [], "es_repost": True
                             })
                             guardar_y_recargar()
-                        else: # Undo repost
+                        else:
                             p["reposted_by"].remove(us_act)
-                            # Hard to delete the exact repost item without a distinct ID trace, but we remove the badge count.
                             guardar_y_recargar()
                             
                     is_saved = p['id'] in mis_datos.get("guardados", [])
