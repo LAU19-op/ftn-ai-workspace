@@ -14,3 +14,4 @@ matplotlib
 librosa
 scipy
 psutil
+spotipy
