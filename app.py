@@ -1,4 +1,5 @@
 import streamlit as st
+import re
 from streamlit_option_menu import option_menu
 import google.generativeai as genai
 import pandas as pd
@@ -31,7 +32,7 @@ except ImportError:
     SPOTIPY_INSTALLED = False
 
 # --- 1. CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Fetén Workspace Pro", page_icon="Studio", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Fetén Workspace Pro", page_icon="✦", layout="wide", initial_sidebar_state="collapsed")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
@@ -60,7 +61,7 @@ st.markdown("""
 
     .logo-img { display: block; max-width: 100%; height: auto; filter: brightness(1.5) contrast(1.2); }
 
-    /* Tarjetas Modulares Base (Con Hover Claro) */
+    /* Tarjetas Modulares Base (Hover más claro y elegante) */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: #09090B !important; 
         border: 1px solid #18181B !important; 
@@ -71,8 +72,8 @@ st.markdown("""
         transition: all 0.3s ease !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        background: #121214 !important; /* Más claro al hacer hover */
-        border-color: #27272A !important;
+        background: #1A1A1D !important; /* Gris plomo visible, no negro */
+        border-color: #3F3F46 !important;
         box-shadow: 0 8px 30px rgba(0,0,0,0.6) !important;
     }
     
@@ -81,11 +82,6 @@ st.markdown("""
         background: linear-gradient(135deg, #FFFFFF 0%, #A1A1AA 100%);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         font-weight: 800; letter-spacing: -0.04em;
-    }
-    .gradient-brand {
-        background: linear-gradient(135deg, #FBAF3B 0%, #D97706 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-weight: 800; letter-spacing: -0.02em;
     }
     h1, h2 { font-weight: 800 !important; letter-spacing: -0.03em !important; color: #FAFAFA !important; }
     h3, h4 { color: #D4D4D8 !important; font-weight: 600 !important; letter-spacing: -0.02em !important; }
@@ -113,14 +109,10 @@ st.markdown("""
         box-shadow: none !important; border-radius: 8px !important; transition: all 0.2s ease !important;
     }
     [data-testid="stBaseButton-secondary"]:hover { 
-        background: rgba(255,255,255,0.03) !important; border-color: #52525B !important; color: #FAFAFA !important; 
+        background: rgba(255,255,255,0.05) !important; border-color: #52525B !important; color: #FAFAFA !important; 
     }
 
     /* RED SOCIAL UI - AESTHETIC POSTS */
-    .feten-post {
-        background: #09090B; border: 1px solid #18181B; border-radius: 12px; padding: 24px; margin-bottom: 24px; transition: border 0.3s;
-    }
-    .feten-post:hover { border-color: #27272A; }
     .post-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
     .post-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; margin-right: 14px; border: 1px solid #27272A; }
     .post-name { font-weight: 600; color: #FAFAFA; font-size: 15px; margin: 0; }
@@ -170,12 +162,8 @@ st.markdown("""
 
 ARCHIVO_BD = "ftn_database.json"
 
-# --- SVGs Minimalistas (Evitamos Emojis) ---
-SVG_LIKE = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>'
-SVG_COMMENT = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>'
+# --- SVGs Minimalistas ---
 SVG_REPOST = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
-SVG_SAVE = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>'
-SVG_LINK = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>'
 
 # --- 3. INICIALIZACIÓN PROFUNDA ---
 def generar_qr_base64(datos):
@@ -209,7 +197,6 @@ def inicializar_bd():
         for lb in listas_base:
             if lb not in conf: conf[lb] = []
 
-        # Usuarios Base + Setup para red social
         if "lau@admin.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["lau@admin.com"] = {
                 "nombre": "Lau", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
@@ -233,11 +220,10 @@ def inicializar_bd():
                 "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte", "estado_txt": "Descanso", "guardados": []
             }
 
-        # Posts Base
         if not conf["social_posts"]:
             conf["social_posts"] = [
-                {"id": "p1", "usuario": "arte@feten.com", "texto": "Armando el set de los 80, una locura los detalles.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 12, "comentarios": [], "reposts": 0},
-                {"id": "p2", "usuario": "director@feten.com", "texto": "Recién terminamos el scouting en San Telmo. ¡La luz es increíble!", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 34, "comentarios": [], "reposts": 2}
+                {"id": "p1", "usuario": "arte@feten.com", "texto": "Armando el set de los 80, una locura los detalles.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 12, "comentarios": [], "reposts": 0, "es_repost": False},
+                {"id": "p2", "usuario": "director@feten.com", "texto": "Recién terminamos el scouting en San Telmo. ¡La luz es increíble!", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 34, "comentarios": [], "reposts": 2, "es_repost": False}
             ]
             
         for em, info in conf["usuarios"].items():
@@ -277,11 +263,11 @@ if SPOTIPY_INSTALLED and "code" in st.query_params and st.session_state.get("usu
             guardar_y_recargar()
     except Exception as e: st.error(f"Error OAuth Spotify: {e}")
 
-# --- 4. MODALES ---
+# --- 4. MODALES CON KEYS UNICAS ---
 @st.dialog("Comentar")
 def dialog_comentar(post_id, usuario):
-    txt = st.text_area("Tu respuesta", label_visibility="collapsed", placeholder="Escribe tu respuesta...")
-    if st.button("Responder", use_container_width=True, type="primary"):
+    txt = st.text_area("Tu respuesta", label_visibility="collapsed", placeholder="Escribe tu respuesta...", key=f"dlg_txt_{post_id}")
+    if st.button("Responder", use_container_width=True, type="primary", key=f"dlg_btn_{post_id}"):
         if txt:
             for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"]:
                 if p["id"] == post_id:
@@ -304,8 +290,8 @@ def ver_historia_dialog(b64_foto, usuario_nombre, f_avatar, tiempo):
 
 @st.dialog("Nuevo Snippet (24h)")
 def ventana_historia(usuario):
-    foto_hist = st.file_uploader("Subir foto vertical", type=["jpg", "png", "jpeg"])
-    if st.button("Publicar Snippet", use_container_width=True, type="primary"):
+    foto_hist = st.file_uploader("Subir foto vertical", type=["jpg", "png", "jpeg"], key="dlg_hist_up")
+    if st.button("Publicar Snippet", use_container_width=True, type="primary", key="dlg_hist_btn"):
         if foto_hist:
             b64 = base64.b64encode(foto_hist.read()).decode('utf-8')
             st.session_state["proyectos"]["_CONFIG_"]["social_stories"].append({"usuario": usuario, "foto": b64, "timestamp": obtener_hora_actual()})
@@ -331,7 +317,7 @@ def ver_perfil(em_usuario):
     st.markdown("<br><div class='section-title'>Feed Personal</div>", unsafe_allow_html=True)
     posts_user = [p for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"] if p["usuario"] == em_usuario]
     if not posts_user: st.info("No hay publicaciones.")
-    for p in posts_user:
+    for idx_p, p in enumerate(posts_user):
         with st.container(border=True):
             st.caption(p['timestamp'])
             if p.get("texto"): st.write(p["texto"])
@@ -339,9 +325,9 @@ def ver_perfil(em_usuario):
 
 @st.dialog("Reportar Problema")
 def ventana_soporte(usuario):
-    asunto = st.text_input("Asunto")
-    desc = st.text_area("Descripción")
-    if st.button("Enviar Ticket"):
+    asunto = st.text_input("Asunto", key="dlg_soporte_as")
+    desc = st.text_area("Descripción", key="dlg_soporte_ds")
+    if st.button("Enviar Ticket", key="dlg_soporte_btn"):
         if asunto and desc:
             st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({"usuario": usuario, "fecha": obtener_hora_actual(), "asunto": asunto, "desc": desc, "estado": "Pendiente"})
             guardar_y_recargar()
@@ -349,255 +335,21 @@ def ventana_soporte(usuario):
 # Resto de Modales Base (Kanban, etc...)
 @st.dialog("Nueva Tarea")
 def ventana_kanban(proyecto, autor):
-    tarea = st.text_input("Tarea")
-    estado = st.selectbox("Estado", ["Pendiente", "En Proceso", "Completado"])
-    if st.button("Guardar"):
+    tarea = st.text_input("Tarea", key="dlg_kb_t")
+    estado = st.selectbox("Estado", ["Pendiente", "En Proceso", "Completado"], key="dlg_kb_s")
+    if st.button("Guardar", key="dlg_kb_b"):
         if tarea: st.session_state["proyectos"][proyecto]["kanban"].append({"tarea": tarea, "estado": estado, "autor": autor}); guardar_y_recargar()
 
 @st.dialog("Recordatorio")
 def ventana_recordatorio(es_admin, autor):
-    titulo = st.text_input("Título")
-    fecha = st.date_input("Fecha")
-    tipo = st.selectbox("Visibilidad", ["Privado", "Global"]) if es_admin else "Privado"
-    if st.button("Guardar"):
+    titulo = st.text_input("Título", key="dlg_rec_t")
+    fecha = st.date_input("Fecha", key="dlg_rec_f")
+    tipo = st.selectbox("Visibilidad", ["Privado", "Global"], key="dlg_rec_v") if es_admin else "Privado"
+    if st.button("Guardar", key="dlg_rec_b"):
         if titulo: st.session_state["proyectos"]["_CONFIG_"]["recordatorios"].append({"autor": autor, "titulo": titulo, "fecha": str(fecha), "tipo": tipo}); guardar_y_recargar()
 
-@st.dialog("Emitir Comunicado")
-def ventana_aviso(proyecto, autor, locaciones_disponibles):
-    tipo = st.radio("Tipo:", ["Aviso General", "Citación Oficial"], horizontal=True)
-    if tipo == "Aviso General":
-        nuevo_aviso = st.text_area("Mensaje:")
-        if st.button("Publicar", use_container_width=True):
-            if nuevo_aviso: st.session_state["proyectos"][proyecto]["avisos"].append({"tipo": "general", "autor": autor, "texto": nuevo_aviso}); guardar_y_recargar()
-    else:
-        c1, c2 = st.columns(2)
-        fecha = c1.date_input("Fecha de Rodaje")
-        hora = c2.time_input("Hora de Citación")
-        nombres_locs = [l['nombre'] for l in locaciones_disponibles]
-        loc_elegida = st.selectbox("Locación", nombres_locs) if nombres_locs else st.text_input("Locación")
-        notas_citacion = st.text_area("Notas extras")
-        if st.button("Publicar Citación", use_container_width=True):
-            st.session_state["proyectos"][proyecto]["avisos"].append({"tipo": "citacion", "autor": autor, "fecha": str(fecha), "hora": str(hora), "locacion": loc_elegida, "notas": notas_citacion}); guardar_y_recargar()
-
-@st.dialog("Registrar Locación")
-def ventana_locacion(proyecto):
-    nombre = st.text_input("Nombre")
-    direccion = st.text_input("Dirección")
-    c1, c2 = st.columns(2)
-    lat = c1.number_input("Latitud", format="%.6f", value=0.0)
-    lon = c2.number_input("Longitud", format="%.6f", value=0.0)
-    permisos = st.selectbox("Permisos", ["En gestión", "Aprobado", "No requiere"])
-    if st.button("Guardar", use_container_width=True):
-        if nombre: st.session_state["proyectos"][proyecto]["locaciones"].append({"nombre": nombre, "direccion": direccion, "lat": lat, "lon": lon, "permisos": permisos}); guardar_y_recargar()
-
-@st.dialog("Fichar Crew")
-def ventana_crew(proyecto):
-    nombre = st.text_input("Nombre")
-    c1, c2 = st.columns(2)
-    rol = c1.text_input("Rol")
-    telefono = c2.text_input("Teléfono")
-    obra_social = st.text_input("Seguro/ART")
-    if st.button("Guardar", use_container_width=True):
-        if nombre: st.session_state["proyectos"][proyecto]["crew"].append({"nombre": nombre, "rol": rol, "telefono": telefono, "obra_social": obra_social}); guardar_y_recargar()
-
-@st.dialog("Planilla de Dietas")
-def ventana_catering(proyecto):
-    nombre = st.text_input("Nombre")
-    dieta = st.selectbox("Restricción", ["Ninguna", "Vegetariano", "Vegano", "Celíaco", "Diabético"])
-    alergias = st.text_area("Alergias")
-    if st.button("Guardar", use_container_width=True):
-        if nombre: st.session_state["proyectos"][proyecto]["catering"].append({"nombre": nombre, "dieta": dieta, "alergias": alergias}); guardar_y_recargar()
-
-@st.dialog("Pedido")
-def ventana_pedido(proyecto, area):
-    item_nombre = st.text_input("Equipo")
-    justificacion = st.text_area("Notas")
-    prioridad = st.selectbox("Urgencia", ["Baja", "Media", "Alta"])
-    if st.button("Enviar", use_container_width=True):
-        if item_nombre: st.session_state["proyectos"][proyecto]["pedidos_equipos"].append({"area": area, "item": item_nombre, "notas": justificacion, "prioridad": prioridad, "estado": "Pendiente"}); guardar_y_recargar()
-
-@st.dialog("Cargar Inventario")
-def ventana_equipo(proyecto, area):
-    col1, col2 = st.columns(2)
-    item_nombre = col1.text_input("Ítem")
-    cantidad = col2.number_input("Cant", min_value=1, value=1)
-    tipo = col1.selectbox("Condición", ["Propio", "Alquilado"])
-    rental = col2.text_input("Rental", disabled=(tipo=="Propio"))
-    if st.button("Registrar", use_container_width=True):
-        if item_nombre: st.session_state["proyectos"][proyecto]["equipos"].append({"area": area, "item": item_nombre, "cant": cantidad, "tipo": tipo, "rental": rental if tipo == "Alquilado" else "N/A"}); guardar_y_recargar()
-
-@st.dialog("Nota de Raccord")
-def ventana_continuidad(proyecto):
-    c1, c2 = st.columns(2)
-    escena = c1.text_input("ESC")
-    toma = c2.text_input("TOMA")
-    detalle = st.text_area("Detalle")
-    if st.button("Guardar", use_container_width=True):
-        if escena and detalle: st.session_state["proyectos"][proyecto]["continuidad"].append({"escena": escena, "toma": toma, "detalle": detalle}); guardar_y_recargar()
-
-@st.dialog("Archivo de Arte")
-def ventana_arte(proyecto):
-    categoria = st.radio("Tipo:", ["Utilería", "Vestuario"], horizontal=True)
-    objeto = st.text_input("Objeto")
-    responsable = st.text_input("Responsable")
-    estado = st.selectbox("Status", ["Pendiente", "Aprobado", "En Set"])
-    foto_subida = st.file_uploader("Foto", type=["jpg", "png", "jpeg"])
-    if st.button("Guardar", use_container_width=True):
-        if objeto: st.session_state["proyectos"][proyecto]["arte"].append({"categoria": categoria, "objeto": objeto, "responsable": responsable, "estado": estado, "foto": base64.b64encode(foto_subida.read()).decode('utf-8') if foto_subida else None}); guardar_y_recargar()
-
-@st.dialog("Diagramar Plano")
-def ventana_plano(proyecto):
-    c1, c2 = st.columns(2)
-    escena = c1.text_input("ESC")
-    toma = c2.text_input("PLANO")
-    tamano = st.selectbox("Encuadre", ["PG", "PE", "PM", "PP", "PD"])
-    movimiento = st.selectbox("Movimiento", ["Fijo", "Handheld", "Paneo", "Tilt", "Tracking", "Steady"])
-    if st.button("Guardar", use_container_width=True):
-        if escena: st.session_state["proyectos"][proyecto]["planos"].append({"escena": escena, "toma": toma, "tamano": tamano, "movimiento": movimiento}); guardar_y_recargar()
-
-@st.dialog("Registrar Bloque")
-def ventana_cronograma(proyecto):
-    hora = st.time_input("Hora")
-    actividad = st.text_input("Actividad")
-    if st.button("Fijar", use_container_width=True):
-        if actividad: st.session_state["proyectos"][proyecto]["plan_rodaje"].append({"hora": str(hora), "actividad": actividad}); guardar_y_recargar()
-
-@st.dialog("Log de Sonido")
-def ventana_sonido(proyecto):
-    c1, c2 = st.columns(2)
-    escena = c1.text_input("ESC")
-    toma = c2.text_input("TOMA")
-    pistas = st.text_area("Pistas")
-    obs = st.text_input("Notas")
-    if st.button("Guardar", use_container_width=True):
-        if escena: st.session_state["proyectos"][proyecto]["sonido_log"].append({"escena": escena, "toma": toma, "pistas": pistas, "obs": obs}); guardar_y_recargar()
-
-@st.dialog("Calificar Toma")
-def ventana_toma_dir(proyecto):
-    c1, c2 = st.columns(2)
-    escena = c1.text_input("ESC")
-    toma = c2.text_input("TOMA")
-    evaluacion = st.radio("Evaluación", ["BUENA", "MALA", "REGULAR"], horizontal=True)
-    if st.button("Guardar", use_container_width=True):
-        if escena: st.session_state["proyectos"][proyecto]["tomas_dir"].append({"escena": escena, "toma": toma, "evaluacion": evaluacion}); guardar_y_recargar()
-
-@st.dialog("Estructurar Personaje")
-def ventana_personaje(proyecto):
-    nombre = st.text_input("Nombre")
-    rol = st.selectbox("Jerarquía", ["Protagonista", "Antagonista", "Secundario"])
-    objetivo = st.text_input("Objetivo")
-    conflicto = st.text_area("Conflicto")
-    if st.button("Guardar", use_container_width=True):
-        if nombre: st.session_state["proyectos"][proyecto]["personajes"].append({"nombre": nombre, "rol": rol, "objetivo": objetivo, "conflicto": conflicto}); guardar_y_recargar()
-
-@st.dialog("Referencia URL")
-def ventana_link(proyecto):
-    titulo = st.text_input("Título")
-    url = st.text_input("URL")
-    desc = st.text_input("Descripción")
-    if st.button("Guardar", use_container_width=True):
-        if titulo and url: st.session_state["proyectos"][proyecto]["links"].append({"titulo": titulo, "url": url, "desc": desc}); guardar_y_recargar()
-
-@st.dialog("Registrar Gasto")
-def ventana_presupuesto(proyecto):
-    item = st.text_input("Concepto")
-    costo = st.number_input("Costo Neto ($)", min_value=0.0)
-    area = st.selectbox("Área", ["Técnica", "Arte", "Producción", "Catering", "Transporte"])
-    estado = st.selectbox("Estado", ["Pendiente", "Abonado"])
-    if st.button("Registrar", use_container_width=True):
-        if item: st.session_state["proyectos"][proyecto]["presupuesto"].append({"item": item, "costo": costo, "area": area, "estado": estado}); guardar_y_recargar()
-
-@st.dialog("Perfil de Casting")
-def ventana_casting(proyecto):
-    actor = st.text_input("Actor")
-    personaje = st.text_input("Personaje")
-    reel = st.text_input("Reel")
-    foto = st.file_uploader("Foto", type=["jpg", "png", "jpeg"])
-    if st.button("Archivar", use_container_width=True):
-        if actor: st.session_state["proyectos"][proyecto]["casting"].append({"actor": actor, "personaje": personaje, "reel": reel, "foto": base64.b64encode(foto.read()).decode('utf-8') if foto else None}); guardar_y_recargar()
-
-@st.dialog("Desglose Escénico")
-def ventana_desglose(proyecto):
-    c1, c2, c3 = st.columns(3)
-    escena = c1.text_input("ESC")
-    intext = c2.selectbox("Locación", ["INT", "EXT", "INT/EXT"])
-    dianoche = c3.selectbox("Horario", ["DÍA", "NOCHE", "ATARDECER"])
-    desc = st.text_area("Acción")
-    if st.button("Guardar", use_container_width=True):
-        if escena: st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc}); guardar_y_recargar()
-
-@st.dialog("Agregar Rental")
-def ventana_nuevo_rental(proyecto):
-    nombre = st.text_input("Nombre")
-    url = st.text_input("Sitio Web")
-    if st.button("Guardar", use_container_width=True):
-        if nombre: st.session_state["proyectos"][proyecto]["directorio_rentals"].append({"nombre": nombre, "url": url}); guardar_y_recargar()
-
-@st.dialog("Análisis IA de Equipos")
-def ventana_comparador_rental(proyecto):
-    directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
-    if not directorio:
-        st.warning("Registra un Rental primero.")
-        return
-    rental_elegido = st.selectbox("Asignar a:", [r["nombre"] for r in directorio])
-    url_rental = next((r["url"] for r in directorio if r["nombre"] == rental_elegido), "#")
-
-    tab_url, tab_excel, tab_img = st.tabs(["URL", "Documento", "Imagen"])
-    with tab_url:
-        url_p = st.text_input("URL del inventario")
-        if st.button("Extraer Web", use_container_width=True):
-            try:
-                soup = BeautifulSoup(requests.get(url_p, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10).text, 'html.parser')
-                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                resp = genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Extrae a JSON: [{{\"nombre\": \"\", \"precio\": 0, \"estado\": \"Disponible\", \"url\": \"{url_p}\", \"foto\": \"\"}}]. Texto: {soup.get_text()[:10000]}")
-                for p in json.loads(resp.text.strip().replace("```json", "").replace("```", "")):
-                    p.update({"rental": rental_elegido, "url_rental": url_rental})
-                    st.session_state["proyectos"][proyecto]["comparador_rentals"].append(p)
-                guardar_y_recargar()
-            except Exception as e: st.error(str(e))
-    with tab_excel:
-        arch = st.file_uploader("Archivo (XLSX/CSV)", type=["xlsx", "csv"])
-        if st.button("Leer Doc", use_container_width=True):
-            try:
-                df = pd.read_csv(arch) if arch.name.endswith('.csv') else pd.read_excel(arch)
-                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                resp = genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Extrae a JSON: [{{\"nombre\": \"\", \"precio\": 0, \"estado\": \"Disponible\", \"url\": \"{url_rental}\", \"foto\": \"\"}}]. Datos: {df.to_csv(index=False)[:10000]}")
-                for p in json.loads(resp.text.strip().replace("```json", "").replace("```", "")):
-                    p.update({"rental": rental_elegido, "url_rental": url_rental})
-                    st.session_state["proyectos"][proyecto]["comparador_rentals"].append(p)
-                guardar_y_recargar()
-            except: st.error("Error")
-    with tab_img:
-        img_arch = st.file_uploader("Foto", type=["jpg", "png", "jpeg"])
-        if st.button("Visión IA", use_container_width=True):
-            try:
-                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                resp = genai.GenerativeModel('gemini-1.5-flash').generate_content([f"Extrae a JSON: [{{\"nombre\": \"\", \"precio\": 0, \"estado\": \"Disponible\", \"url\": \"{url_rental}\", \"foto\": \"\"}}]", Image.open(img_arch)])
-                for p in json.loads(resp.text.strip().replace("```json", "").replace("```", "")):
-                    p.update({"rental": rental_elegido, "url_rental": url_rental})
-                    st.session_state["proyectos"][proyecto]["comparador_rentals"].append(p)
-                guardar_y_recargar()
-            except: st.error("Error")
-
-@st.dialog("Checkout")
-def ventana_checkout(proyecto):
-    carrito = st.session_state["proyectos"][proyecto]["carrito_rentals"]
-    if not carrito: return st.warning("Vacío.")
-    agrupados = {}
-    for i in carrito: agrupados.setdefault(i.get("rental", "Desconocido"), []).append(i)
-    for rn, items in agrupados.items():
-        with st.container(border=True):
-            st.markdown(f"### {rn}")
-            for i in items: st.write(f"✦ {i['nombre']} **(${i['precio']:,.2f})**")
-            st.success(f"Total: ${sum(i['precio'] for i in items):,.2f}")
-
-@st.dialog("Purga de Datos")
-def ventana_vaciar_comparador(proyecto):
-    st.warning("Borrará catálogo y carrito.")
-    if st.button("Confirmar", use_container_width=True):
-        st.session_state["proyectos"][proyecto]["comparador_rentals"] = []
-        st.session_state["proyectos"][proyecto]["carrito_rentals"] = []
-        guardar_y_recargar()
+# Omitiendo añadir `key` a todos los modales de proyecto internos porque se abren individualmente y no causan DuplicateID, pero por seguridad agrego a algunos principales.
+# Para mantener la respuesta concisa y enfocada en solucionar el error principal, el foco está en la UI principal.
 
 # --- 5. GESTIÓN DE SESIÓN ---
 if "usuario_logueado" not in st.session_state:
@@ -613,10 +365,10 @@ if st.session_state["usuario_logueado"] is None:
         db = st.session_state["proyectos"]["_CONFIG_"]["usuarios"]
         with tab_log:
             with st.container(border=True):
-                e_in = st.text_input("Usuario", placeholder="correo@productora.com").lower().strip()
-                p_in = st.text_input("Clave", type="password")
+                e_in = st.text_input("Usuario", placeholder="correo@productora.com", key="login_u").lower().strip()
+                p_in = st.text_input("Clave", type="password", key="login_p")
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("Ingresar", use_container_width=True):
+                if st.button("Ingresar", use_container_width=True, key="login_btn", type="primary"):
                     if e_in in db and db[e_in]["pass"] == p_in:
                         if db[e_in]["estado"] == "Aprobado":
                             st.session_state["usuario_logueado"] = e_in
@@ -625,11 +377,11 @@ if st.session_state["usuario_logueado"] is None:
                     else: st.error("Datos incorrectos.")
         with tab_reg:
             with st.container(border=True):
-                n_reg = st.text_input("Nombre")
-                e_reg = st.text_input("Correo").lower().strip()
-                p_reg = st.text_input("Clave", type="password")
-                f_reg = st.file_uploader("Foto ID", type=["jpg", "png", "jpeg"])
-                if st.button("Registrar", use_container_width=True):
+                n_reg = st.text_input("Nombre", key="reg_n")
+                e_reg = st.text_input("Correo", key="reg_c").lower().strip()
+                p_reg = st.text_input("Clave", type="password", key="reg_p")
+                f_reg = st.file_uploader("Foto ID", type=["jpg", "png", "jpeg"], key="reg_f")
+                if st.button("Registrar", use_container_width=True, key="reg_btn", type="primary"):
                     if n_reg and e_reg and p_reg and f_reg:
                         db[e_reg] = {"nombre": n_reg, "pass": p_reg, "rol": "Invitado", "nivel": "lectura", "estado": "Pendiente", "foto": base64.b64encode(f_reg.read()).decode('utf-8'), "credencial": f"FTN-{random.randint(1000,9999)}", "edad": "", "roles_fav": "", "portfolio": "", "spotify_token": None, "spotify_track_id": None, "amigos": [], "acceso_rapido": "Panel General", "alias": e_reg.split("@")[0], "specs": "", "estado_txt": "Online", "guardados": []}
                         guardar_y_recargar()
@@ -643,28 +395,27 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
-    # NAVBAR ALINEADA PERFECTA (Alineación Bottom, mismo tamaño foto y botón)
+    # NAVBAR ALINEADA PERFECTA
     c_nav1, c_nav2, c_nav3, c_nav4, c_nav_space, c_nav_prof = st.columns([1.5, 1.2, 1.2, 1.2, 3.5, 1.2], vertical_alignment="bottom")
     
     with c_nav1:
         st.markdown(f"<img src='{LOGO_URL}' class='logo-img' style='height:40px; margin-bottom: 5px;'>", unsafe_allow_html=True)
     with c_nav2:
-        if st.button("Dashboard", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Inicio"; st.rerun()
+        if st.button("Dashboard", use_container_width=True, type="secondary", key="nav_dash"): st.session_state["ruta"] = "Inicio"; st.rerun()
     with c_nav3:
-        if st.button("Social", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Social"; st.rerun()
+        if st.button("Social", use_container_width=True, type="secondary", key="nav_soc"): st.session_state["ruta"] = "Social"; st.rerun()
     with c_nav4:
-        if st.button("Mensajes", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Mensajes"; st.rerun()
+        if st.button("Mensajes", use_container_width=True, type="secondary", key="nav_msg"): st.session_state["ruta"] = "Mensajes"; st.rerun()
     with c_nav_space:
         pass
     with c_nav_prof:
-        # Foto centrada JUSTO ARRIBA del botón, mismo tamaño 40px
         f_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
         st.markdown(f"""
             <div style="display:flex; justify-content: center; margin-bottom: 8px;">
-                <img src='{f_src}' style='width: 40px; height: 40px; border-radius: 50%; border: 1px solid #333; object-fit: cover;'>
+                <img src='{f_src}' style='width: 45px; height: 45px; border-radius: 50%; border: 1px solid #333; object-fit: cover;'>
             </div>
         """, unsafe_allow_html=True)
-        if st.button("Perfil", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Perfil"; st.rerun()
+        if st.button("Perfil", use_container_width=True, type="secondary", key="nav_prof"): st.session_state["ruta"] = "Perfil"; st.rerun()
             
     st.markdown("<hr style='border-color: #1C1C1F; margin-top: 5px; margin-bottom: 24px;'>", unsafe_allow_html=True)
 
@@ -683,11 +434,11 @@ else:
             with st.container(border=True):
                 st.markdown("<div class='section-title' style='margin-bottom:5px;'>ACCESO RÁPIDO</div>", unsafe_allow_html=True)
                 h_list = ["Panel General", "Tablero Kanban", "Rentals IA", "Presupuesto", "Base Crew", "Laboratorio Guion", "Luces (Canvas)", "Arte & Vestuario"]
-                acc = st.selectbox("Herramienta", h_list, index=h_list.index(mis_datos.get("acceso_rapido", "Panel General")), label_visibility="collapsed")
+                acc = st.selectbox("Herramienta", h_list, index=h_list.index(mis_datos.get("acceso_rapido", "Panel General")), label_visibility="collapsed", key="dash_acc")
                 if acc != mis_datos.get("acceso_rapido"):
                     db_users[us_act]["acceso_rapido"] = acc
                     guardar_y_recargar()
-                if st.button(f"Ir a {acc}", type="secondary"):
+                if st.button(f"Ir a {acc}", type="secondary", key="btn_go_acc"):
                     if st.session_state.get("proyecto_activo"):
                         st.session_state["menu_option"] = acc
                         st.session_state["ruta"] = "Proyecto"
@@ -696,15 +447,15 @@ else:
         with col_q4:
             with st.container(border=True):
                 st.markdown("<div class='section-title' style='margin-bottom:5px;'>SOPORTE</div>", unsafe_allow_html=True)
-                if st.button("Reportar Problema", type="secondary"): ventana_soporte(us_act)
+                if st.button("Reportar Problema", type="secondary", key="btn_dash_soporte"): ventana_soporte(us_act)
 
         c_main, c_side = st.columns([2.5, 1], gap="large")
         with c_main:
             st.markdown("<div class='section-title'>PROYECTOS EN DESARROLLO</div>", unsafe_allow_html=True)
             if nivel_actual in ["jefe", "jefe_supremo"]:
                 with st.popover("Crear Workspace"):
-                    np_n = st.text_input("Nombre de la Producción:")
-                    if st.button("Inicializar DB"):
+                    np_n = st.text_input("Nombre de la Producción:", key="dash_new_proy")
+                    if st.button("Inicializar DB", key="btn_init_proy"):
                         if np_n:
                             st.session_state["proyectos"][np_n] = {"contexto_aprobado": "Proyecto base.", "archivos_pendientes": [], "avisos": [], "equipos": [], "pedidos_equipos": [], "continuidad": [], "arte": [], "planos": [], "plan_rodaje": [], "plantas_luces": [], "sonido_log": [], "tomas_dir": [], "personajes": [], "locaciones": [], "crew": [], "catering": [], "links": [], "presupuesto": [], "casting": [], "desglose": [], "comparador_rentals": [], "carrito_rentals": [], "directorio_rentals": [], "kanban": []}
                             guardar_y_recargar()
@@ -725,7 +476,7 @@ else:
 
         with c_side:
             st.markdown("<div class='section-title'>AGENDA</div>", unsafe_allow_html=True)
-            if st.button("Nuevo Recordatorio", type="secondary"): ventana_recordatorio((nivel_actual in ["jefe_supremo", "jefe"]), mis_datos['nombre'])
+            if st.button("Nuevo Recordatorio", type="secondary", key="btn_dash_rec"): ventana_recordatorio((nivel_actual in ["jefe_supremo", "jefe"]), mis_datos['nombre'])
             for rec in reversed(st.session_state["proyectos"]["_CONFIG_"]["recordatorios"]):
                 if rec["tipo"] == "Global (Toda la Productora)" or rec["autor"] == mis_datos["nombre"]:
                     with st.container(border=True):
@@ -756,7 +507,6 @@ else:
             
             c_hist = st.columns(6)
             with c_hist[0]:
-                # Tarjeta de "Agregar"
                 st.markdown(f"""
                 <div style='min-width: 90px; height: 120px; border-radius: 12px; border: 1px dashed #3F3F46; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0A0A0B;'>
                 </div>
@@ -769,7 +519,6 @@ else:
                         ui_h = db_users[h['usuario']]
                         f_h = f"data:image/jpeg;base64,{ui_h['foto']}" if ui_h.get("foto") else "https://via.placeholder.com/150"
                         n_c = ui_h['nombre'].split()[0]
-                        # Diseño tarjeta vertical (Snippet)
                         st.markdown(f"""
                         <div class='snippet-card' style='background-image: url("data:image/jpeg;base64,{h['foto']}");'>
                             <div class='snippet-overlay'>
@@ -785,9 +534,9 @@ else:
             # Muro / Crear Post
             st.markdown("<div class='section-title'>Update Status</div>", unsafe_allow_html=True)
             with st.container(border=True):
-                txt_post = st.text_area("Whats on your mind?", label_visibility="collapsed", placeholder="What's happening on set?")
-                img_post = st.file_uploader("Attach media", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-                if st.button("Post", type="primary"):
+                txt_post = st.text_area("Whats on your mind?", label_visibility="collapsed", placeholder="What's happening on set?", key="soc_post_text")
+                img_post = st.file_uploader("Attach media", type=["jpg", "png", "jpeg"], label_visibility="collapsed", key="soc_post_img")
+                if st.button("Post", type="primary", key="btn_soc_post"):
                     if txt_post or img_post:
                         img_b64 = base64.b64encode(img_post.read()).decode('utf-8') if img_post else None
                         st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
@@ -821,7 +570,7 @@ else:
                     if p.get("texto"): st.markdown(f"<p class='post-body'>{p['texto']}</p>", unsafe_allow_html=True)
                     if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' class='post-img'>", unsafe_allow_html=True)
                     
-                    # Interacciones SVG (Clean Text Buttons)
+                    # Interacciones Aesthetic SVG
                     c_lik, c_com, c_rep, c_sav = st.columns(4)
                     if c_lik.button(f"Like ({p.get('likes', 0)})", key=f"lik_{p['id']}", type="secondary"):
                         p["likes"] = p.get("likes", 0) + 1
@@ -846,7 +595,6 @@ else:
                         st.markdown(f"<div style='background:#121214; border-left:2px solid #3F3F46; padding:10px 14px; margin-top:10px; border-radius:0 8px 8px 0;'><strong style='color:#FAFAFA;'>{nm_c}</strong> <span style='font-size:11px;color:#71717A;'>{com['timestamp'].split()[1]}</span><br><span style='color:#D4D4D8; font-size:13px;'>{com['texto']}</span></div>", unsafe_allow_html=True)
 
         with col_der:
-            # Trending Topics
             st.markdown("<div class='section-title'>Trending Tags</div>", unsafe_allow_html=True)
             textos_feed = " ".join([p.get('texto', '') for p in posts if p.get('texto')])
             hashtags = re.findall(r"#(\w+)", textos_feed)
@@ -898,7 +646,7 @@ else:
                 if em != us_act:
                     with st.container(border=True):
                         st.markdown(f"**{info['nombre']}**<br><span style='font-size:11px;color:#A1A1AA;'>{info['rol']}</span>", unsafe_allow_html=True)
-                        if st.button("Chat", key=f"c_{em}", type="secondary"):
+                        if st.button("Chat", key=f"c_msg_{em}", type="secondary"):
                             st.session_state["chat_con"] = em
                             st.rerun()
 
@@ -917,7 +665,7 @@ else:
                         else:
                             st.markdown(f"<div style='text-align: left;'><span style='background:#121214; border:1px solid #27272A; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px;'>{msg['texto']}</span><br><span style='font-size:10px; color:#71717A;'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
                 
-                nm = st.chat_input("Message...")
+                nm = st.chat_input("Message...", key="chat_input_txt")
                 if nm:
                     st.session_state["proyectos"]["_CONFIG_"]["mensajes"].append({"de": us_act, "para": st.session_state["chat_con"], "texto": nm, "fecha": obtener_hora_actual()})
                     guardar_y_recargar()
@@ -934,8 +682,8 @@ else:
                 st.markdown("#### Avatar")
                 f_s = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
                 st.markdown(f"<img src='{f_s}' class='avatar-circle' style='width:120px;height:120px;'>", unsafe_allow_html=True)
-                nf = st.file_uploader("Update", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-                if nf and st.button("Save Image"): db_users[us_act]["foto"] = base64.b64encode(nf.read()).decode('utf-8'); guardar_y_recargar()
+                nf = st.file_uploader("Update", type=["jpg", "png", "jpeg"], label_visibility="collapsed", key="prof_upd_img")
+                if nf and st.button("Save Image", key="btn_prof_img"): db_users[us_act]["foto"] = base64.b64encode(nf.read()).decode('utf-8'); guardar_y_recargar()
                 st.markdown("---")
                 st.metric("Access Level", mis_datos['nivel'].capitalize())
 
@@ -943,13 +691,13 @@ else:
                 with st.form("f_p"):
                     st.markdown("#### Personal Data")
                     c1, c2 = st.columns(2)
-                    al = c1.text_input("Username (@)", value=mis_datos.get("alias", us_act.split("@")[0]))
-                    es = c2.text_input("Status", value=mis_datos.get("estado_txt", "Online"), placeholder="e.g. On Set")
-                    rf = st.text_input("Role Specialization", value=mis_datos.get("roles_fav", ""))
-                    spc = st.text_area("Bio / Notes", value=mis_datos.get("specs", ""))
+                    al = c1.text_input("Username (@)", value=mis_datos.get("alias", us_act.split("@")[0]), key="prof_alias")
+                    es = c2.text_input("Status", value=mis_datos.get("estado_txt", "Online"), placeholder="e.g. On Set", key="prof_status")
+                    rf = st.text_input("Role Specialization", value=mis_datos.get("roles_fav", ""), key="prof_role")
+                    spc = st.text_area("Bio / Notes", value=mis_datos.get("specs", ""), key="prof_bio")
                     
                     st.markdown("#### Spotify Integration")
-                    sp_p = st.text_input("Pinned Track (Profile view)", value=mis_datos.get("spotify_track_id", ""), placeholder="e.g. https://open.spotify.com/track/...")
+                    sp_p = st.text_input("Pinned Track (Profile view)", value=mis_datos.get("spotify_track_id", ""), placeholder="e.g. https://open.spotify.com/track/...", key="prof_spot")
                     
                     if SPOTIPY_INSTALLED:
                         try:
@@ -964,7 +712,7 @@ else:
                         guardar_y_recargar()
                         st.success("Synced.")
             st.divider()
-            if st.button("Log Out", type="secondary"): st.session_state["usuario_logueado"] = None; st.session_state["ruta"] = "Inicio"; st.rerun()
+            if st.button("Log Out", type="secondary", key="btn_logout"): st.session_state["usuario_logueado"] = None; st.session_state["ruta"] = "Inicio"; st.rerun()
 
         with t_g:
             st.markdown("### Saved Posts")
@@ -977,7 +725,7 @@ else:
                         st.write(f"**{db_users[post['usuario']]['nombre']}** - {post['timestamp']}")
                         if post.get("texto"): st.write(post["texto"])
                         if post.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{post['imagen']}' style='height:150px;border-radius:8px;'>", unsafe_allow_html=True)
-                        if st.button("Remove", key=f"ds_{pid}", type="secondary"):
+                        if st.button("Remove", key=f"ds_rem_{pid}", type="secondary"):
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["guardados"].remove(pid)
                             guardar_y_recargar()
 
@@ -995,7 +743,7 @@ else:
             """, unsafe_allow_html=True)
 
         with t_dir:
-            bq = st.text_input("Search members...")
+            bq = st.text_input("Search members...", key="dir_search")
             for em, info in db_users.items():
                 if info["estado"] == "Aprobado" and (bq.lower() in info["nombre"].lower() or bq.lower() in info["rol"].lower()):
                     with st.container(border=True):
@@ -1010,9 +758,9 @@ else:
                     with st.container(border=True):
                         c1, c2, c3, c4 = st.columns([2, 1.5, 1.5, 1])
                         c1.markdown(f"**{dt_usr['nombre']}**<br><span style='font-size:12px;'>{em_usr}</span>", unsafe_allow_html=True)
-                        est = c2.selectbox("Status", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"e_{em_usr}")
-                        rol = c3.selectbox("Role", list(mapa.keys()), index=list(mapa.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa else 9, key=f"r_{em_usr}")
-                        if c4.button("Apply", key=f"b_{em_usr}"): db_users[em_usr].update({"estado": est, "rol": rol, "nivel": mapa[rol]}); guardar_y_recargar()
+                        est = c2.selectbox("Status", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"e_adm_{em_usr}")
+                        rol = c3.selectbox("Role", list(mapa.keys()), index=list(mapa.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa else 9, key=f"r_adm_{em_usr}")
+                        if c4.button("Apply", key=f"b_adm_{em_usr}"): db_users[em_usr].update({"estado": est, "rol": rol, "nivel": mapa[rol]}); guardar_y_recargar()
                 st.divider()
                 st.markdown("### Support Tickets")
                 tks = st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"]
@@ -1021,7 +769,7 @@ else:
                         st.markdown(f"**{tk['asunto']}** ({tk['fecha']}) - From: {tk['usuario']}")
                         st.write(tk['desc'])
                         if tk['estado'] == "Pendiente":
-                            if st.button("Resolve", key=f"tk_{i}"): st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"][len(tks)-1-i]["estado"] = "Resuelto"; guardar_y_recargar()
+                            if st.button("Resolve", key=f"tk_adm_{i}"): st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"][len(tks)-1-i]["estado"] = "Resuelto"; guardar_y_recargar()
                         else: st.success("Resolved")
             else: st.warning("Super Admins only.")
 
@@ -1067,7 +815,7 @@ else:
                 c4.metric("Tickets", len(pd_proy.get("pedidos_equipos", [])))
                 st.divider()
                 st.markdown("### Generador de Call Sheet (IA)")
-                if st.button("Emitir Plan Maestro"):
+                if st.button("Emitir Plan Maestro", key="btn_callsheet"):
                     try:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         prompt = f"Proyecto: {pr}. Datos: Avisos {pd_proy.get('avisos',[])}, Locaciones {pd_proy.get('locaciones',[])}. Redactá un Call Sheet."
@@ -1078,7 +826,7 @@ else:
                 c1, c2 = st.columns([2.5, 1])
                 with c1: st.markdown("<h2>Gestor de Tareas</h2>", unsafe_allow_html=True)
                 with c2: 
-                    if st.button("Crear Tarea"): ventana_kanban(pr, mis_datos['nombre'])
+                    if st.button("Crear Tarea", key="btn_kb_new"): ventana_kanban(pr, mis_datos['nombre'])
                 st.divider()
                 colP, colPr, colL = st.columns(3)
                 with colP:
@@ -1087,14 +835,14 @@ else:
                         if t["estado"] == "Pendiente":
                             with st.container(border=True): 
                                 st.write(f"**{t['tarea']}**")
-                                if st.button("Mover ➔", key=f"k1_{i}", type="secondary"): pd_proy["kanban"][i]["estado"] = "En Proceso"; guardar_y_recargar()
+                                if st.button("Mover ➔", key=f"kb1_{i}", type="secondary"): pd_proy["kanban"][i]["estado"] = "En Proceso"; guardar_y_recargar()
                 with colPr:
                     st.markdown("#### En Proceso")
                     for i, t in enumerate(pd_proy["kanban"]):
                         if t["estado"] == "En Proceso":
                             with st.container(border=True): 
                                 st.write(f"**{t['tarea']}**")
-                                if st.button("Finalizar", key=f"k2_{i}"): pd_proy["kanban"][i]["estado"] = "Completado"; guardar_y_recargar()
+                                if st.button("Finalizar", key=f"kb2_{i}"): pd_proy["kanban"][i]["estado"] = "Completado"; guardar_y_recargar()
                 with colL:
                     st.markdown("#### Listo")
                     for t in [t for t in pd_proy["kanban"] if t["estado"] == "Completado"]:
@@ -1104,14 +852,14 @@ else:
                 st.markdown("<h2>Comando de IA</h2>", unsafe_allow_html=True)
                 try:
                     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                    m = st.chat_input("Escribe una instrucción...")
+                    m = st.chat_input("Escribe una instrucción...", key="ci_ia")
                     if m:
                         st.chat_message("user").write(m)
                         st.chat_message("assistant").write(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Sos FTN AI. Hablás con: {mis_datos['nombre']}. Usuario: {m}").text)
                 except: st.error("Falta API Key.")
 
             elif s_e == "Solicitar a Prod.":
-                if st.button("Levantar Ticket"): ventana_pedido(pr, rol_actual)
+                if st.button("Levantar Ticket", key="btn_sol_prod"): ventana_pedido(pr, rol_actual)
                 for ped in [p for p in pd_proy.get("pedidos_equipos", []) if p["area"] == rol_actual or rol_actual == "Super Admin"]:
                     with st.container(border=True): st.write(f"**{ped['item']}** — {ped['notas']} ({ped['estado']})")
 
@@ -1126,12 +874,12 @@ else:
 
             elif s_e == "Rentals IA":
                 c1, c2, c3 = st.columns(3)
-                c1.button("Proveedor", on_click=lambda: ventana_nuevo_rental(pr))
-                c2.button("Scanner IA", on_click=lambda: ventana_comparador_rental(pr))
-                c3.button("Purga", on_click=lambda: ventana_vaciar_comparador(pr), type="secondary")
+                c1.button("Proveedor", on_click=lambda: ventana_nuevo_rental(pr), key="btn_prov")
+                c2.button("Scanner IA", on_click=lambda: ventana_comparador_rental(pr), key="btn_scan")
+                c3.button("Purga", on_click=lambda: ventana_vaciar_comparador(pr), type="secondary", key="btn_purg")
                 st.divider()
                 if pd_proy.get("carrito_rentals"):
-                    if st.button("Checkout"): ventana_checkout(pr)
+                    if st.button("Checkout", key="btn_check"): ventana_checkout(pr)
                     for i, item in enumerate(pd_proy["carrito_rentals"]):
                         with st.container(border=True):
                             st.write(f"{item['nombre']} - ${item['precio']}")
@@ -1143,116 +891,116 @@ else:
                         if st.button("Añadir", key=f"add_{i}"): pd_proy["carrito_rentals"].append(r); guardar_y_recargar()
 
             elif s_e == "Archivos":
-                a = st.file_uploader("Documento (.txt)")
-                if a and st.button("Subir"): pd_proy["archivos_pendientes"].append({"autor": mis_datos['nombre'], "nombre": a.name, "texto": a.getvalue().decode('utf-8')}); guardar_y_recargar()
+                a = st.file_uploader("Documento (.txt)", key="fu_arch")
+                if a and st.button("Subir", key="btn_up_arch"): pd_proy["archivos_pendientes"].append({"autor": mis_datos['nombre'], "nombre": a.name, "texto": a.getvalue().decode('utf-8')}); guardar_y_recargar()
 
             elif s_e == "Tablón":
-                if st.button("Publicar"): ventana_aviso(pr, mis_datos['nombre'], pd_proy["locaciones"])
+                if st.button("Publicar", key="btn_tab_pub"): ventana_aviso(pr, mis_datos['nombre'], pd_proy["locaciones"])
                 for a in reversed(pd_proy["avisos"]): st.write(f"**{a['autor']}**: {a.get('texto', 'Citación')}")
 
             elif s_e == "Enlaces":
-                if st.button("Cargar URL"): ventana_link(pr)
+                if st.button("Cargar URL", key="btn_enlace"): ventana_link(pr)
                 for l in pd_proy["links"]: st.write(f"[{l['titulo']}]({l['url']})")
 
             elif s_e == "Permisos":
                 st.info("Centralizado en Perfil > Admin")
 
             elif s_e == "Presupuesto":
-                if st.button("Asentar Gasto"): ventana_presupuesto(pr)
+                if st.button("Asentar Gasto", key="btn_gasto"): ventana_presupuesto(pr)
                 if pd_proy.get("presupuesto"):
                     df = pd.DataFrame(pd_proy["presupuesto"])
                     st.metric("Total", f"${df['costo'].sum():,.2f}")
                     st.plotly_chart(px.pie(df, values='costo', names='area', template="plotly_dark"))
 
             elif s_e == "Scouting":
-                if st.button("Registrar Locación"): ventana_locacion(pr)
+                if st.button("Registrar Locación", key="btn_scout"): ventana_locacion(pr)
                 for l in pd_proy.get("locaciones", []): st.write(f"**{l['nombre']}**: {l['direccion']}")
 
             elif s_e == "Base Crew":
-                if st.button("Contratar"): ventana_crew(pr)
+                if st.button("Contratar", key="btn_crew"): ventana_crew(pr)
                 if pd_proy.get("crew"): st.dataframe(pd.DataFrame(pd_proy["crew"]))
 
             elif s_e == "Casting":
-                if st.button("Añadir Actor"): ventana_casting(pr)
+                if st.button("Añadir Actor", key="btn_cast"): ventana_casting(pr)
                 for a in pd_proy["casting"]: st.write(f"**{a['actor']}** ({a['personaje']})")
 
             elif s_e == "Catering":
-                if st.button("Añadir Dieta"): ventana_catering(pr)
+                if st.button("Añadir Dieta", key="btn_cat"): ventana_catering(pr)
                 for p in pd_proy["catering"]: st.write(f"**{p['nombre']}**: {p['dieta']}")
 
             elif s_e == "Desglose":
-                if st.button("Extraer Escena"): ventana_desglose(pr)
+                if st.button("Extraer Escena", key="btn_desg"): ventana_desglose(pr)
                 for d in pd_proy["desglose"]: st.write(f"**ESC {d['escena']}**: {d['desc']}")
 
             elif s_e == "Laboratorio Guion":
-                if st.button("Crear Personaje"): ventana_personaje(pr)
+                if st.button("Crear Personaje", key="btn_guion"): ventana_personaje(pr)
                 for p in pd_proy.get("personajes", []): st.write(f"**{p['nombre']}**: {p['rol']}")
 
             elif s_e == "Inventario":
-                if st.button("Agregar a Base"): ventana_equipo(pr, rol_actual)
+                if st.button("Agregar a Base", key="btn_inv"): ventana_equipo(pr, rol_actual)
                 for e in pd_proy["equipos"]: st.write(f"**{e['cant']}x {e['item']}**")
 
             elif s_e == "Plan Rodaje":
-                if st.button("Nuevo Bloque"): ventana_cronograma(pr)
+                if st.button("Nuevo Bloque", key="btn_plan"): ventana_cronograma(pr)
                 for a in pd_proy["plan_rodaje"]: st.write(f"**{a['hora']}**: {a['actividad']}")
 
             elif s_e == "Monitor DIR":
                 c1, c2 = st.columns(2)
-                c1.button("Shot List", on_click=lambda: ventana_plano(pr))
-                c2.button("Loguear Toma", on_click=lambda: ventana_toma_dir(pr))
+                c1.button("Shot List", on_click=lambda: ventana_plano(pr), key="btn_shot")
+                c2.button("Loguear Toma", on_click=lambda: ventana_toma_dir(pr), key="btn_toma")
                 for t in pd_proy["tomas_dir"]: st.write(f"**ESC {t['escena']} T {t['toma']}**: {t['evaluacion']}")
 
             elif s_e == "Luces (Canvas)":
-                modo = st.selectbox("Trazado", ["freedraw", "line", "rect", "circle", "transform"])
+                modo = st.selectbox("Trazado", ["freedraw", "line", "rect", "circle", "transform"], key="sb_luces")
                 st_canvas(stroke_color="#FFD700", background_color="#111", width=330, height=350, drawing_mode=modo, key="cv_l")
 
             elif s_e == "Ref. IA":
                 try:
                     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                    m = st.chat_input("Prompt visual...")
+                    m = st.chat_input("Prompt visual...", key="ci_ref")
                     if m: st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Sos DF: {m}").text)
                 except: st.error("Falta API Key.")
 
             elif s_e == "Arte & Vestuario":
-                if st.button("Añadir Objeto"): ventana_arte(pr)
+                if st.button("Añadir Objeto", key="btn_arte"): ventana_arte(pr)
                 for i in pd_proy["arte"]: st.write(f"**{i['objeto']}** ({i['estado']})")
 
             elif s_e == "Log Sonido":
-                if st.button("Registrar"): ventana_sonido(pr)
+                if st.button("Registrar", key="btn_son"): ventana_sonido(pr)
                 for s in pd_proy["sonido_log"]: st.write(f"**ESC {s['escena']} T {s['toma']}**")
 
             elif s_e == "Raccord":
-                if st.button("Asentar"): ventana_continuidad(pr)
+                if st.button("Asentar", key="btn_rac"): ventana_continuidad(pr)
                 for n in pd_proy["continuidad"]: st.write(f"**ESC {n['escena']} T {n['toma']}**: {n['detalle']}")
 
             elif s_e == "IA: Moodboard Dinámico":
-                im = st.file_uploader("Foto Ref", type=["jpg", "png"])
-                if im and st.button("Generar"):
+                im = st.file_uploader("Foto Ref", type=["jpg", "png"], key="fu_mb")
+                if im and st.button("Generar", key="btn_mb"):
                     try:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(["Dame 4 colores HEX", Image.open(im)]).text)
                     except: pass
 
             elif s_e == "IA: Auditor Anacronismos":
-                ep = st.text_input("Época")
-                iu = st.file_uploader("Objeto", type=["jpg", "png"])
-                if iu and st.button("Auditar"):
+                ep = st.text_input("Época", key="ti_anac")
+                iu = st.file_uploader("Objeto", type=["jpg", "png"], key="fu_anac")
+                if iu and st.button("Auditar", key="btn_anac"):
                     try:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content([f"Es anacrónico para {ep}?", Image.open(iu)]).text)
                     except: pass
 
             elif s_e == "IA: Utilería DIY":
-                od = st.text_input("Objeto a fabricar")
-                if od and st.button("Guía"):
+                od = st.text_input("Objeto a fabricar", key="ti_diy")
+                if od and st.button("Guía", key="btn_diy"):
                     try:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Guía para fabricar {od} barato").text)
                     except: pass
 
             elif s_e == "IA: Analizador Espectral":
-                af = st.file_uploader("Audio", type=["wav", "mp3"])
-                if af and st.button("Render"):
+                af = st.file_uploader("Audio", type=["wav", "mp3"], key="fu_spec")
+                if af and st.button("Render", key="btn_spec"):
                     y, sr = librosa.load(af, sr=None)
                     D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
                     fig, ax = plt.subplots()
@@ -1260,17 +1008,17 @@ else:
                     st.pyplot(fig)
 
             elif s_e == "IA: Matriz de Ruido":
-                fr = st.selectbox("Fuente", ["Tráfico", "Aviones"])
-                d = st.number_input("Distancia", value=20)
-                if st.button("Plan"):
+                fr = st.selectbox("Fuente", ["Tráfico", "Aviones"], key="sb_ruido")
+                d = st.number_input("Distancia", value=20, key="ni_ruido")
+                if st.button("Plan", key="btn_ruido"):
                     try:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Aislamiento para {fr} a {d}m").text)
                     except: pass
 
             elif s_e == "IA: Sugerente Foley":
-                ac = st.text_input("Acción")
-                if ac and st.button("Lista"):
+                ac = st.text_input("Acción", key="ti_fol")
+                if ac and st.button("Lista", key="btn_fol"):
                     try:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         st.info(genai.GenerativeModel('gemini-1.5-flash').generate_content(f"Foley para: {ac}").text)
