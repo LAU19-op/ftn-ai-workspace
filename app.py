@@ -21,7 +21,6 @@ import matplotlib.pyplot as plt
 import librosa
 import scipy.signal
 import streamlit.components.v1 as components
-import re
 
 # Importación de Spotify para la conexión en tiempo real
 try:
@@ -32,7 +31,7 @@ except ImportError:
     SPOTIPY_INSTALLED = False
 
 # --- 1. CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Fetén Workspace Pro", page_icon="✦", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Fetén Workspace Pro", page_icon="Studio", layout="wide", initial_sidebar_state="collapsed")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
 
@@ -42,7 +41,7 @@ TZ_AR = timezone(timedelta(hours=-3))
 def obtener_hora_actual():
     return datetime.now(TZ_AR).strftime("%Y-%m-%d %H:%M:%S")
 
-# --- 2. DISEÑO UI/UX "SAAS OBSIDIAN PRO" E "INSTAGRAM WEB" ---
+# --- 2. DISEÑO UI/UX "OBSIDIAN CINEMATIC" ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -52,86 +51,131 @@ st.markdown("""
     
     /* Fondo Obsidiana Premium */
     .stApp {
-        background-color: #050505 !important;
+        background-color: #030303 !important;
         background-image: 
-            radial-gradient(circle at 10% 20%, rgba(251, 175, 59, 0.05), transparent 25%), 
-            radial-gradient(circle at 90% 80%, rgba(180, 113, 63, 0.04), transparent 25%) !important;
+            radial-gradient(circle at 10% 20%, rgba(251, 175, 59, 0.03), transparent 25%), 
+            radial-gradient(circle at 90% 80%, rgba(180, 113, 63, 0.02), transparent 25%) !important;
         color: #EDEDED !important;
     }
 
     .logo-img { display: block; max-width: 100%; height: auto; filter: brightness(1.5) contrast(1.2); }
 
-    /* Tarjetas Modulares Base */
+    /* Tarjetas Modulares Base (Con Hover Claro) */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: #0A0A0B !important; border: 1px solid #1C1C1F !important; border-radius: 16px !important;
-        padding: 1.5rem !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; margin-bottom: 16px !important;
+        background: #09090B !important; 
+        border: 1px solid #18181B !important; 
+        border-radius: 12px !important;
+        padding: 1.5rem !important; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; 
+        margin-bottom: 16px !important;
+        transition: all 0.3s ease !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        background: #121214 !important; /* Más claro al hacer hover */
+        border-color: #27272A !important;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.6) !important;
     }
     
-    /* Títulos */
+    /* Títulos Estéticos */
     .gradient-text {
-        background: linear-gradient(135deg, #FFFFFF 0%, #FBAF3B 100%);
+        background: linear-gradient(135deg, #FFFFFF 0%, #A1A1AA 100%);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-weight: 800; letter-spacing: -0.03em;
+        font-weight: 800; letter-spacing: -0.04em;
     }
-    h1, h2 { font-weight: 800 !important; letter-spacing: -0.02em !important; color: #FAFAFA !important; }
-    h3, h4 { color: #D4D4D8 !important; font-weight: 600 !important; letter-spacing: -0.01em !important; }
-    .section-title { color: #71717A; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px; }
+    .gradient-brand {
+        background: linear-gradient(135deg, #FBAF3B 0%, #D97706 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        font-weight: 800; letter-spacing: -0.02em;
+    }
+    h1, h2 { font-weight: 800 !important; letter-spacing: -0.03em !important; color: #FAFAFA !important; }
+    h3, h4 { color: #D4D4D8 !important; font-weight: 600 !important; letter-spacing: -0.02em !important; }
+    .section-title { color: #52525B; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; }
 
-    /* Inputs */
+    /* Inputs Limpios */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea, .stChatInput input {
-        background-color: #0E0E11 !important; border: 1px solid #27272A !important; color: #FAFAFA !important;
-        border-radius: 10px !important; padding: 12px 16px !important; font-weight: 400 !important;
+        background-color: #09090B !important; border: 1px solid #27272A !important; color: #FAFAFA !important;
+        border-radius: 8px !important; padding: 12px 16px !important; font-weight: 400 !important;
+        transition: all 0.2s ease !important;
     }
-    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { border-color: #FBAF3B !important; box-shadow: 0 0 0 1px #FBAF3B !important; }
+    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus { border-color: #FBAF3B !important; box-shadow: 0 0 0 1px rgba(251, 175, 59, 0.2) !important; }
     
-    /* Botones Primarios */
+    /* Botones */
     .stButton button {
-        background: linear-gradient(135deg, #FBAF3B 0%, #D97706 100%) !important; border: none !important; color: #050505 !important;
-        border-radius: 10px !important; font-weight: 700 !important; padding: 0.6rem 1rem !important; transition: all 0.2s ease !important; width: 100% !important;
+        background: #FAFAFA !important; border: 1px solid #FAFAFA !important; color: #050505 !important;
+        border-radius: 8px !important; font-weight: 600 !important; padding: 0.6rem 1rem !important; transition: all 0.2s ease !important; width: 100% !important;
     }
-    .stButton button:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(251, 175, 59, 0.3) !important; }
-    .stButton button p { color: #050505 !important; font-weight: 700 !important; margin: 0; }
+    .stButton button:hover { background: #E4E4E7 !important; border-color: #E4E4E7 !important; transform: translateY(-1px) !important; }
+    .stButton button p { color: #050505 !important; font-weight: 600 !important; margin: 0; }
     
-    /* Botones Secundarios (Estilo Twitter Actions) */
-    [data-testid="stBaseButton-secondary"] { background: transparent !important; border: 1px solid #27272A !important; color: #A1A1AA !important; box-shadow: none !important; border-radius: 8px !important; }
-    [data-testid="stBaseButton-secondary"]:hover { border-color: #52525B !important; color: #FBAF3B !important; background: rgba(251, 175, 59, 0.05) !important; }
-
-    /* RED SOCIAL UI */
-    .tweet-card { background: #0A0A0B; border: 1px solid #1C1C1F; border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: border 0.2s; }
-    .tweet-card:hover { border-color: #333; }
-    .tweet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .tweet-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 1px solid #27272A; }
-    .tweet-name { font-weight: 700; color: #FAFAFA; font-size: 15px; margin: 0; }
-    .tweet-handle { color: #71717A; font-size: 13px; margin: 0; }
-    .tweet-body { font-size: 15px; color: #E2E8F0; margin-top: 8px; margin-bottom: 12px; line-height: 1.5; white-space: pre-wrap; }
-    .tweet-img { width: 100%; border-radius: 12px; border: 1px solid #1C1C1F; margin-bottom: 12px; max-height: 500px; object-fit: cover; }
-    
-    .comment-box { background: #111111; border-left: 2px solid #27272A; padding: 10px 15px; margin-top: 10px; border-radius: 0 12px 12px 0; }
-    .repost-badge { font-size: 12px; color: #71717A; font-weight: 600; margin-bottom: 8px; display: block; }
-
-    /* Historias estilo Instagram */
-    .story-avatar-active {
-        border-radius: 50%; padding: 3px; width: 68px; height: 68px; object-fit: cover;
-        background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-        border: 2px solid #050505; cursor: pointer; transition: transform 0.2s;
+    /* Botones Secundarios Aesthetic (Translucidos) */
+    [data-testid="stBaseButton-secondary"] { 
+        background: transparent !important; border: 1px solid #27272A !important; color: #A1A1AA !important; 
+        box-shadow: none !important; border-radius: 8px !important; transition: all 0.2s ease !important;
     }
-    .story-avatar-active:hover { transform: scale(1.05); }
+    [data-testid="stBaseButton-secondary"]:hover { 
+        background: rgba(255,255,255,0.03) !important; border-color: #52525B !important; color: #FAFAFA !important; 
+    }
 
-    /* Reproductor Modal Instagram Web */
-    .ig-modal-header { display: flex; align-items: center; margin-bottom: 15px; }
-    .ig-modal-progress { width: 100%; height: 3px; background: rgba(255,255,255,0.3); border-radius: 3px; margin-bottom: 15px; overflow: hidden; }
-    .ig-modal-progress-bar { width: 100%; height: 100%; background: #FFF; animation: progress 5s linear; }
+    /* RED SOCIAL UI - AESTHETIC POSTS */
+    .feten-post {
+        background: #09090B; border: 1px solid #18181B; border-radius: 12px; padding: 24px; margin-bottom: 24px; transition: border 0.3s;
+    }
+    .feten-post:hover { border-color: #27272A; }
+    .post-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .post-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; margin-right: 14px; border: 1px solid #27272A; }
+    .post-name { font-weight: 600; color: #FAFAFA; font-size: 15px; margin: 0; }
+    .post-handle { color: #52525B; font-size: 13px; margin: 0; font-weight: 400; }
+    .post-body { font-size: 15px; color: #D4D4D8; margin-top: 4px; margin-bottom: 16px; line-height: 1.6; white-space: pre-wrap; letter-spacing: -0.01em; }
+    .post-img { width: 100%; border-radius: 8px; border: 1px solid #18181B; margin-bottom: 16px; max-height: 500px; object-fit: cover; }
+    
+    /* Historias Verticales Cinemáticas (Snippets) */
+    .snippets-tray { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 24px; }
+    .snippets-tray::-webkit-scrollbar { height: 4px; }
+    .snippets-tray::-webkit-scrollbar-thumb { background: #27272A; border-radius: 10px; }
+    
+    .snippet-card {
+        min-width: 110px; height: 160px; border-radius: 12px; position: relative; overflow: hidden;
+        border: 1px solid #27272A; cursor: pointer; transition: transform 0.2s, border 0.2s;
+        background-size: cover; background-position: center;
+    }
+    .snippet-card:hover { transform: scale(1.02); border-color: #FBAF3B; }
+    .snippet-overlay {
+        position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 8px 8px 8px;
+        background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: flex-start;
+    }
+    .snippet-avatar { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #FBAF3B; margin-bottom: 4px; object-fit: cover;}
+    .snippet-name { font-size: 11px; color: #FFF; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+
+    .avatar-circle { border-radius: 50%; object-fit: cover; border: 1px solid #333; }
+    .online-indicator { display: inline-block; width: 8px; height: 8px; background-color: #FBAF3B; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 8px rgba(251, 175, 59, 0.6); }
+    
+    /* Modal Header IG Web Style */
+    .modal-header-pro { display: flex; align-items: center; margin-bottom: 12px; }
+    .modal-progress { width: 100%; height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
+    .modal-progress-bar { width: 100%; height: 100%; background: #FAFAFA; animation: progress 5s linear forwards; }
     @keyframes progress { 0% { width: 0%; } 100% { width: 100%; } }
 
-    .avatar-circle { border-radius: 50%; object-fit: cover; border: 2px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.3); }
-    .online-dot { display: inline-block; width: 10px; height: 10px; background-color: #22C55E; border-radius: 50%; margin-right: 8px; box-shadow: 0 0 8px #22C55E; }
-    
-    [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2.2rem !important; font-weight: 800 !important; letter-spacing: -1px; }
-    [data-testid="stMetricLabel"] { color: #A1A1AA !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 600 !important; }
+    /* SVG Styling for inline icons */
+    .icon-svg { vertical-align: middle; margin-right: 4px; margin-bottom: 2px; }
+
+    [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2rem !important; font-weight: 800 !important; letter-spacing: -1px; }
+    [data-testid="stMetricLabel"] { color: #71717A !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.7rem !important; font-weight: 600 !important; }
+
+    @media (max-width: 768px) {
+        [data-testid="column"] { width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }
+        .block-container { padding: 1rem !important; }
+    }
     </style>
 """, unsafe_allow_html=True)
 
 ARCHIVO_BD = "ftn_database.json"
+
+# --- SVGs Minimalistas (Evitamos Emojis) ---
+SVG_LIKE = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>'
+SVG_COMMENT = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>'
+SVG_REPOST = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
+SVG_SAVE = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>'
+SVG_LINK = '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>'
 
 # --- 3. INICIALIZACIÓN PROFUNDA ---
 def generar_qr_base64(datos):
@@ -165,53 +209,54 @@ def inicializar_bd():
         for lb in listas_base:
             if lb not in conf: conf[lb] = []
 
+        # Usuarios Base + Setup para red social
         if "lau@admin.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["lau@admin.com"] = {
-                "nombre": "Lau (Admin)", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
-                "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Directora", "specs": "Amo el cine de terror.", "portfolio": "", 
+                "nombre": "Lau", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
+                "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Directora", "specs": "Amo el cine oscuro.", "portfolio": "", 
                 "spotify_token": None, "spotify_track_id": None, "amigos": ["director@feten.com", "arte@feten.com"], 
-                "acceso_rapido": "Panel General", "alias": "lau_ok", "estado_txt": "🎬 Editando", "guardados": []
+                "acceso_rapido": "Panel General", "alias": "lau_ok", "estado_txt": "Editando", "guardados": []
             }
             
         if "director@feten.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["director@feten.com"] = {
-                "nombre": "Matias (Director)", "pass": "1234", "rol": "Dirección", "nivel": "jefe", "estado": "Aprobado",
-                "foto": "", "credencial": "FTN-0002", "edad": "35", "roles_fav": "Cine", "specs": "", "portfolio": "", 
+                "nombre": "Matias", "pass": "1234", "rol": "Dirección", "nivel": "jefe", "estado": "Aprobado",
+                "foto": "", "credencial": "FTN-0002", "edad": "35", "roles_fav": "Cine", "specs": "Ópticas anamórficas.", "portfolio": "", 
                 "spotify_token": None, "spotify_track_id": "4cOdK2wGLETKBW3PvgPWqT", "amigos": [], 
-                "acceso_rapido": "Monitor DIR", "alias": "mati_dir", "estado_txt": "🎥 En Set", "guardados": []
+                "acceso_rapido": "Monitor DIR", "alias": "mati_dir", "estado_txt": "En Set", "guardados": []
             }
         if "arte@feten.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["arte@feten.com"] = {
-                "nombre": "Sofi (Arte)", "pass": "1234", "rol": "Dirección de Arte", "nivel": "jefe", "estado": "Aprobado",
-                "foto": "", "credencial": "FTN-0003", "edad": "28", "roles_fav": "Escenografía", "specs": "", "portfolio": "", 
+                "nombre": "Sofi", "pass": "1234", "rol": "Dirección de Arte", "nivel": "jefe", "estado": "Aprobado",
+                "foto": "", "credencial": "FTN-0003", "edad": "28", "roles_fav": "Escenografía", "specs": "Paletas de color.", "portfolio": "", 
                 "spotify_token": None, "spotify_track_id": "11dFghVXANMlKmJXsNCbNl", "amigos": [], 
-                "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte", "estado_txt": "☕ Descanso", "guardados": []
+                "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte", "estado_txt": "Descanso", "guardados": []
             }
 
-        # Adaptación de Posts para Twitter Features
+        # Posts Base
+        if not conf["social_posts"]:
+            conf["social_posts"] = [
+                {"id": "p1", "usuario": "arte@feten.com", "texto": "Armando el set de los 80, una locura los detalles.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 12, "comentarios": [], "reposts": 0},
+                {"id": "p2", "usuario": "director@feten.com", "texto": "Recién terminamos el scouting en San Telmo. ¡La luz es increíble!", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 34, "comentarios": [], "reposts": 2}
+            ]
+            
+        for em, info in conf["usuarios"].items():
+            for key, val in [("amigos", []), ("spotify_token", None), ("spotify_track_id", None), ("estado", "Aprobado"), 
+                             ("credencial", f"FTN-{random.randint(1000, 9999)}"), ("acceso_rapido", "Panel General"), 
+                             ("alias", em.split("@")[0]), ("estado_txt", "Online"), ("guardados", [])]:
+                if key not in info: info[key] = val
+
         for p in conf["social_posts"]:
             if "id" not in p: p["id"] = str(random.randint(100000, 999999))
             if "comentarios" not in p: p["comentarios"] = []
             if "reposts" not in p: p["reposts"] = 0
             if "es_repost" not in p: p["es_repost"] = False
-            
-        for em, info in conf["usuarios"].items():
-            if "amigos" not in info: info["amigos"] = []
-            if "spotify_token" not in info: info["spotify_token"] = None
-            if "spotify_track_id" not in info: info["spotify_track_id"] = None
-            if "estado" not in info: info["estado"] = "Aprobado"
-            if "credencial" not in info: info["credencial"] = f"FTN-{random.randint(1000, 9999)}"
-            if "acceso_rapido" not in info: info["acceso_rapido"] = "Panel General"
-            if "alias" not in info: info["alias"] = em.split("@")[0]
-            if "estado_txt" not in info: info["estado_txt"] = "Online"
-            if "guardados" not in info: info["guardados"] = []
 
         claves_proy = ["archivos_pendientes", "avisos", "equipos", "pedidos_equipos", "continuidad", "arte", "planos", "plan_rodaje", "plantas_luces", "sonido_log", "tomas_dir", "personajes", "locaciones", "crew", "catering", "links", "presupuesto", "casting", "desglose", "comparador_rentals", "carrito_rentals", "directorio_rentals", "kanban"]
         for nombre_proy, datos_proy in data_cargada.items():
             if nombre_proy != "_CONFIG_":
-                if "contexto_aprobado" not in datos_proy: datos_proy["contexto_aprobado"] = "Proyecto actualizado."
-                for clave in claves_proy:
-                    if clave not in datos_proy: datos_proy[clave] = []
+                datos_proy.setdefault("contexto_aprobado", "Proyecto actualizado.")
+                for clave in claves_proy: datos_proy.setdefault(clave, [])
                     
         st.session_state["proyectos"] = data_cargada
 
@@ -221,7 +266,7 @@ if "ruta" not in st.session_state: st.session_state["ruta"] = "Inicio"
 if "proyecto_activo" not in st.session_state: st.session_state["proyecto_activo"] = None
 if "menu_option" not in st.session_state: st.session_state["menu_option"] = "Panel General"
 
-# OAUTH SPOTIFY
+# OAUTH SPOTIFY HANDLER
 if SPOTIPY_INSTALLED and "code" in st.query_params and st.session_state.get("usuario_logueado"):
     try:
         if "SPOTIFY_CLIENT_ID" in st.secrets:
@@ -233,59 +278,57 @@ if SPOTIPY_INSTALLED and "code" in st.query_params and st.session_state.get("usu
     except Exception as e: st.error(f"Error OAuth Spotify: {e}")
 
 # --- 4. MODALES ---
-@st.dialog("◈ Comentar Publicación")
+@st.dialog("Comentar")
 def dialog_comentar(post_id, usuario):
-    txt = st.text_area("Tu respuesta:")
-    if st.button("Responder", use_container_width=True):
+    txt = st.text_area("Tu respuesta", label_visibility="collapsed", placeholder="Escribe tu respuesta...")
+    if st.button("Responder", use_container_width=True, type="primary"):
         if txt:
             for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"]:
                 if p["id"] == post_id:
                     p["comentarios"].append({"usuario": usuario, "texto": txt, "timestamp": obtener_hora_actual()})
                     guardar_y_recargar()
 
-@st.dialog("◈ Reproductor de Historia")
+@st.dialog("Reproductor de Snippet")
 def ver_historia_dialog(b64_foto, usuario_nombre, f_avatar, tiempo):
-    # Diseño simulando Instagram Web Modal
     st.markdown(f"""
-        <div class="ig-modal-progress"><div class="ig-modal-progress-bar"></div></div>
-        <div class="ig-modal-header">
-            <img src="{f_avatar}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; margin-right:10px;">
+        <div class="modal-progress"><div class="modal-progress-bar"></div></div>
+        <div class="modal-header-pro">
+            <img src="{f_avatar}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; margin-right:8px;">
             <div>
-                <span style="font-weight:700; color:#FAFAFA; font-size:14px;">{usuario_nombre}</span>
-                <span style="color:#A1A1AA; font-size:12px; margin-left:8px;">{tiempo}</span>
+                <span style="font-weight:600; color:#FAFAFA; font-size:13px;">{usuario_nombre}</span>
+                <span style="color:#71717A; font-size:11px; margin-left:6px;">{tiempo}</span>
             </div>
         </div>
-        <img src="data:image/jpeg;base64,{b64_foto}" style="width:100%; max-height: 70vh; border-radius:12px; object-fit:contain; background:#000;">
+        <img src="data:image/jpeg;base64,{b64_foto}" style="width:100%; border-radius:8px; object-fit:contain; background:#050505;">
     """, unsafe_allow_html=True)
 
-@st.dialog("◈ Subir Historia (24h)")
+@st.dialog("Nuevo Snippet (24h)")
 def ventana_historia(usuario):
-    foto_hist = st.file_uploader("Subir foto", type=["jpg", "png", "jpeg"])
-    if st.button("Publicar Historia", use_container_width=True):
+    foto_hist = st.file_uploader("Subir foto vertical", type=["jpg", "png", "jpeg"])
+    if st.button("Publicar Snippet", use_container_width=True, type="primary"):
         if foto_hist:
             b64 = base64.b64encode(foto_hist.read()).decode('utf-8')
             st.session_state["proyectos"]["_CONFIG_"]["social_stories"].append({"usuario": usuario, "foto": b64, "timestamp": obtener_hora_actual()})
             guardar_y_recargar()
 
-@st.dialog("◈ Perfil de Usuario")
+@st.dialog("Perfil de Creador")
 def ver_perfil(em_usuario):
     u_info = st.session_state["proyectos"]["_CONFIG_"]["usuarios"][em_usuario]
     f_usr = f"data:image/jpeg;base64,{u_info['foto']}" if u_info.get("foto") else "https://via.placeholder.com/150"
     
-    colA, colB = st.columns([1, 2])
-    with colA: st.markdown(f"<img src='{f_usr}' style='width:100px; height:100px; border-radius:50%; object-fit:cover; border:2px solid #FBAF3B;'>", unsafe_allow_html=True)
+    colA, colB = st.columns([1, 2.5])
+    with colA: st.markdown(f"<img src='{f_usr}' style='width:90px; height:90px; border-radius:50%; object-fit:cover; border:1px solid #333;'>", unsafe_allow_html=True)
     with colB:
-        st.markdown(f"<h3 style='margin:0; font-size:22px;'>{u_info['nombre']}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#A1A1AA; margin:0;'>@{u_info['alias']} • {u_info['estado_txt']}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p style='font-size:13px; color:#D4D4D8; margin-top:10px;'>{u_info.get('specs', '')}</p>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='margin:0; font-size:20px;'>{u_info['nombre']}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#A1A1AA; font-size:13px; margin:0;'>@{u_info['alias']} • {u_info['rol']}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:13px; color:#D4D4D8; margin-top:8px;'>{u_info.get('specs', '')}</p>", unsafe_allow_html=True)
     
     st.divider()
     if u_info.get("spotify_track_id"):
-        st.markdown("<p style='font-size:11px; font-weight:700; color:#71717A; letter-spacing:1px; margin-bottom:5px;'>TRACK ANCLADO</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:10px; font-weight:700; color:#71717A; letter-spacing:1px; margin-bottom:8px;'>SOUNDTRACK ANCLADO</p>", unsafe_allow_html=True)
         components.iframe(f"https://open.spotify.com/embed/track/{u_info['spotify_track_id']}?utm_source=generator&theme=0", height=80)
-        st.markdown("<br>", unsafe_allow_html=True)
         
-    st.markdown("<div class='section-title'>Publicaciones</div>", unsafe_allow_html=True)
+    st.markdown("<br><div class='section-title'>Feed Personal</div>", unsafe_allow_html=True)
     posts_user = [p for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"] if p["usuario"] == em_usuario]
     if not posts_user: st.info("No hay publicaciones.")
     for p in posts_user:
@@ -294,7 +337,7 @@ def ver_perfil(em_usuario):
             if p.get("texto"): st.write(p["texto"])
             if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' style='width:100%; border-radius:8px; margin-top:8px;'>", unsafe_allow_html=True)
 
-@st.dialog("◈ Reportar Problema")
+@st.dialog("Reportar Problema")
 def ventana_soporte(usuario):
     asunto = st.text_input("Asunto")
     desc = st.text_area("Descripción")
@@ -303,15 +346,15 @@ def ventana_soporte(usuario):
             st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({"usuario": usuario, "fecha": obtener_hora_actual(), "asunto": asunto, "desc": desc, "estado": "Pendiente"})
             guardar_y_recargar()
 
-# Resto de Modales Base (Proyecto)...
-@st.dialog("◈ Nueva Tarea")
+# Resto de Modales Base (Kanban, etc...)
+@st.dialog("Nueva Tarea")
 def ventana_kanban(proyecto, autor):
     tarea = st.text_input("Tarea")
     estado = st.selectbox("Estado", ["Pendiente", "En Proceso", "Completado"])
     if st.button("Guardar"):
         if tarea: st.session_state["proyectos"][proyecto]["kanban"].append({"tarea": tarea, "estado": estado, "autor": autor}); guardar_y_recargar()
 
-@st.dialog("◈ Recordatorio")
+@st.dialog("Recordatorio")
 def ventana_recordatorio(es_admin, autor):
     titulo = st.text_input("Título")
     fecha = st.date_input("Fecha")
@@ -319,7 +362,7 @@ def ventana_recordatorio(es_admin, autor):
     if st.button("Guardar"):
         if titulo: st.session_state["proyectos"]["_CONFIG_"]["recordatorios"].append({"autor": autor, "titulo": titulo, "fecha": str(fecha), "tipo": tipo}); guardar_y_recargar()
 
-@st.dialog("⟡ Emitir Comunicado")
+@st.dialog("Emitir Comunicado")
 def ventana_aviso(proyecto, autor, locaciones_disponibles):
     tipo = st.radio("Tipo:", ["Aviso General", "Citación Oficial"], horizontal=True)
     if tipo == "Aviso General":
@@ -336,7 +379,7 @@ def ventana_aviso(proyecto, autor, locaciones_disponibles):
         if st.button("Publicar Citación", use_container_width=True):
             st.session_state["proyectos"][proyecto]["avisos"].append({"tipo": "citacion", "autor": autor, "fecha": str(fecha), "hora": str(hora), "locacion": loc_elegida, "notas": notas_citacion}); guardar_y_recargar()
 
-@st.dialog("⌖ Registrar Locación")
+@st.dialog("Registrar Locación")
 def ventana_locacion(proyecto):
     nombre = st.text_input("Nombre")
     direccion = st.text_input("Dirección")
@@ -347,7 +390,7 @@ def ventana_locacion(proyecto):
     if st.button("Guardar", use_container_width=True):
         if nombre: st.session_state["proyectos"][proyecto]["locaciones"].append({"nombre": nombre, "direccion": direccion, "lat": lat, "lon": lon, "permisos": permisos}); guardar_y_recargar()
 
-@st.dialog("◈ Fichar Crew")
+@st.dialog("Fichar Crew")
 def ventana_crew(proyecto):
     nombre = st.text_input("Nombre")
     c1, c2 = st.columns(2)
@@ -357,7 +400,7 @@ def ventana_crew(proyecto):
     if st.button("Guardar", use_container_width=True):
         if nombre: st.session_state["proyectos"][proyecto]["crew"].append({"nombre": nombre, "rol": rol, "telefono": telefono, "obra_social": obra_social}); guardar_y_recargar()
 
-@st.dialog("◈ Planilla de Dietas")
+@st.dialog("Planilla de Dietas")
 def ventana_catering(proyecto):
     nombre = st.text_input("Nombre")
     dieta = st.selectbox("Restricción", ["Ninguna", "Vegetariano", "Vegano", "Celíaco", "Diabético"])
@@ -365,7 +408,7 @@ def ventana_catering(proyecto):
     if st.button("Guardar", use_container_width=True):
         if nombre: st.session_state["proyectos"][proyecto]["catering"].append({"nombre": nombre, "dieta": dieta, "alergias": alergias}); guardar_y_recargar()
 
-@st.dialog("✉ Pedido")
+@st.dialog("Pedido")
 def ventana_pedido(proyecto, area):
     item_nombre = st.text_input("Equipo")
     justificacion = st.text_area("Notas")
@@ -373,7 +416,7 @@ def ventana_pedido(proyecto, area):
     if st.button("Enviar", use_container_width=True):
         if item_nombre: st.session_state["proyectos"][proyecto]["pedidos_equipos"].append({"area": area, "item": item_nombre, "notas": justificacion, "prioridad": prioridad, "estado": "Pendiente"}); guardar_y_recargar()
 
-@st.dialog("⚙ Cargar Inventario")
+@st.dialog("Cargar Inventario")
 def ventana_equipo(proyecto, area):
     col1, col2 = st.columns(2)
     item_nombre = col1.text_input("Ítem")
@@ -383,7 +426,7 @@ def ventana_equipo(proyecto, area):
     if st.button("Registrar", use_container_width=True):
         if item_nombre: st.session_state["proyectos"][proyecto]["equipos"].append({"area": area, "item": item_nombre, "cant": cantidad, "tipo": tipo, "rental": rental if tipo == "Alquilado" else "N/A"}); guardar_y_recargar()
 
-@st.dialog("⟡ Nota de Raccord")
+@st.dialog("Nota de Raccord")
 def ventana_continuidad(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC")
@@ -392,7 +435,7 @@ def ventana_continuidad(proyecto):
     if st.button("Guardar", use_container_width=True):
         if escena and detalle: st.session_state["proyectos"][proyecto]["continuidad"].append({"escena": escena, "toma": toma, "detalle": detalle}); guardar_y_recargar()
 
-@st.dialog("◈ Archivo de Arte")
+@st.dialog("Archivo de Arte")
 def ventana_arte(proyecto):
     categoria = st.radio("Tipo:", ["Utilería", "Vestuario"], horizontal=True)
     objeto = st.text_input("Objeto")
@@ -402,7 +445,7 @@ def ventana_arte(proyecto):
     if st.button("Guardar", use_container_width=True):
         if objeto: st.session_state["proyectos"][proyecto]["arte"].append({"categoria": categoria, "objeto": objeto, "responsable": responsable, "estado": estado, "foto": base64.b64encode(foto_subida.read()).decode('utf-8') if foto_subida else None}); guardar_y_recargar()
 
-@st.dialog("◈ Diagramar Plano")
+@st.dialog("Diagramar Plano")
 def ventana_plano(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC")
@@ -412,14 +455,14 @@ def ventana_plano(proyecto):
     if st.button("Guardar", use_container_width=True):
         if escena: st.session_state["proyectos"][proyecto]["planos"].append({"escena": escena, "toma": toma, "tamano": tamano, "movimiento": movimiento}); guardar_y_recargar()
 
-@st.dialog("⏱ Registrar Bloque")
+@st.dialog("Registrar Bloque")
 def ventana_cronograma(proyecto):
     hora = st.time_input("Hora")
     actividad = st.text_input("Actividad")
     if st.button("Fijar", use_container_width=True):
         if actividad: st.session_state["proyectos"][proyecto]["plan_rodaje"].append({"hora": str(hora), "actividad": actividad}); guardar_y_recargar()
 
-@st.dialog("◈ Log de Sonido")
+@st.dialog("Log de Sonido")
 def ventana_sonido(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC")
@@ -429,7 +472,7 @@ def ventana_sonido(proyecto):
     if st.button("Guardar", use_container_width=True):
         if escena: st.session_state["proyectos"][proyecto]["sonido_log"].append({"escena": escena, "toma": toma, "pistas": pistas, "obs": obs}); guardar_y_recargar()
 
-@st.dialog("🎬 Calificar Toma")
+@st.dialog("Calificar Toma")
 def ventana_toma_dir(proyecto):
     c1, c2 = st.columns(2)
     escena = c1.text_input("ESC")
@@ -438,7 +481,7 @@ def ventana_toma_dir(proyecto):
     if st.button("Guardar", use_container_width=True):
         if escena: st.session_state["proyectos"][proyecto]["tomas_dir"].append({"escena": escena, "toma": toma, "evaluacion": evaluacion}); guardar_y_recargar()
 
-@st.dialog("◈ Estructurar Personaje")
+@st.dialog("Estructurar Personaje")
 def ventana_personaje(proyecto):
     nombre = st.text_input("Nombre")
     rol = st.selectbox("Jerarquía", ["Protagonista", "Antagonista", "Secundario"])
@@ -447,7 +490,7 @@ def ventana_personaje(proyecto):
     if st.button("Guardar", use_container_width=True):
         if nombre: st.session_state["proyectos"][proyecto]["personajes"].append({"nombre": nombre, "rol": rol, "objetivo": objetivo, "conflicto": conflicto}); guardar_y_recargar()
 
-@st.dialog("⧉ Referencia URL")
+@st.dialog("Referencia URL")
 def ventana_link(proyecto):
     titulo = st.text_input("Título")
     url = st.text_input("URL")
@@ -455,7 +498,7 @@ def ventana_link(proyecto):
     if st.button("Guardar", use_container_width=True):
         if titulo and url: st.session_state["proyectos"][proyecto]["links"].append({"titulo": titulo, "url": url, "desc": desc}); guardar_y_recargar()
 
-@st.dialog("◈ Registrar Gasto")
+@st.dialog("Registrar Gasto")
 def ventana_presupuesto(proyecto):
     item = st.text_input("Concepto")
     costo = st.number_input("Costo Neto ($)", min_value=0.0)
@@ -464,7 +507,7 @@ def ventana_presupuesto(proyecto):
     if st.button("Registrar", use_container_width=True):
         if item: st.session_state["proyectos"][proyecto]["presupuesto"].append({"item": item, "costo": costo, "area": area, "estado": estado}); guardar_y_recargar()
 
-@st.dialog("◒ Perfil de Casting")
+@st.dialog("Perfil de Casting")
 def ventana_casting(proyecto):
     actor = st.text_input("Actor")
     personaje = st.text_input("Personaje")
@@ -473,7 +516,7 @@ def ventana_casting(proyecto):
     if st.button("Archivar", use_container_width=True):
         if actor: st.session_state["proyectos"][proyecto]["casting"].append({"actor": actor, "personaje": personaje, "reel": reel, "foto": base64.b64encode(foto.read()).decode('utf-8') if foto else None}); guardar_y_recargar()
 
-@st.dialog("▤ Desglose Escénico")
+@st.dialog("Desglose Escénico")
 def ventana_desglose(proyecto):
     c1, c2, c3 = st.columns(3)
     escena = c1.text_input("ESC")
@@ -483,14 +526,14 @@ def ventana_desglose(proyecto):
     if st.button("Guardar", use_container_width=True):
         if escena: st.session_state["proyectos"][proyecto]["desglose"].append({"escena": escena, "intext": intext, "dianoche": dianoche, "desc": desc}); guardar_y_recargar()
 
-@st.dialog("⌂ Agregar Rental")
+@st.dialog("Agregar Rental")
 def ventana_nuevo_rental(proyecto):
     nombre = st.text_input("Nombre")
     url = st.text_input("Sitio Web")
     if st.button("Guardar", use_container_width=True):
         if nombre: st.session_state["proyectos"][proyecto]["directorio_rentals"].append({"nombre": nombre, "url": url}); guardar_y_recargar()
 
-@st.dialog("✦ Análisis IA de Equipos")
+@st.dialog("Análisis IA de Equipos")
 def ventana_comparador_rental(proyecto):
     directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
     if not directorio:
@@ -536,10 +579,9 @@ def ventana_comparador_rental(proyecto):
                 guardar_y_recargar()
             except: st.error("Error")
 
-@st.dialog("◈ Checkout")
+@st.dialog("Checkout")
 def ventana_checkout(proyecto):
     carrito = st.session_state["proyectos"][proyecto]["carrito_rentals"]
-    directorio = st.session_state["proyectos"][proyecto].get("directorio_rentals", [])
     if not carrito: return st.warning("Vacío.")
     agrupados = {}
     for i in carrito: agrupados.setdefault(i.get("rental", "Desconocido"), []).append(i)
@@ -601,17 +643,17 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
-    # NAVBAR ALINEADA PERFECTA (Alineación Bottom)
+    # NAVBAR ALINEADA PERFECTA (Alineación Bottom, mismo tamaño foto y botón)
     c_nav1, c_nav2, c_nav3, c_nav4, c_nav_space, c_nav_prof = st.columns([1.5, 1.2, 1.2, 1.2, 3.5, 1.2], vertical_alignment="bottom")
     
     with c_nav1:
         st.markdown(f"<img src='{LOGO_URL}' class='logo-img' style='height:40px; margin-bottom: 5px;'>", unsafe_allow_html=True)
     with c_nav2:
-        if st.button("⌂ Dashboard", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Inicio"; st.rerun()
+        if st.button("Dashboard", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Inicio"; st.rerun()
     with c_nav3:
-        if st.button("◈ Social", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Social"; st.rerun()
+        if st.button("Social", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Social"; st.rerun()
     with c_nav4:
-        if st.button("✉ Mensajes", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Mensajes"; st.rerun()
+        if st.button("Mensajes", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Mensajes"; st.rerun()
     with c_nav_space:
         pass
     with c_nav_prof:
@@ -619,12 +661,12 @@ else:
         f_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
         st.markdown(f"""
             <div style="display:flex; justify-content: center; margin-bottom: 8px;">
-                <img src='{f_src}' style='width: 45px; height: 45px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover;'>
+                <img src='{f_src}' style='width: 40px; height: 40px; border-radius: 50%; border: 1px solid #333; object-fit: cover;'>
             </div>
         """, unsafe_allow_html=True)
-        if st.button("⚙ Perfil", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Perfil"; st.rerun()
+        if st.button("Perfil", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Perfil"; st.rerun()
             
-    st.markdown("<hr style='border-color: #1C1C1F; margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color: #1C1C1F; margin-top: 5px; margin-bottom: 24px;'>", unsafe_allow_html=True)
 
     # --- INICIO DASHBOARD ---
     if st.session_state["ruta"] == "Inicio":
@@ -690,50 +732,62 @@ else:
                         st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:700;'>{rec['fecha']}</span>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-weight:600; font-size:14px;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
-    # --- SOCIAL (TWITTER / IG STYLE) ---
+    # --- SOCIAL (CERO EMOJIS, EXPERIENCIA TWITTER/IG) ---
     elif st.session_state["ruta"] == "Social":
-        st.markdown("<h2 class='gradient-text'>Workspace Social</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 class='gradient-text'>The Feed</h2>", unsafe_allow_html=True)
         col_izq, col_centro, col_der = st.columns([1, 2.5, 1.2], gap="large")
         
         with col_izq:
             with st.container(border=True):
                 f_usr = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
-                st.markdown(f"<img src='{f_usr}' class='avatar-circle' style='width:60px; height:60px; margin-bottom:10px;'>", unsafe_allow_html=True)
-                st.markdown(f"#### {mis_datos['nombre']}")
-                st.caption(f"@{mis_datos.get('alias', us_act.split('@')[0])}")
-                st.markdown(f"**{mis_datos.get('estado_txt', 'Online')}**")
+                st.markdown(f"<img src='{f_usr}' class='avatar-circle' style='width:70px; height:70px; margin-bottom:12px;'>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='margin:0;'>{mis_datos['nombre']}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color:#71717A; font-size:13px; margin:0;'>@{mis_datos.get('alias', us_act.split('@')[0])}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color:#A1A1AA; font-size:13px; margin-top:8px;'>{mis_datos.get('estado_txt', 'Online')}</p>", unsafe_allow_html=True)
                 st.divider()
                 st.markdown(f"**Siguiendo:** {len(mis_datos.get('amigos', []))}")
                 st.markdown(f"**Guardados:** {len(mis_datos.get('guardados', []))}")
                 
         with col_centro:
-            # Historias (Estilo IG Web)
-            st.markdown("<div class='section-title'>Historias 24h</div>", unsafe_allow_html=True)
+            # Historias Interactuables Verticales (Snippets)
+            st.markdown("<div class='section-title'>Snippets (24h)</div>", unsafe_allow_html=True)
             ahora = datetime.now(TZ_AR)
             h_activas = [h for h in st.session_state["proyectos"]["_CONFIG_"]["social_stories"] if (ahora - datetime.strptime(h["timestamp"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ_AR)).total_seconds() < 86400]
             
             c_hist = st.columns(6)
             with c_hist[0]:
-                if st.button("➕", help="Subir Historia", type="secondary"): ventana_historia(us_act)
+                # Tarjeta de "Agregar"
+                st.markdown(f"""
+                <div style='min-width: 90px; height: 120px; border-radius: 12px; border: 1px dashed #3F3F46; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0A0A0B;'>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("New", help="Subir Historia", type="secondary", key="new_s_btn"): ventana_historia(us_act)
             
             for idx, h in enumerate(reversed(h_activas)):
                 if idx + 1 < 6:
                     with c_hist[idx + 1]:
                         ui_h = db_users[h['usuario']]
                         f_h = f"data:image/jpeg;base64,{ui_h['foto']}" if ui_h.get("foto") else "https://via.placeholder.com/150"
-                        
-                        # Imagen Circular Clickable (Borde Activo)
-                        st.markdown(f"<img src='{f_h}' class='story-avatar-active'>", unsafe_allow_html=True)
-                        if st.button(f"⟡ {ui_h['nombre'].split()[0]}", key=f"vh_{idx}", type="secondary"):
+                        n_c = ui_h['nombre'].split()[0]
+                        # Diseño tarjeta vertical (Snippet)
+                        st.markdown(f"""
+                        <div class='snippet-card' style='background-image: url("data:image/jpeg;base64,{h['foto']}");'>
+                            <div class='snippet-overlay'>
+                                <img src='{f_h}' class='snippet-avatar'>
+                                <span class='snippet-name'>{n_c}</span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        if st.button("Ver", key=f"vh_{idx}", type="secondary"):
                             ver_historia_dialog(h['foto'], ui_h['nombre'], f_h, h['timestamp'].split()[1])
             st.divider()
             
-            # Muro (Crear Post)
-            st.markdown("<div class='section-title'>Muro</div>", unsafe_allow_html=True)
+            # Muro / Crear Post
+            st.markdown("<div class='section-title'>Update Status</div>", unsafe_allow_html=True)
             with st.container(border=True):
-                txt_post = st.text_area("¿Qué está pasando?", label_visibility="collapsed")
-                img_post = st.file_uploader("Adjuntar foto", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-                if st.button("Publicar en Muro", type="primary"):
+                txt_post = st.text_area("Whats on your mind?", label_visibility="collapsed", placeholder="What's happening on set?")
+                img_post = st.file_uploader("Attach media", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+                if st.button("Post", type="primary"):
                     if txt_post or img_post:
                         img_b64 = base64.b64encode(img_post.read()).decode('utf-8') if img_post else None
                         st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
@@ -742,7 +796,7 @@ else:
                         })
                         guardar_y_recargar()
 
-            # Feed Formateado Puro con Acciones Completas
+            # Feed Aesthetic
             posts = st.session_state["proyectos"]["_CONFIG_"]["social_posts"]
             for i, p in enumerate(posts):
                 ui = db_users[p["usuario"]]
@@ -751,44 +805,49 @@ else:
                 
                 with st.container(border=True):
                     if p.get("es_repost"):
-                        st.markdown(f"<span class='repost-badge'>🔁 Reposteado</span>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='font-size: 11px; color: #71717A; font-weight: 600; margin-bottom: 8px; display: block;'>{SVG_REPOST} Reposted</span>", unsafe_allow_html=True)
                     
-                    c_av, c_info = st.columns([1, 8])
-                    with c_av:
-                        st.markdown(f"<img src='{fi}' class='tweet-avatar'>", unsafe_allow_html=True)
-                    with c_info:
-                        st.markdown(f"<p class='tweet-name'>{ui['nombre']} <span class='tweet-handle'>@{alias_u} • {p['timestamp']}</span></p>", unsafe_allow_html=True)
+                    st.markdown(f"""
+                        <div class='post-header'>
+                            <div style='display:flex; align-items:center;'>
+                                <img src='{fi}' class='post-avatar'>
+                                <div>
+                                    <p class='post-name'>{ui['nombre']} <span class='post-handle'>@{alias_u} • {p['timestamp'].split()[1]}</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
                     
-                    if p.get("texto"): st.markdown(f"<p class='tweet-body'>{p['texto']}</p>", unsafe_allow_html=True)
-                    if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' class='tweet-img'>", unsafe_allow_html=True)
+                    if p.get("texto"): st.markdown(f"<p class='post-body'>{p['texto']}</p>", unsafe_allow_html=True)
+                    if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' class='post-img'>", unsafe_allow_html=True)
                     
-                    # Interacciones (Twitter Style)
+                    # Interacciones SVG (Clean Text Buttons)
                     c_lik, c_com, c_rep, c_sav = st.columns(4)
-                    if c_lik.button(f"♡ {p.get('likes', 0)}", key=f"lik_{p['id']}", type="secondary"):
+                    if c_lik.button(f"Like ({p.get('likes', 0)})", key=f"lik_{p['id']}", type="secondary"):
                         p["likes"] = p.get("likes", 0) + 1
                         guardar_y_recargar()
-                    if c_com.button(f"💬 {len(p.get('comentarios', []))}", key=f"com_{p['id']}", type="secondary"):
+                    if c_com.button(f"Reply ({len(p.get('comentarios', []))})", key=f"com_{p['id']}", type="secondary"):
                         dialog_comentar(p['id'], us_act)
-                    if c_rep.button(f"🔁 {p.get('reposts', 0)}", key=f"rep_{p['id']}", type="secondary"):
-                        # Crear repost
+                    if c_rep.button(f"Repost ({p.get('reposts', 0)})", key=f"rep_{p['id']}", type="secondary"):
                         p["reposts"] = p.get("reposts", 0) + 1
                         st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {
                             "id": str(random.randint(100000, 999999)), "usuario": p['usuario'], "texto": p.get('texto'), "imagen": p.get('imagen'), 
                             "timestamp": obtener_hora_actual(), "likes": 0, "comentarios": [], "reposts": 0, "es_repost": True
                         })
                         guardar_y_recargar()
-                    if c_sav.button("🔖", key=f"sav_{p['id']}", type="secondary"):
+                    if c_sav.button("Save", key=f"sav_{p['id']}", type="secondary"):
                         if p['id'] not in mis_datos.get("guardados", []):
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["guardados"].append(p['id'])
                             guardar_y_recargar()
                     
-                    # Mostrar comentarios si hay
+                    # Comentarios Inline
                     for com in p.get("comentarios", []):
-                        st.markdown(f"<div class='comment-box'><strong>{db_users[com['usuario']]['nombre']}</strong> <span style='font-size:11px;color:#71717A;'>{com['timestamp']}</span><br>{com['texto']}</div>", unsafe_allow_html=True)
+                        nm_c = db_users[com['usuario']]['nombre']
+                        st.markdown(f"<div style='background:#121214; border-left:2px solid #3F3F46; padding:10px 14px; margin-top:10px; border-radius:0 8px 8px 0;'><strong style='color:#FAFAFA;'>{nm_c}</strong> <span style='font-size:11px;color:#71717A;'>{com['timestamp'].split()[1]}</span><br><span style='color:#D4D4D8; font-size:13px;'>{com['texto']}</span></div>", unsafe_allow_html=True)
 
         with col_der:
-            # Tendencias (Extraídas de los posts)
-            st.markdown("<div class='section-title'>📈 TENDENCIAS</div>", unsafe_allow_html=True)
+            # Trending Topics
+            st.markdown("<div class='section-title'>Trending Tags</div>", unsafe_allow_html=True)
             textos_feed = " ".join([p.get('texto', '') for p in posts if p.get('texto')])
             hashtags = re.findall(r"#(\w+)", textos_feed)
             if hashtags:
@@ -797,20 +856,20 @@ else:
                     with st.container(border=True):
                         st.markdown(f"**#{tag}**<br><span style='font-size:11px;color:#71717A;'>{count} posts</span>", unsafe_allow_html=True)
             else:
-                st.info("Aún no hay hashtags en uso.")
+                st.info("No active trends.")
 
-            st.markdown("<br><div class='section-title'>A QUIÉN SEGUIR</div>", unsafe_allow_html=True)
+            st.markdown("<br><div class='section-title'>Network</div>", unsafe_allow_html=True)
             for em, info in db_users.items():
                 if em != us_act and em not in mis_datos.get("amigos", []):
                     with st.container(border=True):
-                        st.markdown(f"<p style='margin:0; font-weight:600;'>{info['nombre']}</p><p style='margin:0; font-size:11px; color:#A1A1AA;'>{info['rol']}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p style='margin:0; font-weight:600; color:#FAFAFA;'>{info['nombre']}</p><p style='margin:0; font-size:11px; color:#A1A1AA;'>{info['rol']}</p>", unsafe_allow_html=True)
                         c_vp, c_sg = st.columns(2)
-                        if c_vp.button("Perfil", key=f"vp_{em}", type="secondary"): ver_perfil(em)
-                        if c_sg.button("Seguir", key=f"seg_{em}", type="secondary"):
+                        if c_vp.button("Profile", key=f"vp_{em}", type="secondary"): ver_perfil(em)
+                        if c_sg.button("Follow", key=f"seg_{em}", type="secondary"):
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["amigos"].append(em)
                             guardar_y_recargar()
             
-            st.markdown("<br><div class='section-title'>🟢 EN VIVO (SPOTIFY)</div>", unsafe_allow_html=True)
+            st.markdown("<br><div class='section-title'>Live Activity (Spotify)</div>", unsafe_allow_html=True)
             amigos_seguir = mis_datos.get("amigos", []) + [us_act]
             for em in amigos_seguir:
                 if em in db_users:
@@ -822,52 +881,52 @@ else:
                             if current and current.get("is_playing"):
                                 tid = current["item"]["id"]
                                 with st.container(border=True):
-                                    st.markdown(f"<p style='margin:0; font-size:12px; font-weight:700;'><span class='online-dot'></span>{info['nombre']}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='margin:0; font-size:12px; font-weight:700;'><span class='online-indicator'></span>{info['nombre']}</p>", unsafe_allow_html=True)
                                     components.iframe(f"https://open.spotify.com/embed/track/{tid}?utm_source=generator&theme=0", height=80)
                                 continue
                         except: pass
 
-    # --- MENSAJES ---
+    # --- MENSAJES (CHAT PRIVADO) ---
     elif st.session_state["ruta"] == "Mensajes":
-        st.markdown("<h2 class='gradient-text'>Mensajería</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 class='gradient-text'>Direct Messages</h2>", unsafe_allow_html=True)
         col_list, col_chat = st.columns([1, 2.5], gap="large")
         if "chat_con" not in st.session_state: st.session_state["chat_con"] = None
         
         with col_list:
-            st.markdown("<div class='section-title'>Contactos</div>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title'>Inbox</div>", unsafe_allow_html=True)
             for em, info in db_users.items():
                 if em != us_act:
                     with st.container(border=True):
                         st.markdown(f"**{info['nombre']}**<br><span style='font-size:11px;color:#A1A1AA;'>{info['rol']}</span>", unsafe_allow_html=True)
-                        if st.button("Abrir", key=f"c_{em}", type="secondary"):
+                        if st.button("Chat", key=f"c_{em}", type="secondary"):
                             st.session_state["chat_con"] = em
                             st.rerun()
 
         with col_chat:
             if st.session_state["chat_con"]:
                 d_inf = db_users[st.session_state["chat_con"]]
-                st.markdown(f"### Chat con {d_inf['nombre']}")
+                st.markdown(f"### Chatting with {d_inf['nombre']}")
                 st.divider()
                 historial = [m for m in st.session_state["proyectos"]["_CONFIG_"]["mensajes"] if (m["de"] == us_act and m["para"] == st.session_state["chat_con"]) or (m["de"] == st.session_state["chat_con"] and m["para"] == us_act)]
                 
                 with st.container(height=400):
-                    if not historial: st.info("Escribe tu primer mensaje.")
+                    if not historial: st.info("Say hi.")
                     for msg in historial:
                         if msg["de"] == us_act:
-                            st.markdown(f"<div style='text-align: right;'><span style='background:#FBAF3B; color:#000; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px; font-weight:600;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align: right;'><span style='background:#FBAF3B; color:#000; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px; font-weight:600;'>{msg['texto']}</span><br><span style='font-size:10px; color:#71717A;'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
                         else:
-                            st.markdown(f"<div style='text-align: left;'><span style='background:#111; border:1px solid #333; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align: left;'><span style='background:#121214; border:1px solid #27272A; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px;'>{msg['texto']}</span><br><span style='font-size:10px; color:#71717A;'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
                 
-                nm = st.chat_input("Mensaje...")
+                nm = st.chat_input("Message...")
                 if nm:
                     st.session_state["proyectos"]["_CONFIG_"]["mensajes"].append({"de": us_act, "para": st.session_state["chat_con"], "texto": nm, "fecha": obtener_hora_actual()})
                     guardar_y_recargar()
-            else: st.info("Selecciona un contacto.")
+            else: st.info("Select a contact.")
 
     # --- PERFIL Y ADMIN ---
     elif st.session_state["ruta"] == "Perfil":
-        st.markdown("<div class='section-title'>AJUSTES DE CUENTA</div>", unsafe_allow_html=True)
-        t_per, t_g, t_cred, t_dir, t_adm = st.tabs(["Mi Perfil", "Guardados", "Credencial", "Directorio", "Admin"])
+        st.markdown("<div class='section-title'>ACCOUNT SETTINGS</div>", unsafe_allow_html=True)
+        t_per, t_g, t_cred, t_dir, t_adm = st.tabs(["Profile", "Saved", "ID Card", "Directory", "Admin"])
         
         with t_per:
             c_img, c_form = st.columns([1, 2.5])
@@ -875,42 +934,42 @@ else:
                 st.markdown("#### Avatar")
                 f_s = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
                 st.markdown(f"<img src='{f_s}' class='avatar-circle' style='width:120px;height:120px;'>", unsafe_allow_html=True)
-                nf = st.file_uploader("Actualizar", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-                if nf and st.button("Guardar"): db_users[us_act]["foto"] = base64.b64encode(nf.read()).decode('utf-8'); guardar_y_recargar()
+                nf = st.file_uploader("Update", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+                if nf and st.button("Save Image"): db_users[us_act]["foto"] = base64.b64encode(nf.read()).decode('utf-8'); guardar_y_recargar()
                 st.markdown("---")
-                st.metric("Nivel", mis_datos['nivel'].capitalize())
+                st.metric("Access Level", mis_datos['nivel'].capitalize())
 
             with c_form:
                 with st.form("f_p"):
-                    st.markdown("#### Datos Personales")
+                    st.markdown("#### Personal Data")
                     c1, c2 = st.columns(2)
-                    al = c1.text_input("Alias / Arroba (@)", value=mis_datos.get("alias", us_act.split("@")[0]))
-                    es = c2.text_input("Estado / Actividad", value=mis_datos.get("estado_txt", "Online"), placeholder="Ej: 🎥 Filmando")
-                    rf = st.text_input("Especialidad", value=mis_datos.get("roles_fav", ""))
-                    spc = st.text_area("Biografía / Notas de Perfil", value=mis_datos.get("specs", ""))
+                    al = c1.text_input("Username (@)", value=mis_datos.get("alias", us_act.split("@")[0]))
+                    es = c2.text_input("Status", value=mis_datos.get("estado_txt", "Online"), placeholder="e.g. On Set")
+                    rf = st.text_input("Role Specialization", value=mis_datos.get("roles_fav", ""))
+                    spc = st.text_area("Bio / Notes", value=mis_datos.get("specs", ""))
                     
                     st.markdown("#### Spotify Integration")
-                    sp_p = st.text_input("Canción Anclada (Se ve en tu Perfil)", value=mis_datos.get("spotify_track_id", ""), placeholder="Ej: https://open.spotify.com/track/...")
+                    sp_p = st.text_input("Pinned Track (Profile view)", value=mis_datos.get("spotify_track_id", ""), placeholder="e.g. https://open.spotify.com/track/...")
                     
                     if SPOTIPY_INSTALLED:
                         try:
                             sp_oauth = SpotifyOAuth(client_id=st.secrets["SPOTIFY_CLIENT_ID"], client_secret=st.secrets["SPOTIFY_CLIENT_SECRET"], redirect_uri=st.secrets["SPOTIFY_REDIRECT_URI"], scope="user-read-currently-playing")
                             auth_url = sp_oauth.get_authorize_url()
-                            st.markdown(f"[🔗 **Vincular cuenta de Spotify (Para emitir 'En Vivo')**]({auth_url})")
-                        except: st.info("Faltan credenciales de Spotify en st.secrets para conectar el vivo.")
+                            st.markdown(f"[🔗 **Link Spotify Account (Live Status)**]({auth_url})")
+                        except: st.info("Requires Spotify keys in st.secrets.")
 
-                    if st.form_submit_button("Sincronizar Perfil"):
+                    if st.form_submit_button("Sync Profile"):
                         t_id = sp_p.split("track/")[1].split("?")[0] if "track/" in sp_p else sp_p
                         db_users[us_act].update({"alias": al, "estado_txt": es, "roles_fav": rf, "specs": spc, "spotify_track_id": t_id})
                         guardar_y_recargar()
-                        st.success("Perfil sincronizado.")
+                        st.success("Synced.")
             st.divider()
-            if st.button("Cerrar Sesión", type="secondary"): st.session_state["usuario_logueado"] = None; st.session_state["ruta"] = "Inicio"; st.rerun()
+            if st.button("Log Out", type="secondary"): st.session_state["usuario_logueado"] = None; st.session_state["ruta"] = "Inicio"; st.rerun()
 
         with t_g:
-            st.markdown("### Posts Guardados 🔖")
+            st.markdown("### Saved Posts")
             mis_g = mis_datos.get("guardados", [])
-            if not mis_g: st.info("No has guardado nada aún.")
+            if not mis_g: st.info("Nothing saved yet.")
             for pid in mis_g:
                 post = next((p for p in st.session_state["proyectos"]["_CONFIG_"]["social_posts"] if p["id"] == pid), None)
                 if post:
@@ -918,7 +977,7 @@ else:
                         st.write(f"**{db_users[post['usuario']]['nombre']}** - {post['timestamp']}")
                         if post.get("texto"): st.write(post["texto"])
                         if post.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{post['imagen']}' style='height:150px;border-radius:8px;'>", unsafe_allow_html=True)
-                        if st.button("Eliminar", key=f"ds_{pid}", type="secondary"):
+                        if st.button("Remove", key=f"ds_{pid}", type="secondary"):
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["guardados"].remove(pid)
                             guardar_y_recargar()
 
@@ -936,7 +995,7 @@ else:
             """, unsafe_allow_html=True)
 
         with t_dir:
-            bq = st.text_input("Buscar miembros...")
+            bq = st.text_input("Search members...")
             for em, info in db_users.items():
                 if info["estado"] == "Aprobado" and (bq.lower() in info["nombre"].lower() or bq.lower() in info["rol"].lower()):
                     with st.container(border=True):
@@ -951,20 +1010,20 @@ else:
                     with st.container(border=True):
                         c1, c2, c3, c4 = st.columns([2, 1.5, 1.5, 1])
                         c1.markdown(f"**{dt_usr['nombre']}**<br><span style='font-size:12px;'>{em_usr}</span>", unsafe_allow_html=True)
-                        est = c2.selectbox("Estado", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"e_{em_usr}")
-                        rol = c3.selectbox("Rol", list(mapa.keys()), index=list(mapa.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa else 9, key=f"r_{em_usr}")
-                        if c4.button("Aplicar", key=f"b_{em_usr}"): db_users[em_usr].update({"estado": est, "rol": rol, "nivel": mapa[rol]}); guardar_y_recargar()
+                        est = c2.selectbox("Status", ["Aprobado", "Pendiente"], index=0 if dt_usr.get("estado") == "Aprobado" else 1, key=f"e_{em_usr}")
+                        rol = c3.selectbox("Role", list(mapa.keys()), index=list(mapa.keys()).index(dt_usr["rol"]) if dt_usr["rol"] in mapa else 9, key=f"r_{em_usr}")
+                        if c4.button("Apply", key=f"b_{em_usr}"): db_users[em_usr].update({"estado": est, "rol": rol, "nivel": mapa[rol]}); guardar_y_recargar()
                 st.divider()
-                st.markdown("### Tickets de Soporte")
+                st.markdown("### Support Tickets")
                 tks = st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"]
                 for i, tk in enumerate(reversed(tks)):
                     with st.container(border=True):
-                        st.markdown(f"**{tk['asunto']}** ({tk['fecha']}) - De: {tk['usuario']}")
+                        st.markdown(f"**{tk['asunto']}** ({tk['fecha']}) - From: {tk['usuario']}")
                         st.write(tk['desc'])
                         if tk['estado'] == "Pendiente":
-                            if st.button("Resuelto", key=f"tk_{i}"): st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"][len(tks)-1-i]["estado"] = "Resuelto"; guardar_y_recargar()
-                        else: st.success("Resuelto")
-            else: st.warning("Solo Super Admins.")
+                            if st.button("Resolve", key=f"tk_{i}"): st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"][len(tks)-1-i]["estado"] = "Resuelto"; guardar_y_recargar()
+                        else: st.success("Resolved")
+            else: st.warning("Super Admins only.")
 
     # --- PROYECTO (HERRAMIENTAS INTACTAS) ---
     elif st.session_state["ruta"] == "Proyecto":
@@ -996,7 +1055,7 @@ else:
         idx_def = nf.index(st.session_state["menu_option"]) if st.session_state.get("menu_option") in nf else 0
             
         with col_nav:
-            s_e = option_menu(menu_title="HERRAMIENTAS", options=nf, icons=inf, default_index=idx_def, styles={"container": {"padding": "10px", "background-color": "#0A0A0B", "border-radius": "16px", "border": "1px solid #1C1C1F"}, "icon": {"color": "#888", "font-size": "15px"}, "menu-title": {"color": "#666", "font-size": "11px", "letter-spacing": "2px", "font-weight": "700"}, "nav-link": {"font-size": "13px", "text-align": "left", "margin": "4px 0", "color": "#CCC", "border-radius": "8px", "padding": "10px"}, "nav-link-selected": {"background-color": "#1A1A1A", "color": "#FAFAFA", "font-weight": "600", "border-left": "3px solid #FBAF3B"}})
+            s_e = option_menu(menu_title="WORKSPACE", options=nf, icons=inf, default_index=idx_def, styles={"container": {"padding": "10px", "background-color": "#09090B", "border-radius": "12px", "border": "1px solid #18181B"}, "icon": {"color": "#888", "font-size": "15px"}, "menu-title": {"color": "#666", "font-size": "11px", "letter-spacing": "2px", "font-weight": "700"}, "nav-link": {"font-size": "13px", "text-align": "left", "margin": "4px 0", "color": "#CCC", "border-radius": "8px", "padding": "10px"}, "nav-link-selected": {"background-color": "#121214", "color": "#FAFAFA", "font-weight": "600", "border-left": "3px solid #FBAF3B"}})
             st.session_state["menu_option"] = s_e
         
         with col_content:
@@ -1012,7 +1071,7 @@ else:
                     try:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         prompt = f"Proyecto: {pr}. Datos: Avisos {pd_proy.get('avisos',[])}, Locaciones {pd_proy.get('locaciones',[])}. Redactá un Call Sheet."
-                        st.markdown(f"<div style='background:#111; padding:20px; border-radius:12px; border:1px solid #222;'>{genai.GenerativeModel('gemini-1.5-flash').generate_content(prompt).text}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background:#121214; padding:20px; border-radius:12px; border:1px solid #27272A;'>{genai.GenerativeModel('gemini-1.5-flash').generate_content(prompt).text}</div>", unsafe_allow_html=True)
                     except: st.error("Falta API Key Gemini.")
 
             elif s_e == "Tablero Kanban":
