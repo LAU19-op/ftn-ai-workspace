@@ -13,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
-from datetime import datetime, date, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 import random
 import time
 import numpy as np
@@ -22,18 +22,24 @@ import librosa
 import scipy.signal
 import streamlit.components.v1 as components
 
+# Importación de Spotify con manejo de errores para evitar crasheos si falta en requirements.txt
+try:
+    import spotipy
+    from spotipy.oauth2 import SpotifyOAuth
+    SPOTIPY_INSTALLED = True
+except ImportError:
+    SPOTIPY_INSTALLED = False
+
 # --- 1. CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="Fetén Workspace Pro", page_icon="✦", layout="wide", initial_sidebar_state="collapsed")
 
 LOGO_URL = "https://i.supaimg.com/4a90693e-1b41-4313-8203-f60c8b81825f/da7de7fd-3ded-4499-b3f4-790424f0dc5a.png"
-
-# HORA DE ARGENTINA (Nativa, UTC-3)
 TZ_AR = timezone(timedelta(hours=-3))
 
 def obtener_hora_actual():
     return datetime.now(TZ_AR).strftime("%Y-%m-%d %H:%M:%S")
 
-# --- 2. DISEÑO UI/UX "SAAS OBSIDIAN PRO" ---
+# --- 2. DISEÑO UI/UX "SAAS OBSIDIAN PRO" (INSTAGRAM STYLE PARA SOCIAL) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -41,7 +47,7 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
     
-    /* Fondo Obsidiana Premium */
+    /* Fondo Obsidiana */
     .stApp {
         background-color: #050505 !important;
         background-image: 
@@ -52,27 +58,21 @@ st.markdown("""
 
     .logo-img { display: block; max-width: 100%; height: auto; filter: brightness(1.5) contrast(1.2); }
 
-    /* Contenedores Base */
+    /* Tarjetas Modulares */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: #0A0A0B !important;
-        border: 1px solid #1C1C1F !important;
-        border-radius: 16px !important;
-        padding: 1.5rem !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
-        margin-bottom: 16px !important;
+        background: #0A0A0B !important; border: 1px solid #1C1C1F !important; border-radius: 16px !important;
+        padding: 1.5rem !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; margin-bottom: 16px !important;
     }
     
-    /* Títulos */
     .gradient-text {
         background: linear-gradient(135deg, #FFFFFF 0%, #FBAF3B 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-weight: 800; letter-spacing: -0.03em;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; letter-spacing: -0.03em;
     }
     h1, h2 { font-weight: 800 !important; letter-spacing: -0.02em !important; color: #FAFAFA !important; }
     h3, h4 { color: #D4D4D8 !important; font-weight: 600 !important; letter-spacing: -0.01em !important; }
     .section-title { color: #71717A; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px; }
 
-    /* Inputs */
+    /* Formularios */
     .stTextInput input, .stSelectbox select, .stNumberInput input, .stDateInput input, .stTimeInput input, .stTextArea textarea, .stChatInput input {
         background-color: #0E0E11 !important; border: 1px solid #27272A !important; color: #FAFAFA !important;
         border-radius: 10px !important; padding: 12px 16px !important; font-weight: 400 !important;
@@ -90,13 +90,20 @@ st.markdown("""
     [data-testid="stBaseButton-secondary"] { background: #0A0A0B !important; border: 1px solid #27272A !important; color: #A1A1AA !important; box-shadow: none !important; }
     [data-testid="stBaseButton-secondary"]:hover { border-color: #52525B !important; color: #FAFAFA !important; }
 
-    /* Red Social UI */
-    .tweet-card {
-        background: #0A0A0B; border: 1px solid #1C1C1F; border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: background 0.2s;
+    /* Historias estilo Instagram */
+    .story-avatar-active {
+        border-radius: 50%; padding: 3px; width: 68px; height: 68px; object-fit: cover;
+        background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        border: 2px solid #050505; /* Borde interno negro para separar la foto del gradiente */
     }
-    .tweet-card:hover { background: #0E0E11; }
-    .tweet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .tweet-user-info { display: flex; align-items: center; }
+    .story-avatar-inactive {
+        border-radius: 50%; padding: 2px; width: 68px; height: 68px; object-fit: cover;
+        border: 1px solid #333; background: #050505;
+    }
+    
+    /* Red Social Muro */
+    .tweet-card { background: #0A0A0B; border: 1px solid #1C1C1F; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+    .tweet-header { display: flex; align-items: center; margin-bottom: 10px; justify-content: space-between; }
     .tweet-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 1px solid #27272A; }
     .tweet-name { font-weight: 700; color: #FAFAFA; font-size: 15px; margin: 0; }
     .tweet-handle { color: #71717A; font-size: 13px; margin: 0; }
@@ -104,37 +111,17 @@ st.markdown("""
     .tweet-img { width: 100%; border-radius: 12px; border: 1px solid #1C1C1F; margin-bottom: 12px; max-height: 400px; object-fit: cover; }
     .tweet-actions { display: flex; justify-content: space-between; max-width: 300px; color: #71717A; font-size: 13px; font-weight: 600; padding-top: 10px; border-top: 1px solid #1C1C1F; }
 
-    .avatar-circle { border-radius: 50%; object-fit: cover; border: 2px solid #FBAF3B; box-shadow: 0 4px 10px rgba(180, 113, 63, 0.3); }
+    /* Indicador Online */
+    .online-dot { display: inline-block; width: 10px; height: 10px; background-color: #22C55E; border-radius: 50%; margin-right: 8px; box-shadow: 0 0 8px #22C55E; }
     
-    .story-tray { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
-    .story-tray::-webkit-scrollbar { height: 0px; }
-    .story-circle-wrapper { display: flex; flex-direction: column; align-items: center; min-width: 68px; }
-    .story-img { width: 64px; height: 64px; border-radius: 50%; border: 2px solid #000; outline: 2px solid #FBAF3B; object-fit: cover; margin-bottom: 6px; }
-    .story-author { font-size: 11px; color: #A1A1AA; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 68px; }
-
-    /* Contenedor Actividad en Vivo */
-    .online-indicator { display: inline-block; width: 8px; height: 8px; background-color: #22C55E; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 8px #22C55E; }
-
-    /* Credencial */
-    .credencial-feten { background-color: #0A0A0B; border: 1px solid #1C1C1F; border-radius: 16px; padding: 30px; width: 100%; max-width: 380px; margin: 0 auto; text-align: center; position: relative; overflow: hidden; }
-    .credencial-feten::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #FBAF3B, #B4713F); }
-    .credencial-img { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #FBAF3B; margin-bottom: 15px; object-fit: cover;}
-    .credencial-name { font-size: 20px; font-weight: 700; margin: 0; color: #FAFAFA !important;}
-    .credencial-role { font-size: 12px; color: #FBAF3B !important; margin-top: 4px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;}
-
     [data-testid="stMetricValue"] { color: #FAFAFA !important; font-size: 2.2rem !important; font-weight: 800 !important; letter-spacing: -1px; }
     [data-testid="stMetricLabel"] { color: #A1A1AA !important; text-transform: uppercase !important; letter-spacing: 1px !important; font-size: 0.75rem !important; font-weight: 600 !important; }
-
-    @media (max-width: 768px) {
-        [data-testid="column"] { width: 100% !important; flex: 100% !important; min-width: 100% !important; margin-bottom: 10px !important; }
-        .block-container { padding-left: 1rem !important; padding-right: 1rem !important; padding-top: 1.5rem !important; }
-    }
     </style>
 """, unsafe_allow_html=True)
 
 ARCHIVO_BD = "ftn_database.json"
 
-# --- 3. INICIALIZACIÓN PROFUNDA (CREACIÓN DE USUARIOS Y ESTRUCTURAS) ---
+# --- 3. INICIALIZACIÓN Y BASE DE DATOS ---
 def generar_qr_base64(datos):
     qr = qrcode.QRCode(version=1, box_size=5, border=1)
     qr.add_data(datos)
@@ -162,47 +149,39 @@ def inicializar_bd():
             
         conf = data_cargada["_CONFIG_"]
         
-        listas_base = ["recordatorios", "notificaciones", "mensajes", "tickets_soporte", "social_posts", "social_stories"]
-        for lb in listas_base:
-            if lb not in conf:
-                conf[lb] = []
+        for lb in ["recordatorios", "notificaciones", "mensajes", "tickets_soporte", "social_posts", "social_stories"]:
+            if lb not in conf: conf[lb] = []
 
         if "lau@admin.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["lau@admin.com"] = {
                 "nombre": "Lau (Admin)", "pass": "1234", "rol": "Super Admin", "nivel": "jefe_supremo", "estado": "Aprobado",
                 "foto": "", "credencial": "FTN-0001", "edad": "", "roles_fav": "Directora", "specs": "Amo el cine de terror.", "portfolio": "", 
-                "spotify_perfil": "https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT", "spotify_now": "", "spotify_vinculado": False, "conectado": True,
-                "amigos": ["director@feten.com", "arte@feten.com"], "acceso_rapido": "Panel General", "alias": "lau_ok"
+                "spotify_token": None, "spotify_track_id": None, "amigos": ["director@feten.com", "arte@feten.com"], "acceso_rapido": "Panel General", "alias": "lau_ok"
             }
             
         if "director@feten.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["director@feten.com"] = {
                 "nombre": "Matias (Director)", "pass": "1234", "rol": "Dirección", "nivel": "jefe", "estado": "Aprobado",
-                "foto": "", "credencial": "FTN-0002", "edad": "35", "roles_fav": "Cine publicitario", "specs": "Especialista en ópticas anamórficas.", "portfolio": "", 
-                "spotify_perfil": "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl", "spotify_now": "https://open.spotify.com/track/254bCGIGIeb1vCpVSSDKpG", "spotify_vinculado": True, "conectado": True,
-                "amigos": [], "acceso_rapido": "Monitor DIR", "alias": "mati_dir"
+                "foto": "", "credencial": "FTN-0002", "edad": "35", "roles_fav": "Cine", "specs": "", "portfolio": "", 
+                "spotify_token": None, "spotify_track_id": "4cOdK2wGLETKBW3PvgPWqT", "amigos": [], "acceso_rapido": "Monitor DIR", "alias": "mati_dir"
             }
         if "arte@feten.com" not in conf.get("usuarios", {}):
             conf["usuarios"]["arte@feten.com"] = {
                 "nombre": "Sofi (Arte)", "pass": "1234", "rol": "Dirección de Arte", "nivel": "jefe", "estado": "Aprobado",
-                "foto": "", "credencial": "FTN-0003", "edad": "28", "roles_fav": "Escenografía", "specs": "Siempre con una paleta de colores en la mano.", "portfolio": "", 
-                "spotify_perfil": "https://open.spotify.com/track/3q7HQrS4wL455FEn8P9Q4D", "spotify_now": "https://open.spotify.com/track/7qiZfU4dY1lWllzX7mPBI3", "spotify_vinculado": True, "conectado": True,
-                "amigos": [], "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte"
+                "foto": "", "credencial": "FTN-0003", "edad": "28", "roles_fav": "Escenografía", "specs": "", "portfolio": "", 
+                "spotify_token": None, "spotify_track_id": "11dFghVXANMlKmJXsNCbNl", "amigos": [], "acceso_rapido": "Arte & Vestuario", "alias": "sofi_arte"
             }
 
         if not conf["social_posts"]:
             conf["social_posts"] = [
-                {"usuario": "arte@feten.com", "texto": "Armando el set de los años 80, una locura los detalles que estamos consiguiendo. Mañana subo fotos de la utilería.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 12},
-                {"usuario": "director@feten.com", "texto": "Recién terminamos el scouting técnico en San Telmo. ¡La luz de esa locación es increíble para la escena final! Listos para arrancar.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 34}
+                {"usuario": "arte@feten.com", "texto": "Armando el set de los 80, una locura los detalles.", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 12},
+                {"usuario": "director@feten.com", "texto": "Recién terminamos el scouting en San Telmo. ¡La luz es increíble!", "imagen": None, "timestamp": (datetime.now(TZ_AR) - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S"), "likes": 34}
             ]
             
         for em, info in conf["usuarios"].items():
             if "amigos" not in info: info["amigos"] = []
-            if "spotify_perfil" not in info: info["spotify_perfil"] = ""
-            if "spotify_now" not in info: info["spotify_now"] = ""
-            if "spotify_vinculado" not in info: info["spotify_vinculado"] = False
-            if "conectado" not in info: info["conectado"] = True
-            if "specs" not in info: info["specs"] = ""
+            if "spotify_token" not in info: info["spotify_token"] = None
+            if "spotify_track_id" not in info: info["spotify_track_id"] = None
             if "estado" not in info: info["estado"] = "Aprobado"
             if "credencial" not in info: info["credencial"] = f"FTN-{random.randint(1000, 9999)}"
             if "acceso_rapido" not in info: info["acceso_rapido"] = "Panel General"
@@ -223,16 +202,30 @@ if "ruta" not in st.session_state: st.session_state["ruta"] = "Inicio"
 if "proyecto_activo" not in st.session_state: st.session_state["proyecto_activo"] = None
 if "menu_option" not in st.session_state: st.session_state["menu_option"] = "Panel General"
 
-# --- 4. MODALES GLOBALES DE ACCIÓN ---
+# SPOTIFY API OAUTH HANDLER (Si hay code en URL, procesarlo y guardarlo)
+if SPOTIPY_INSTALLED and "code" in st.query_params and st.session_state.get("usuario_logueado"):
+    try:
+        sp_oauth = SpotifyOAuth(
+            client_id=st.secrets["SPOTIFY_CLIENT_ID"],
+            client_secret=st.secrets["SPOTIFY_CLIENT_SECRET"],
+            redirect_uri=st.secrets["SPOTIFY_REDIRECT_URI"],
+            scope="user-read-currently-playing"
+        )
+        token_info = sp_oauth.get_access_token(st.query_params["code"])
+        st.session_state["proyectos"]["_CONFIG_"]["usuarios"][st.session_state["usuario_logueado"]]["spotify_token"] = token_info
+        st.query_params.clear() # Limpiar URL
+        guardar_y_recargar()
+    except Exception as e:
+        st.error("Error validando Spotify. Verificá las credenciales en st.secrets.")
+
+# --- 4. MODALES ---
 @st.dialog("◈ Reportar Problema")
 def ventana_soporte(usuario):
     asunto = st.text_input("Asunto")
     desc = st.text_area("Descripción del bug o problema")
     if st.button("Enviar Ticket", use_container_width=True):
         if asunto and desc:
-            st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({
-                "usuario": usuario, "fecha": obtener_hora_actual(), "asunto": asunto, "desc": desc, "estado": "Pendiente"
-            })
+            st.session_state["proyectos"]["_CONFIG_"]["tickets_soporte"].append({"usuario": usuario, "fecha": obtener_hora_actual(), "asunto": asunto, "desc": desc, "estado": "Pendiente"})
             st.success("Ticket enviado al Administrador.")
             guardar_y_recargar()
 
@@ -242,10 +235,13 @@ def ventana_historia(usuario):
     if st.button("Publicar Historia", use_container_width=True):
         if foto_hist:
             b64 = base64.b64encode(foto_hist.read()).decode('utf-8')
-            st.session_state["proyectos"]["_CONFIG_"]["social_stories"].append({
-                "usuario": usuario, "foto": b64, "timestamp": obtener_hora_actual()
-            })
+            st.session_state["proyectos"]["_CONFIG_"]["social_stories"].append({"usuario": usuario, "foto": b64, "timestamp": obtener_hora_actual()})
             guardar_y_recargar()
+
+@st.dialog("◈ Ver Historia")
+def ver_historia_dialog(b64_foto, usuario_nombre, tiempo):
+    st.markdown(f"**{usuario_nombre}** • {tiempo}")
+    st.markdown(f"<img src='data:image/jpeg;base64,{b64_foto}' style='width:100%; border-radius:12px; object-fit:cover;'>", unsafe_allow_html=True)
 
 @st.dialog("◈ Perfil de Usuario")
 def ver_perfil(em_usuario):
@@ -253,18 +249,16 @@ def ver_perfil(em_usuario):
     f_usr = f"data:image/jpeg;base64,{u_info['foto']}" if u_info.get("foto") else "https://via.placeholder.com/150"
     
     colA, colB = st.columns([1, 2])
-    with colA:
-        st.markdown(f"<img src='{f_usr}' style='width:100px; height:100px; border-radius:50%; object-fit:cover; border:2px solid #FBAF3B;'>", unsafe_allow_html=True)
+    with colA: st.markdown(f"<img src='{f_usr}' style='width:100px; height:100px; border-radius:50%; object-fit:cover; border:2px solid #FBAF3B;'>", unsafe_allow_html=True)
     with colB:
         st.markdown(f"<h3 style='margin:0; font-size:22px;'>{u_info['nombre']}</h3>", unsafe_allow_html=True)
         st.markdown(f"<p style='color:#A1A1AA; margin:0;'>@{u_info['alias']} • {u_info['rol']}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p style='font-size:13px; color:#D4D4D8; margin-top:10px;'>{u_info.get('specs', 'Sin biografía.')}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:13px; color:#D4D4D8; margin-top:10px;'>{u_info.get('specs', '')}</p>", unsafe_allow_html=True)
     
     st.divider()
-    if u_info.get("spotify_perfil") and "track/" in u_info["spotify_perfil"]:
-        st.markdown("<p style='font-size:11px; font-weight:700; color:#71717A; letter-spacing:1px; margin-bottom:5px;'>CANCIÓN ANCLADA</p>", unsafe_allow_html=True)
-        tid = u_info["spotify_perfil"].split("track/")[1].split("?")[0]
-        components.iframe(f"https://open.spotify.com/embed/track/{tid}?utm_source=generator&theme=0", height=80)
+    if u_info.get("spotify_track_id"):
+        st.markdown("<p style='font-size:11px; font-weight:700; color:#71717A; letter-spacing:1px; margin-bottom:5px;'>TRACK ANCLADO</p>", unsafe_allow_html=True)
+        components.iframe(f"https://open.spotify.com/embed/track/{u_info['spotify_track_id']}?utm_source=generator&theme=0", height=80)
         st.markdown("<br>", unsafe_allow_html=True)
         
     st.markdown("<div class='section-title'>Publicaciones</div>", unsafe_allow_html=True)
@@ -276,7 +270,7 @@ def ver_perfil(em_usuario):
             if p.get("texto"): st.write(p["texto"])
             if p.get("imagen"): st.markdown(f"<img src='data:image/jpeg;base64,{p['imagen']}' style='width:100%; border-radius:8px; margin-top:8px;'>", unsafe_allow_html=True)
 
-# Resto de Modales Base (Proyecto)...
+# Resto de Modales Base...
 @st.dialog("◈ Nueva Tarea Kanban")
 def ventana_kanban(proyecto, autor):
     tarea = st.text_input("Descripción de la Tarea")
@@ -307,8 +301,7 @@ def ventana_aviso(proyecto, autor, locaciones_disponibles):
         loc_elegida = st.selectbox("Locación", nombres_locs) if nombres_locs else st.text_input("Locación")
         notas_citacion = st.text_area("Notas extras")
         if st.button("Publicar Citación", use_container_width=True):
-            st.session_state["proyectos"][proyecto]["avisos"].append({"tipo": "citacion", "autor": autor, "fecha": str(fecha), "hora": str(hora), "locacion": loc_elegida, "notas": notas_citacion})
-            guardar_y_recargar()
+            st.session_state["proyectos"][proyecto]["avisos"].append({"tipo": "citacion", "autor": autor, "fecha": str(fecha), "hora": str(hora), "locacion": loc_elegida, "notas": notas_citacion}); guardar_y_recargar()
 
 @st.dialog("⌖ Registrar Locación")
 def ventana_locacion(proyecto):
@@ -347,7 +340,7 @@ def ventana_pedido(proyecto, area):
     if st.button("Enviar", use_container_width=True):
         if item_nombre: st.session_state["proyectos"][proyecto]["pedidos_equipos"].append({"area": area, "item": item_nombre, "notas": justificacion, "prioridad": prioridad, "estado": "Pendiente"}); guardar_y_recargar()
 
-@st.dialog("⚙ Cargar Inventario")
+@st.dialog("⚙ Cargar Equipo al Inventario")
 def ventana_equipo(proyecto, area):
     col1, col2 = st.columns(2)
     item_nombre = col1.text_input("Ítem")
@@ -563,7 +556,7 @@ if st.session_state["usuario_logueado"] is None:
                 f_reg = st.file_uploader("Foto ID", type=["jpg", "png", "jpeg"])
                 if st.button("Registrar", use_container_width=True):
                     if n_reg and e_reg and p_reg and f_reg:
-                        db[e_reg] = {"nombre": n_reg, "pass": p_reg, "rol": "Invitado", "nivel": "lectura", "estado": "Pendiente", "foto": base64.b64encode(f_reg.read()).decode('utf-8'), "credencial": f"FTN-{random.randint(1000,9999)}", "edad": "", "roles_fav": "", "portfolio": "", "spotify_perfil": "", "spotify_now": "", "spotify_vinculado": False, "conectado": True, "amigos": [], "acceso_rapido": "Panel General", "alias": e_reg.split("@")[0], "specs": ""}
+                        db[e_reg] = {"nombre": n_reg, "pass": p_reg, "rol": "Invitado", "nivel": "lectura", "estado": "Pendiente", "foto": base64.b64encode(f_reg.read()).decode('utf-8'), "credencial": f"FTN-{random.randint(1000,9999)}", "edad": "", "roles_fav": "", "portfolio": "", "spotify_token": None, "spotify_track_id": None, "amigos": [], "acceso_rapido": "Panel General", "alias": e_reg.split("@")[0], "specs": ""}
                         guardar_y_recargar()
                         st.success("Enviado al administrador.")
 
@@ -575,7 +568,7 @@ else:
     rol_actual = mis_datos["rol"]
     nivel_actual = mis_datos["nivel"]
     
-    # NAVBAR ALINEADA PERFECTA (Alineación Bottom, mismo alto 40px para foto y botón)
+    # NAVBAR ALINEADA PERFECTA (Alineación Vertical desde el fondo)
     c_nav1, c_nav2, c_nav3, c_nav4, c_nav_space, c_nav_prof = st.columns([1.5, 1.2, 1.2, 1.2, 3.5, 1.2], vertical_alignment="bottom")
     
     with c_nav1:
@@ -589,11 +582,10 @@ else:
     with c_nav_space:
         pass
     with c_nav_prof:
-        # Foto centrada JUSTO ARRIBA del botón
         f_src = f"data:image/jpeg;base64,{mis_datos['foto']}" if mis_datos.get("foto") else "https://via.placeholder.com/150"
         st.markdown(f"""
             <div style="display:flex; justify-content: center; margin-bottom: 8px;">
-                <img src='{f_src}' style='width: 45px; height: 45px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover;'>
+                <img src='{f_src}' style='width: 40px; height: 40px; border-radius: 50%; border: 2px solid #FBAF3B; object-fit: cover;'>
             </div>
         """, unsafe_allow_html=True)
         if st.button("⚙ Perfil", use_container_width=True, type="secondary"): st.session_state["ruta"] = "Perfil"; st.rerun()
@@ -664,7 +656,7 @@ else:
                         st.markdown(f"<span style='color:#FBAF3B; font-size:11px; font-weight:700;'>{rec['fecha']}</span>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-weight:600; font-size:14px;'>{rec['titulo']}</div>", unsafe_allow_html=True)
 
-    # --- SOCIAL (RED NATIVA) ---
+    # --- SOCIAL ---
     elif st.session_state["ruta"] == "Social":
         st.markdown("<h2 class='gradient-text'>Workspace Social</h2>", unsafe_allow_html=True)
         col_izq, col_centro, col_der = st.columns([1, 2.5, 1.2], gap="large")
@@ -678,28 +670,29 @@ else:
                 st.markdown(f"**Siguiendo:** {len(mis_datos.get('amigos', []))}")
                 
         with col_centro:
-            # Historias Interactuables
+            # Historias Estilo Instagram (Interactivas)
             st.markdown("<div class='section-title'>Historias 24h</div>", unsafe_allow_html=True)
             ahora = datetime.now(TZ_AR)
             h_activas = [h for h in st.session_state["proyectos"]["_CONFIG_"]["social_stories"] if (ahora - datetime.strptime(h["timestamp"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ_AR)).total_seconds() < 86400]
             
-            cols_hist = st.columns(min(len(h_activas) + 1, 6))
-            with cols_hist[0]:
+            c_hist = st.columns(6)
+            with c_hist[0]:
                 if st.button("➕", help="Subir Historia"): ventana_historia(us_act)
             
             for idx, h in enumerate(reversed(h_activas)):
                 if idx + 1 < 6:
-                    with cols_hist[idx + 1]:
-                        n_c = db_users[h['usuario']]['nombre'].split()[0]
-                        with st.popover(f"⟡ {n_c}"):
-                            st.markdown(f"<img src='data:image/jpeg;base64,{h['foto']}' style='width:100%; border-radius:12px;'>", unsafe_allow_html=True)
-                            st.caption(f"Subido a las: {h['timestamp'].split()[1]}")
+                    with c_hist[idx + 1]:
+                        ui_h = db_users[h['usuario']]
+                        f_h = f"data:image/jpeg;base64,{ui_h['foto']}" if ui_h.get("foto") else "https://via.placeholder.com/150"
+                        st.markdown(f"<img src='{f_h}' class='story-avatar-active'>", unsafe_allow_html=True)
+                        if st.button(ui_h['nombre'].split()[0], key=f"v_h_{idx}"):
+                            ver_historia_dialog(h['foto'], ui_h['nombre'], h['timestamp'])
             st.divider()
             
-            # Muro
+            # Muro Publicar
             st.markdown("<div class='section-title'>Muro</div>", unsafe_allow_html=True)
             with st.container(border=True):
-                txt_post = st.text_area("¿Qué está pasando?", label_visibility="collapsed")
+                txt_post = st.text_area("¿Qué está pasando en el set?", label_visibility="collapsed")
                 img_post = st.file_uploader("Adjuntar foto", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
                 if st.button("Publicar en Muro"):
                     if txt_post or img_post:
@@ -707,7 +700,7 @@ else:
                         st.session_state["proyectos"]["_CONFIG_"]["social_posts"].insert(0, {"usuario": us_act, "texto": txt_post, "imagen": img_b64, "timestamp": obtener_hora_actual(), "likes": 0})
                         guardar_y_recargar()
 
-            # Feed Formateado Puro Sin Tags Expuestos
+            # Feed Formateado HTML Puro SIN sangrías para evitar error de Streamlit
             posts = st.session_state["proyectos"]["_CONFIG_"]["social_posts"]
             for i, p in enumerate(posts):
                 ui = db_users[p["usuario"]]
@@ -738,18 +731,33 @@ else:
                             st.session_state["proyectos"]["_CONFIG_"]["usuarios"][us_act]["amigos"].append(em)
                             guardar_y_recargar()
             
-            st.markdown("<br><div class='section-title'>🟢 CONECTADOS AHORA</div>", unsafe_allow_html=True)
+            st.markdown("<br><div class='section-title'>🟢 EN VIVO (SPOTIFY)</div>", unsafe_allow_html=True)
+            st.caption("Si conectaste tu cuenta oficial de Spotify (OAuth), acá se mostrará en tiempo real tu pista actual.")
+            
             amigos_seguir = mis_datos.get("amigos", []) + [us_act]
             for em in amigos_seguir:
                 if em in db_users:
                     info = db_users[em]
-                    if info.get("conectado", False) and info.get("spotify_vinculado", False) and info.get("spotify_now"):
-                        with st.container(border=True):
-                            st.markdown(f"<p style='margin:0; font-size:13px; font-weight:600;'><span class='online-indicator'></span>{info['nombre']} <span style='color:#71717A; font-weight:400; font-size:11px;'>escucha:</span></p>", unsafe_allow_html=True)
-                            tid = info["spotify_now"].split("track/")[1].split("?")[0]
-                            components.iframe(f"https://open.spotify.com/embed/track/{tid}?utm_source=generator&theme=0", height=80)
+                    # Integración Real Spotify API (Si hay token)
+                    if SPOTIPY_INSTALLED and info.get("spotify_token"):
+                        try:
+                            sp = spotipy.Spotify(auth=info["spotify_token"]["access_token"])
+                            current = sp.current_user_playing_track()
+                            if current and current.get("is_playing"):
+                                tid = current["item"]["id"]
+                                with st.container(border=True):
+                                    st.markdown(f"<p style='margin:0; font-size:12px; font-weight:700;'><span class='online-dot'></span>{info['nombre']}</p>", unsafe_allow_html=True)
+                                    components.iframe(f"https://open.spotify.com/embed/track/{tid}?utm_source=generator&theme=0", height=80)
+                                continue # Pasa al siguiente usuario
+                        except: pass # Token expirado o error de API
 
-    # --- MENSAJES (CHAT PRIVADO) ---
+                    # Fallback visual: si no hay Spotify OAuth pero pegó su link manualmente
+                    elif info.get("spotify_track_id"):
+                        with st.container(border=True):
+                            st.markdown(f"<p style='margin:0; font-size:12px; font-weight:700;'><span class='online-dot'></span>{info['nombre']}</p>", unsafe_allow_html=True)
+                            components.iframe(f"https://open.spotify.com/embed/track/{info['spotify_track_id']}?utm_source=generator&theme=0", height=80)
+
+    # --- MENSAJES ---
     elif st.session_state["ruta"] == "Mensajes":
         st.markdown("<h2 class='gradient-text'>Mensajería</h2>", unsafe_allow_html=True)
         col_list, col_chat = st.columns([1, 2.5], gap="large")
@@ -776,13 +784,13 @@ else:
                     if not historial: st.info("Escribe tu primer mensaje.")
                     for msg in historial:
                         if msg["de"] == us_act:
-                            st.markdown(f"<div style='text-align: right;'><span style='background:#FBAF3B; color:#000; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px; font-weight:600;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha']}</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align: right;'><span style='background:#FBAF3B; color:#000; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px; font-weight:600;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
                         else:
-                            st.markdown(f"<div style='text-align: left;'><span style='background:#111; border:1px solid #333; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha']}</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align: left;'><span style='background:#111; border:1px solid #333; padding:10px 14px; border-radius:14px; display:inline-block; margin-bottom:4px;'>{msg['texto']}</span><br><span style='font-size:10px; color:#52525B;'>{msg['fecha'].split()[1]}</span></div>", unsafe_allow_html=True)
                 
                 nm = st.chat_input("Mensaje...")
                 if nm:
-                    st.session_state["proyectos"]["_CONFIG_"]["mensajes"].append({"de": us_act, "para": st.session_state["chat_con"], "texto": nm, "fecha": obtener_hora_actual().split(" ")[1]})
+                    st.session_state["proyectos"]["_CONFIG_"]["mensajes"].append({"de": us_act, "para": st.session_state["chat_con"], "texto": nm, "fecha": obtener_hora_actual()})
                     guardar_y_recargar()
             else: st.info("Selecciona un contacto.")
 
@@ -804,23 +812,30 @@ else:
 
             with c_form:
                 with st.form("f_p"):
-                    st.markdown("#### Datos Personales y Biografía")
+                    st.markdown("#### Datos Personales")
                     c1, c2 = st.columns(2)
                     al = c1.text_input("Alias / Arroba (@)", value=mis_datos.get("alias", us_act.split("@")[0]))
                     rf = c2.text_input("Especialidad", value=mis_datos.get("roles_fav", ""))
                     spc = st.text_area("Biografía / Notas de Perfil", value=mis_datos.get("specs", ""))
-                    pf = st.text_input("Portfolio Link", value=mis_datos.get("portfolio", ""))
                     
-                    st.markdown("#### Integración Spotify")
-                    sp_p = st.text_input("Canción Anclada en el Perfil", value=mis_datos.get("spotify_perfil", ""), placeholder="Ej: https://open.spotify.com/track/...")
-                    vinculado = st.toggle("Vincular Spotify (Mostrar estado 'Conectado' y 'Escuchando ahora' en Social)", value=mis_datos.get("spotify_vinculado", False))
-                    sp_n = st.text_input("Escuchando ahora (Simulación)", value=mis_datos.get("spotify_now", ""), placeholder="Ej: https://open.spotify.com/track/...")
+                    st.markdown("#### Spotify Integration")
+                    if not SPOTIPY_INSTALLED:
+                        st.warning("⚠️ spotipy no está en requirements.txt. Solo funcionará el reproductor estático.")
                     
+                    # Logica de Spotify Manual (Fallback)
+                    sp_p = st.text_input("Link de Track de Spotify (Fallback Estático)", value=mis_datos.get("spotify_track_id", ""), placeholder="https://open.spotify.com/track/...")
+                    
+                    # Botón de Vinculación Real (OAuth)
+                    if SPOTIPY_INSTALLED:
+                        try:
+                            sp_oauth = SpotifyOAuth(client_id=st.secrets["SPOTIFY_CLIENT_ID"], client_secret=st.secrets["SPOTIFY_CLIENT_SECRET"], redirect_uri=st.secrets["SPOTIFY_REDIRECT_URI"], scope="user-read-currently-playing")
+                            auth_url = sp_oauth.get_authorize_url()
+                            st.markdown(f"[🔗 **Vincular cuenta real de Spotify para 'En vivo'**]({auth_url})")
+                        except: st.info("Para vincular Spotify real, el Admin debe configurar st.secrets.")
+
                     if st.form_submit_button("Sincronizar Perfil"):
-                        db_users[us_act].update({
-                            "alias": al, "roles_fav": rf, "portfolio": pf, "specs": spc,
-                            "spotify_perfil": sp_p, "spotify_now": sp_n, "spotify_vinculado": vinculado, "conectado": True
-                        })
+                        t_id = sp_p.split("track/")[1].split("?")[0] if "track/" in sp_p else sp_p
+                        db_users[us_act].update({"alias": al, "roles_fav": rf, "specs": spc, "spotify_track_id": t_id})
                         guardar_y_recargar()
                         st.success("Perfil sincronizado.")
             st.divider()
@@ -870,7 +885,7 @@ else:
                         else: st.success("Resuelto")
             else: st.warning("Solo Super Admins.")
 
-    # --- PROYECTO (HERRAMIENTAS INTACTAS) ---
+    # --- PROYECTO ---
     elif st.session_state["ruta"] == "Proyecto":
         pr = st.session_state["proyecto_activo"]
         pd_proy = st.session_state["proyectos"][pr]
